@@ -45,6 +45,10 @@ void main() {
 
         vel = direction * orbitalSpeed;
 
+        // Speed jitter to break up banding
+        float speedJitter = (hash(uv + 0.5) - 0.5) * 0.15;
+        vel *= (1.0 + speedJitter);
+
         // Small Y variation for 3D depth
         float randomY = (hash(uv) - 0.5) * orbitalSpeed * 0.1;
         vel.y += randomY;

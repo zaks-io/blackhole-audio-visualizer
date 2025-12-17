@@ -36,11 +36,12 @@ void main() {
             float baseAngle = emitterIndex * 6.28318530718 / uEmitterCount;
 
             // Add emitter rotation offset and jitter
-            float angleJitter = (hash(uv + uTime) - 0.5) * 0.3;
+            float angleJitter = (hash(uv + uTime) - 0.5) * 0.6;
             float angle = baseAngle + uEmitterAngle + angleJitter;
 
             // Calculate position with tilt
-            float rad = uEmissionRadius;
+            float radJitter = (hash(uv + uTime * 0.1) - 0.5) * 0.2;
+            float rad = uEmissionRadius * (1.0 + radJitter);
             float x = rad * cos(angle);
             float z = rad * sin(angle);
 
