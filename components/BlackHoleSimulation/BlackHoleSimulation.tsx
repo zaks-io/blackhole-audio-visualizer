@@ -1,10 +1,18 @@
 'use client';
 
 import { useMemo } from 'react';
-import { OrbitControls } from '@react-three/drei';
+import { OrbitControls, Environment } from '@react-three/drei';
 import { useControls } from 'leva';
 import { ParticleSystem } from './ParticleSystem';
 import { BlackHole } from './BlackHole';
+
+const SKYBOX_OPTIONS = {
+  'None': '',
+  'Starmap': '/starmap_2020_4k.exr',
+  'Hazy Nebulae': '/HDR_hazy_nebulae_4k.exr',
+  'Blue Nebulae': '/HDR_rich_blue_nebulae_1_4k.exr',
+  'Multi Nebulae': '/HDR_rich_multi_nebulae_2_4k.exr',
+};
 
 export function BlackHoleSimulation() {
   const blackHoleControls = useControls('Black Hole', {
@@ -37,6 +45,10 @@ export function BlackHoleSimulation() {
     showEmitters: { value: true },
   });
 
+  const skyboxControls = useControls('Skybox', {
+    skybox: { value: 'Hazy Nebulae', options: Object.keys(SKYBOX_OPTIONS) },
+  });
+
   const emitterPositions = useMemo(() => {
     const positions: [number, number, number][] = [];
     for (let i = 0; i < emitterControls.emitterCount; i++) {
@@ -50,9 +62,12 @@ export function BlackHoleSimulation() {
     return positions;
   }, [emitterControls.emitRadius, emitterControls.emitterCount, emitterControls.emitterAngle, emitterControls.emitterTilt]);
 
+  const skyboxPath = SKYBOX_OPTIONS[skyboxControls.skybox as keyof typeof SKYBOX_OPTIONS];
+
   return (
     <>
       <color attach="background" args={['#000000']} />
+      {skyboxPath && <Environment files={skyboxPath} background />}
 
       <ParticleSystem
         pointSize={particleControls.pointSize}
