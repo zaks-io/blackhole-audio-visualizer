@@ -5,6 +5,7 @@ import { OrbitControls, Environment } from '@react-three/drei';
 import { useControls } from 'leva';
 import { ParticleSystem } from './ParticleSystem';
 import { BlackHole } from './BlackHole';
+import type { AudioData } from '@/hooks/useMicrophone';
 
 const SKYBOX_OPTIONS = {
   'None': '',
@@ -14,7 +15,12 @@ const SKYBOX_OPTIONS = {
   'Multi Nebulae': '/HDR_rich_multi_nebulae_2_4k.exr',
 };
 
-export function BlackHoleSimulation() {
+interface BlackHoleSimulationProps {
+  getFrequencyData: () => AudioData;
+  isAudioConnected: boolean;
+}
+
+export function BlackHoleSimulation({ getFrequencyData, isAudioConnected }: BlackHoleSimulationProps) {
   const blackHoleControls = useControls('Black Hole', {
     eventHorizonRadius: { value: 3.0, min: 0.5, max: 20, step: 0.5 },
   });
@@ -45,12 +51,29 @@ export function BlackHoleSimulation() {
     inwardAngle: { value: 0, min: -1, max: 1, step: 0.01 },
     spawnRate: { value: 1.0, min: 0.1, max: 10, step: 0.1 },
     emitterSpread: { value: 0.1, min: 0, max: 2.0, step: 0.05 },
-    showEmitters: { value: true },
+    showEmitters: { value: false },
   });
 
   const skyboxControls = useControls('Skybox', {
     skybox: { value: 'Hazy Nebulae', options: Object.keys(SKYBOX_OPTIONS) },
   });
+
+  const audioControls = useControls('Audio', {
+    waveSpeed: { value: 2.0, min: 0.1, max: 10, step: 0.1 },
+    amplitude: { value: 1.0, min: 0, max: 3, step: 0.1 },
+    bassGain: { value: 1.0, min: 0, max: 3, step: 0.1 },
+    midGain: { value: 1.0, min: 0, max: 3, step: 0.1 },
+    highGain: { value: 1.0, min: 0, max: 3, step: 0.1 },
+  });
+
+  const getAudioData = () => {
+    const { bass, mid, high } = getFrequencyData();
+    return {
+      bass: bass * audioControls.bassGain,
+      mid: mid * audioControls.midGain,
+      high: high * audioControls.highGain,
+    };
+  };
 
   const emitterPositions = useMemo(() => {
     const positions: [number, number, number][] = [];
@@ -93,6 +116,10 @@ export function BlackHoleSimulation() {
         iscoRadius={blackHoleControls.eventHorizonRadius * physicsControls.iscoRatio}
         iscoStrength={physicsControls.iscoStrength}
         emitterSpread={emitterControls.emitterSpread}
+        audioWaveSpeed={audioControls.waveSpeed}
+        audioAmplitude={audioControls.amplitude}
+        getAudioData={getAudioData}
+        audioEnabled={isAudioConnected}
       />
       <BlackHole eventHorizonRadius={blackHoleControls.eventHorizonRadius} />
 

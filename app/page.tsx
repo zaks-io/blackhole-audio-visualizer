@@ -3,8 +3,18 @@
 import { Canvas } from '@react-three/fiber';
 import { Leva } from 'leva';
 import { BlackHoleSimulation } from '@/components/BlackHoleSimulation';
+import { MicToggleFab } from '@/components/MicToggleFab';
+import { useMicrophone } from '@/hooks/useMicrophone';
 
 export default function Home() {
+  const { connect, getFrequencyData, isConnected } = useMicrophone();
+
+  const handleMicToggle = () => {
+    if (!isConnected) {
+      connect();
+    }
+  };
+
   return (
     <div className="w-screen h-screen">
       <Leva
@@ -16,8 +26,12 @@ export default function Home() {
         gl={{ antialias: true, alpha: false }}
         dpr={[1, 2]}
       >
-        <BlackHoleSimulation />
+        <BlackHoleSimulation
+          getFrequencyData={getFrequencyData}
+          isAudioConnected={isConnected}
+        />
       </Canvas>
+      <MicToggleFab isConnected={isConnected} onToggle={handleMicToggle} />
     </div>
   );
 }

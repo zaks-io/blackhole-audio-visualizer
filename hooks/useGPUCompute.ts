@@ -84,6 +84,11 @@ export function useGPUCompute() {
     positionVariable.material.uniforms.uSpawnRate = { value: 1.0 };
     positionVariable.material.uniforms.uOrbitDecay = { value: 2.0 };
     positionVariable.material.uniforms.uDoDrift = { value: false };
+    positionVariable.material.uniforms.uAudioBass = { value: 0.0 };
+    positionVariable.material.uniforms.uAudioMid = { value: 0.0 };
+    positionVariable.material.uniforms.uAudioHigh = { value: 0.0 };
+    positionVariable.material.uniforms.uAudioWaveSpeed = { value: 2.0 };
+    positionVariable.material.uniforms.uAudioAmplitude = { value: 1.0 };
 
     // Set up uniforms for velocity shader
     velocityVariable.material.uniforms.uTime = { value: 0 };
@@ -253,6 +258,26 @@ export function useGPUCompute() {
     }
   }, []);
 
+  const setAudioData = useCallback((bass: number, mid: number, high: number) => {
+    if (positionVariableRef.current) {
+      positionVariableRef.current.material.uniforms.uAudioBass.value = bass;
+      positionVariableRef.current.material.uniforms.uAudioMid.value = mid;
+      positionVariableRef.current.material.uniforms.uAudioHigh.value = high;
+    }
+  }, []);
+
+  const setAudioWaveSpeed = useCallback((value: number) => {
+    if (positionVariableRef.current) {
+      positionVariableRef.current.material.uniforms.uAudioWaveSpeed.value = value;
+    }
+  }, []);
+
+  const setAudioAmplitude = useCallback((value: number) => {
+    if (positionVariableRef.current) {
+      positionVariableRef.current.material.uniforms.uAudioAmplitude.value = value;
+    }
+  }, []);
+
   return {
     getPositionTexture,
     getVelocityTexture,
@@ -270,5 +295,8 @@ export function useGPUCompute() {
     setISCORadius,
     setISCOStrength,
     setEmitterSpread,
+    setAudioData,
+    setAudioWaveSpeed,
+    setAudioAmplitude,
   };
 }
