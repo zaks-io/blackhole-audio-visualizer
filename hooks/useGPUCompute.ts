@@ -94,6 +94,8 @@ export function useGPUCompute() {
     velocityVariable.material.uniforms.uEmissionRadius = { value: EMISSION_RADIUS };
     velocityVariable.material.uniforms.uEmitterCount = { value: 1.0 };
     velocityVariable.material.uniforms.uInwardAngle = { value: 0.0 };
+    velocityVariable.material.uniforms.uISCORadius = { value: 9.0 };
+    velocityVariable.material.uniforms.uISCOStrength = { value: 0.5 };
     velocityVariable.material.uniforms.uDoKick = { value: false };
 
     // Set dependencies: position and velocity both depend on each other
@@ -232,6 +234,18 @@ export function useGPUCompute() {
     }
   }, []);
 
+  const setISCORadius = useCallback((value: number) => {
+    if (velocityVariableRef.current) {
+      velocityVariableRef.current.material.uniforms.uISCORadius.value = value;
+    }
+  }, []);
+
+  const setISCOStrength = useCallback((value: number) => {
+    if (velocityVariableRef.current) {
+      velocityVariableRef.current.material.uniforms.uISCOStrength.value = value;
+    }
+  }, []);
+
   return {
     getPositionTexture,
     getVelocityTexture,
@@ -246,5 +260,7 @@ export function useGPUCompute() {
     setEmitterTilt,
     setSpawnRate,
     setInwardAngle,
+    setISCORadius,
+    setISCOStrength,
   };
 }

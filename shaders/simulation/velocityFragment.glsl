@@ -6,6 +6,8 @@ uniform float uEventHorizon;
 uniform float uEmissionRadius;
 uniform float uEmitterCount;
 uniform float uInwardAngle;
+uniform float uISCORadius;
+uniform float uISCOStrength;
 uniform bool uDoKick;
 
 float hash(vec2 p) {
@@ -59,6 +61,36 @@ void main() {
 
             // Half-step kick
             vel -= r_hat * accel * uDeltaTime * 0.5;
+
+            // GLOBAL: Cap velocity below escape velocity so particles can NEVER escape
+            // Escape velocity = sqrt(2 * GM / r), we cap at fraction of that
+            float escapeVel = sqrt(2.0 * uGM / r_soft);
+            float maxVel = escapeVel * (1.0 - uISCOStrength * 0.5);
+            float currentSpeed = length(vel);
+            if (currentSpeed > maxVel) {
+                vel *= maxVel / currentSpeed;
+            }
+        }
+
+        // ISCO Region: Force spiral inward
+        if (r_len < uISCORadius && r_len > uEventHorizon && uISCOStrength > 0.0) {
+            float iscoDepth = 1.0 - (r_len - uEventHorizon) / (uISCORadius - uEventHorizon);
+            iscoDepth = clamp(iscoDepth, 0.0, 1.0);
+
+            vec3 r_hat_isco = pos / r_len;
+            float orbitalSpeed = sqrt(uGM / (r_len + uSoftening));
+
+            // Decompose into radial and tangential
+            float radialVel = dot(vel, r_hat_isco);
+            vec3 tangentialVel = vel - r_hat_isco * radialVel;
+
+            // Kill tangential velocity progressively
+            tangentialVel *= (1.0 - iscoDepth * uISCOStrength);
+
+            // Force inward
+            radialVel = min(radialVel, -orbitalSpeed * iscoDepth * uISCOStrength);
+
+            vel = r_hat_isco * radialVel + tangentialVel;
         }
     }
 

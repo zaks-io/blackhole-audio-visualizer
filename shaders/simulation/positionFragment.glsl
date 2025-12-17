@@ -59,11 +59,14 @@ void main() {
         // DRIFT: update position using velocity
         pos = pos + vel * uDeltaTime;
 
-        // Direct orbit decay - shrink radius to cause inspiral
-        // This guarantees particles spiral in without messing with velocity
+        // Age the particle
+        lifetime += uDeltaTime;
+
+        // Orbit decay scales with age - older particles fall in faster
         if (uOrbitDecay > 0.0) {
             vec3 r_hat = normalize(pos);
-            pos -= r_hat * uOrbitDecay * uDeltaTime;
+            float ageDecay = uOrbitDecay * lifetime;
+            pos -= r_hat * ageDecay * uDeltaTime;
         }
     }
 

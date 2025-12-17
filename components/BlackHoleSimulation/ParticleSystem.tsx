@@ -26,6 +26,8 @@ interface ParticleSystemProps {
   emitterTilt: number;
   spawnRate: number;
   inwardAngle: number;
+  iscoRadius: number;
+  iscoStrength: number;
 }
 
 export function ParticleSystem({
@@ -46,6 +48,8 @@ export function ParticleSystem({
   emitterTilt,
   spawnRate,
   inwardAngle,
+  iscoRadius,
+  iscoStrength,
 }: ParticleSystemProps) {
   const {
     getPositionTexture,
@@ -61,6 +65,8 @@ export function ParticleSystem({
     setEmitterTilt,
     setSpawnRate,
     setInwardAngle,
+    setISCORadius,
+    setISCOStrength,
   } = useGPUCompute();
   const materialRef = useRef<THREE.ShaderMaterial>(null);
 
@@ -126,6 +132,8 @@ export function ParticleSystem({
     setEmitterTilt(emitterTilt);
     setSpawnRate(spawnRate);
     setInwardAngle(inwardAngle);
+    setISCORadius(iscoRadius);
+    setISCOStrength(iscoStrength);
   });
 
   return (
