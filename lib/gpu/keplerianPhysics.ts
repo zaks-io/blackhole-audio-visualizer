@@ -1,10 +1,9 @@
 import * as THREE from 'three';
 
-export const TEXTURE_SIZE = 512;
+export const TEXTURE_SIZE = 256;
 export const PARTICLE_COUNT = TEXTURE_SIZE * TEXTURE_SIZE;
 
-const EVENT_HORIZON = 1.5;
-const MIN_ORBIT_RADIUS = EVENT_HORIZON * 3;
+export const EMISSION_RADIUS = 20.0;
 
 export function createOrbitalElementsTexture(): THREE.DataTexture {
   const data = new Float32Array(PARTICLE_COUNT * 4);
@@ -12,11 +11,11 @@ export function createOrbitalElementsTexture(): THREE.DataTexture {
   for (let i = 0; i < PARTICLE_COUNT; i++) {
     const i4 = i * 4;
 
-    const spread = Math.abs(gaussianRandom()) * 8;
-    const a = MIN_ORBIT_RADIUS + spread + 0.5;
+    // All particles start at emission ring radius
+    const a = EMISSION_RADIUS;
 
-    // Eccentricity: low eccentricity so orbits are nearly circular
-    const e = Math.pow(Math.random(), 2) * 0.3;
+    // Eccentricity: low for nearly circular orbits
+    const e = Math.pow(Math.random(), 2) * 0.1;
 
     // Inclination: tight disk, -15 to +15 degrees
     const i_rad = (Math.random() - 0.5) * (Math.PI / 6);
@@ -61,10 +60,13 @@ export function createPhaseTexture(): THREE.DataTexture {
     // Initial mean anomaly: uniform 0 to 2π
     const M0 = Math.random() * Math.PI * 2;
 
+    // Spawn delay: 0-1 random value (multiplied by spawn duration in shader)
+    const spawnDelay = Math.random();
+
     data[i4 + 0] = Omega;
     data[i4 + 1] = M0;
-    data[i4 + 2] = 0; // unused
-    data[i4 + 3] = 1; // unused (alpha)
+    data[i4 + 2] = spawnDelay;
+    data[i4 + 3] = 0; // respawn timer (0 = ready to spawn)
   }
 
   const texture = new THREE.DataTexture(
@@ -137,7 +139,7 @@ export function createInitialPositionTexture(
     data[i4 + 0] = x;
     data[i4 + 1] = y;
     data[i4 + 2] = z;
-    data[i4 + 3] = 1;
+    data[i4 + 3] = a; // Store semi-major axis for decay tracking
   }
 
   const texture = new THREE.DataTexture(

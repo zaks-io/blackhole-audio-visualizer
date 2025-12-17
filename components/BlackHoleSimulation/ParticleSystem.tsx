@@ -19,6 +19,12 @@ interface ParticleSystemProps {
   timeScale: number;
   eventHorizonRadius: number;
   decayRate: number;
+  emissionRadius: number;
+  spawnDuration: number;
+  emitterCount: number;
+  eccentricity: number;
+  inclination: number;
+  omega: number;
 }
 
 export function ParticleSystem({
@@ -32,8 +38,26 @@ export function ParticleSystem({
   timeScale,
   eventHorizonRadius,
   decayRate,
+  emissionRadius,
+  spawnDuration,
+  emitterCount,
+  eccentricity,
+  inclination,
+  omega,
 }: ParticleSystemProps) {
-  const { getPositionTexture, setGravitationalParameter, setTimeScale, setEventHorizon, setDecayRate } = useGPUCompute();
+  const {
+    getPositionTexture,
+    setGravitationalParameter,
+    setTimeScale,
+    setEventHorizon,
+    setDecayRate,
+    setEmissionRadius,
+    setSpawnDuration,
+    setEmitterCount,
+    setEccentricity,
+    setInclination,
+    setOmega,
+  } = useGPUCompute();
   const materialRef = useRef<THREE.ShaderMaterial>(null);
 
   const { positions, references } = useMemo(() => {
@@ -86,6 +110,12 @@ export function ParticleSystem({
     setTimeScale(timeScale);
     setEventHorizon(eventHorizonRadius);
     setDecayRate(decayRate);
+    setEmissionRadius(emissionRadius);
+    setSpawnDuration(spawnDuration);
+    setEmitterCount(emitterCount);
+    setEccentricity(eccentricity);
+    setInclination(inclination);
+    setOmega(omega);
   });
 
   return (

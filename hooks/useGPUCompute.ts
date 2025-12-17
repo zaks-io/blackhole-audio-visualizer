@@ -7,6 +7,7 @@ import type { Variable } from 'three/examples/jsm/misc/GPUComputationRenderer.js
 import * as THREE from 'three';
 import {
   TEXTURE_SIZE,
+  EMISSION_RADIUS,
   createOrbitalElementsTexture,
   createPhaseTexture,
   createInitialPositionTexture,
@@ -55,6 +56,7 @@ export function useGPUCompute() {
     );
 
     positionVariable.material.uniforms.uTime = { value: 0 };
+    positionVariable.material.uniforms.uDeltaTime = { value: 0.016 };
     positionVariable.material.uniforms.textureOrbitalElements = {
       value: textures.orbitalElements,
     };
@@ -63,7 +65,14 @@ export function useGPUCompute() {
     };
     positionVariable.material.uniforms.uGravitationalParameter = { value: 100.0 };
     positionVariable.material.uniforms.uEventHorizon = { value: 1.5 };
-    positionVariable.material.uniforms.uDecayRate = { value: 0.1 };
+    positionVariable.material.uniforms.uDecayRate = { value: 0.5 };
+    positionVariable.material.uniforms.uEmissionRadius = { value: EMISSION_RADIUS };
+    positionVariable.material.uniforms.uSpawnDuration = { value: 5.0 };
+    positionVariable.material.uniforms.uEmitterCount = { value: 12.0 };
+    positionVariable.material.uniforms.uEccentricity = { value: 0.0 };
+    positionVariable.material.uniforms.uInclination = { value: 0.0 };
+    positionVariable.material.uniforms.uOmega = { value: 0.0 };
+    positionVariable.material.uniforms.uTurbulenceStrength = { value: 0.0 };
 
     // Position depends on itself to read previous state (capture time)
     gpuCompute.setVariableDependencies(positionVariable, [positionVariable]);
@@ -84,11 +93,13 @@ export function useGPUCompute() {
     };
   }, [gl, textures]);
 
-  useFrame((state) => {
+  useFrame((state, delta) => {
     if (!gpuComputeRef.current || !positionVariableRef.current) return;
 
     positionVariableRef.current.material.uniforms.uTime.value =
       state.clock.elapsedTime * timeScaleRef.current;
+    positionVariableRef.current.material.uniforms.uDeltaTime.value =
+      delta * timeScaleRef.current;
 
     gpuComputeRef.current.compute();
   });
@@ -121,5 +132,53 @@ export function useGPUCompute() {
     }
   }, []);
 
-  return { getPositionTexture, setGravitationalParameter, setTimeScale, setEventHorizon, setDecayRate };
+  const setEmissionRadius = useCallback((value: number) => {
+    if (positionVariableRef.current) {
+      positionVariableRef.current.material.uniforms.uEmissionRadius.value = value;
+    }
+  }, []);
+
+  const setSpawnDuration = useCallback((value: number) => {
+    if (positionVariableRef.current) {
+      positionVariableRef.current.material.uniforms.uSpawnDuration.value = value;
+    }
+  }, []);
+
+  const setEmitterCount = useCallback((value: number) => {
+    if (positionVariableRef.current) {
+      positionVariableRef.current.material.uniforms.uEmitterCount.value = value;
+    }
+  }, []);
+
+  const setEccentricity = useCallback((value: number) => {
+    if (positionVariableRef.current) {
+      positionVariableRef.current.material.uniforms.uEccentricity.value = value;
+    }
+  }, []);
+
+  const setInclination = useCallback((value: number) => {
+    if (positionVariableRef.current) {
+      positionVariableRef.current.material.uniforms.uInclination.value = value;
+    }
+  }, []);
+
+  const setOmega = useCallback((value: number) => {
+    if (positionVariableRef.current) {
+      positionVariableRef.current.material.uniforms.uOmega.value = value;
+    }
+  }, []);
+
+  return {
+    getPositionTexture,
+    setGravitationalParameter,
+    setTimeScale,
+    setEventHorizon,
+    setDecayRate,
+    setEmissionRadius,
+    setSpawnDuration,
+    setEmitterCount,
+    setEccentricity,
+    setInclination,
+    setOmega,
+  };
 }
