@@ -3,7 +3,7 @@ import * as THREE from 'three';
 export const TEXTURE_SIZE = 512;
 export const PARTICLE_COUNT = TEXTURE_SIZE * TEXTURE_SIZE;
 export const EMISSION_RADIUS = 20.0;
-export const DEFAULT_GM = 5000.0;
+export const DEFAULT_GM = 100000.0;
 export const DEFAULT_SOFTENING = 0.5;
 
 /**
@@ -24,8 +24,9 @@ export function createInitialPositionTexture(
     data[i4 + 1] = 0;
     data[i4 + 2] = 0;
 
-    // Fully random spawn times over 300 seconds - no sequential pattern
-    data[i4 + 3] = -Math.random() * 300.0;
+    // Fully random spawn times - spreads particles evenly over initial period
+    // spawnRate in shader controls how fast this counts down
+    data[i4 + 3] = -Math.random() * 60.0;
   }
 
   const texture = new THREE.DataTexture(

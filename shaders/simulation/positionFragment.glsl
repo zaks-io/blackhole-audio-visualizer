@@ -5,6 +5,11 @@ uniform float uSoftening;
 uniform float uEventHorizon;
 uniform float uEmissionRadius;
 uniform float uEmitterCount;
+uniform float uEmitterAngle;
+uniform float uEmitterTilt;
+uniform float uSpawnRate;
+uniform float uOrbitDecay;
+uniform bool uDoDrift;
 
 float hash(vec2 p) {
     return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
@@ -23,21 +28,42 @@ void main() {
     float r = length(pos);
 
     if (lifetime < 0.0) {
-        // WAITING: count toward spawn
-        lifetime += uDeltaTime;
+        // WAITING: count toward spawn (scaled by spawn rate)
+        lifetime += uDeltaTime * uSpawnRate;
         if (lifetime >= 0.0) {
-            // SPAWN at emitter with time-varying angle jitter
-            float angleJitter = (hash(uv + uTime) - 0.5) * 0.15;
-            float r = uEmissionRadius;
-            pos = vec3(r * cos(angleJitter), 0.0, r * sin(angleJitter));
+            // Pick which emitter this particle spawns from
+            float emitterIndex = floor(hash(uv) * uEmitterCount);
+            float baseAngle = emitterIndex * 6.28318530718 / uEmitterCount;
+
+            // Add emitter rotation offset and jitter
+            float angleJitter = (hash(uv + uTime) - 0.5) * 0.3;
+            float angle = baseAngle + uEmitterAngle + angleJitter;
+
+            // Calculate position with tilt
+            float rad = uEmissionRadius;
+            float x = rad * cos(angle);
+            float z = rad * sin(angle);
+
+            // Apply tilt around the X axis
+            float tiltAmount = sin(angle) * uEmitterTilt;
+            float y = tiltAmount;
+
+            pos = vec3(x, y, z);
             lifetime = 1.0;
         }
     } else if (r < uEventHorizon) {
         // HIT CENTER: recycle to emitter queue
-        lifetime = -hash(uv + uTime) * 2.0;
-    } else {
-        // FLYING: update position
+        lifetime = -hash(uv + uTime) * (1.0 / max(uSpawnRate, 0.01));
+    } else if (uDoDrift) {
+        // DRIFT: update position using velocity
         pos = pos + vel * uDeltaTime;
+
+        // Direct orbit decay - shrink radius to cause inspiral
+        // This guarantees particles spiral in without messing with velocity
+        if (uOrbitDecay > 0.0) {
+            vec3 r_hat = normalize(pos);
+            pos -= r_hat * uOrbitDecay * uDeltaTime;
+        }
     }
 
     gl_FragColor = vec4(pos, lifetime);

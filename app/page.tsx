@@ -12,7 +12,7 @@ export default function Home() {
         theme={{ sizes: { rootWidth: '340px', controlWidth: '160px' } }}
       />
       <Canvas
-        camera={{ position: [0, 30, 50], fov: 60 }}
+        camera={{ position: [0, 90, 150], fov: 60 }}
         gl={{ antialias: true, alpha: false }}
         dpr={[1, 2]}
       >

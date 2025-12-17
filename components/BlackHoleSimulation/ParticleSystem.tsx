@@ -19,9 +19,13 @@ interface ParticleSystemProps {
   timeScale: number;
   eventHorizonRadius: number;
   softening: number;
-  drag: number;
+  orbitDecay: number;
   emissionRadius: number;
   emitterCount: number;
+  emitterAngle: number;
+  emitterTilt: number;
+  spawnRate: number;
+  inwardAngle: number;
 }
 
 export function ParticleSystem({
@@ -35,9 +39,13 @@ export function ParticleSystem({
   timeScale,
   eventHorizonRadius,
   softening,
-  drag,
+  orbitDecay,
   emissionRadius,
   emitterCount,
+  emitterAngle,
+  emitterTilt,
+  spawnRate,
+  inwardAngle,
 }: ParticleSystemProps) {
   const {
     getPositionTexture,
@@ -46,9 +54,13 @@ export function ParticleSystem({
     setTimeScale,
     setEventHorizon,
     setSoftening,
-    setDrag,
+    setOrbitDecay,
     setEmissionRadius,
     setEmitterCount,
+    setEmitterAngle,
+    setEmitterTilt,
+    setSpawnRate,
+    setInwardAngle,
   } = useGPUCompute();
   const materialRef = useRef<THREE.ShaderMaterial>(null);
 
@@ -107,9 +119,13 @@ export function ParticleSystem({
     setTimeScale(timeScale);
     setEventHorizon(eventHorizonRadius);
     setSoftening(softening);
-    setDrag(drag);
+    setOrbitDecay(orbitDecay);
     setEmissionRadius(emissionRadius);
     setEmitterCount(emitterCount);
+    setEmitterAngle(emitterAngle);
+    setEmitterTilt(emitterTilt);
+    setSpawnRate(spawnRate);
+    setInwardAngle(inwardAngle);
   });
 
   return (

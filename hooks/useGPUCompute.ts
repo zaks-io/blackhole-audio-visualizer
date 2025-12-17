@@ -78,7 +78,12 @@ export function useGPUCompute() {
     positionVariable.material.uniforms.uSoftening = { value: DEFAULT_SOFTENING };
     positionVariable.material.uniforms.uEventHorizon = { value: 3.0 };
     positionVariable.material.uniforms.uEmissionRadius = { value: EMISSION_RADIUS };
-    positionVariable.material.uniforms.uEmitterCount = { value: 12.0 };
+    positionVariable.material.uniforms.uEmitterCount = { value: 1.0 };
+    positionVariable.material.uniforms.uEmitterAngle = { value: 0.0 };
+    positionVariable.material.uniforms.uEmitterTilt = { value: 0.0 };
+    positionVariable.material.uniforms.uSpawnRate = { value: 1.0 };
+    positionVariable.material.uniforms.uOrbitDecay = { value: 2.0 };
+    positionVariable.material.uniforms.uDoDrift = { value: false };
 
     // Set up uniforms for velocity shader
     velocityVariable.material.uniforms.uTime = { value: 0 };
@@ -87,8 +92,9 @@ export function useGPUCompute() {
     velocityVariable.material.uniforms.uSoftening = { value: DEFAULT_SOFTENING };
     velocityVariable.material.uniforms.uEventHorizon = { value: 3.0 };
     velocityVariable.material.uniforms.uEmissionRadius = { value: EMISSION_RADIUS };
-    velocityVariable.material.uniforms.uEmitterCount = { value: 12.0 };
-    velocityVariable.material.uniforms.uDrag = { value: 0.1 };
+    velocityVariable.material.uniforms.uEmitterCount = { value: 1.0 };
+    velocityVariable.material.uniforms.uInwardAngle = { value: 0.0 };
+    velocityVariable.material.uniforms.uDoKick = { value: false };
 
     // Set dependencies: position and velocity both depend on each other
     gpuCompute.setVariableDependencies(positionVariable, [positionVariable, velocityVariable]);
@@ -118,14 +124,22 @@ export function useGPUCompute() {
     const scaledTime = state.clock.elapsedTime * timeScaleRef.current;
     const scaledDelta = Math.min(delta * timeScaleRef.current, 0.05); // Cap at 50ms
 
-    // Update position shader uniforms
+    // Update time uniforms
     positionVariableRef.current.material.uniforms.uTime.value = scaledTime;
     positionVariableRef.current.material.uniforms.uDeltaTime.value = scaledDelta;
-
-    // Update velocity shader uniforms
     velocityVariableRef.current.material.uniforms.uTime.value = scaledTime;
     velocityVariableRef.current.material.uniforms.uDeltaTime.value = scaledDelta;
 
+    // KICK-DRIFT-KICK (Leapfrog) Integration:
+
+    // Pass 1: First KICK (half-step velocity update)
+    velocityVariableRef.current.material.uniforms.uDoKick.value = true;
+    positionVariableRef.current.material.uniforms.uDoDrift.value = false;
+    gpuComputeRef.current.compute();
+
+    // Pass 2: DRIFT (position update) + Second KICK (half-step velocity update)
+    velocityVariableRef.current.material.uniforms.uDoKick.value = true;
+    positionVariableRef.current.material.uniforms.uDoDrift.value = true;
     gpuComputeRef.current.compute();
   });
 
@@ -188,9 +202,33 @@ export function useGPUCompute() {
     }
   }, []);
 
-  const setDrag = useCallback((value: number) => {
+  const setOrbitDecay = useCallback((value: number) => {
+    if (positionVariableRef.current) {
+      positionVariableRef.current.material.uniforms.uOrbitDecay.value = value;
+    }
+  }, []);
+
+  const setEmitterAngle = useCallback((value: number) => {
+    if (positionVariableRef.current) {
+      positionVariableRef.current.material.uniforms.uEmitterAngle.value = value;
+    }
+  }, []);
+
+  const setEmitterTilt = useCallback((value: number) => {
+    if (positionVariableRef.current) {
+      positionVariableRef.current.material.uniforms.uEmitterTilt.value = value;
+    }
+  }, []);
+
+  const setSpawnRate = useCallback((value: number) => {
+    if (positionVariableRef.current) {
+      positionVariableRef.current.material.uniforms.uSpawnRate.value = value;
+    }
+  }, []);
+
+  const setInwardAngle = useCallback((value: number) => {
     if (velocityVariableRef.current) {
-      velocityVariableRef.current.material.uniforms.uDrag.value = value;
+      velocityVariableRef.current.material.uniforms.uInwardAngle.value = value;
     }
   }, []);
 
@@ -203,6 +241,10 @@ export function useGPUCompute() {
     setSoftening,
     setEmissionRadius,
     setEmitterCount,
-    setDrag,
+    setOrbitDecay,
+    setEmitterAngle,
+    setEmitterTilt,
+    setSpawnRate,
+    setInwardAngle,
   };
 }
