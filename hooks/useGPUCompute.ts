@@ -63,7 +63,6 @@ export function useGPUCompute() {
     };
     positionVariable.material.uniforms.uGravitationalParameter = { value: 100.0 };
     positionVariable.material.uniforms.uEventHorizon = { value: 1.5 };
-    positionVariable.material.uniforms.uIscoRadius = { value: 4.5 };
     positionVariable.material.uniforms.uDecayRate = { value: 0.1 };
 
     // Position depends on itself to read previous state (capture time)
@@ -113,7 +112,6 @@ export function useGPUCompute() {
   const setEventHorizon = useCallback((value: number) => {
     if (positionVariableRef.current) {
       positionVariableRef.current.material.uniforms.uEventHorizon.value = value;
-      positionVariableRef.current.material.uniforms.uIscoRadius.value = value * 3;
     }
   }, []);
 

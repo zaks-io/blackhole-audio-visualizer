@@ -4,7 +4,7 @@ export const TEXTURE_SIZE = 512;
 export const PARTICLE_COUNT = TEXTURE_SIZE * TEXTURE_SIZE;
 
 const EVENT_HORIZON = 1.5;
-const ISCO_RADIUS = EVENT_HORIZON * 3;
+const MIN_ORBIT_RADIUS = EVENT_HORIZON * 3;
 
 export function createOrbitalElementsTexture(): THREE.DataTexture {
   const data = new Float32Array(PARTICLE_COUNT * 4);
@@ -12,14 +12,10 @@ export function createOrbitalElementsTexture(): THREE.DataTexture {
   for (let i = 0; i < PARTICLE_COUNT; i++) {
     const i4 = i * 4;
 
-    // Most particles orbit near ISCO with some spread outward
-    // Gaussian-like distribution centered just outside ISCO
-    const u = Math.random();
-    const spread = Math.abs(gaussianRandom()) * 8; // Spread outward from ISCO
-    const a = ISCO_RADIUS + spread + 0.5;
+    const spread = Math.abs(gaussianRandom()) * 8;
+    const a = MIN_ORBIT_RADIUS + spread + 0.5;
 
     // Eccentricity: low eccentricity so orbits are nearly circular
-    // This means perihelion ≈ semi-major axis, keeping them near ISCO
     const e = Math.pow(Math.random(), 2) * 0.3;
 
     // Inclination: tight disk, -15 to +15 degrees

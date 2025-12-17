@@ -8,8 +8,6 @@ import { BlackHole } from './BlackHole';
 export function BlackHoleSimulation() {
   const blackHoleControls = useControls('Black Hole', {
     eventHorizonRadius: { value: 1.5, min: 0.5, max: 5, step: 0.1 },
-    showISCO: true,
-    iscoOpacity: { value: 0.3, min: 0, max: 1, step: 0.05 },
   });
 
   const particleControls = useControls('Particles', {
@@ -43,11 +41,7 @@ export function BlackHoleSimulation() {
         eventHorizonRadius={blackHoleControls.eventHorizonRadius}
         decayRate={physicsControls.decayRate}
       />
-      <BlackHole
-        eventHorizonRadius={blackHoleControls.eventHorizonRadius}
-        showISCO={blackHoleControls.showISCO}
-        iscoOpacity={blackHoleControls.iscoOpacity}
-      />
+      <BlackHole eventHorizonRadius={blackHoleControls.eventHorizonRadius} />
 
       <OrbitControls
         enableDamping
