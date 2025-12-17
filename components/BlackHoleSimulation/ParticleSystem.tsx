@@ -4,7 +4,7 @@ import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useGPUCompute } from '@/hooks/useGPUCompute';
-import { TEXTURE_SIZE, PARTICLE_COUNT } from '@/lib/gpu/keplerianPhysics';
+import { TEXTURE_SIZE, PARTICLE_COUNT } from '@/lib/gpu/verletPhysics';
 import particleVertexShader from '@/shaders/particles/particleVertex.glsl';
 import particleFragmentShader from '@/shaders/particles/particleFragment.glsl';
 
@@ -18,13 +18,10 @@ interface ParticleSystemProps {
   gravitationalParameter: number;
   timeScale: number;
   eventHorizonRadius: number;
-  decayRate: number;
+  softening: number;
+  drag: number;
   emissionRadius: number;
-  spawnDuration: number;
   emitterCount: number;
-  eccentricity: number;
-  inclination: number;
-  omega: number;
 }
 
 export function ParticleSystem({
@@ -37,26 +34,21 @@ export function ParticleSystem({
   gravitationalParameter,
   timeScale,
   eventHorizonRadius,
-  decayRate,
+  softening,
+  drag,
   emissionRadius,
-  spawnDuration,
   emitterCount,
-  eccentricity,
-  inclination,
-  omega,
 }: ParticleSystemProps) {
   const {
     getPositionTexture,
+    getVelocityTexture,
     setGravitationalParameter,
     setTimeScale,
     setEventHorizon,
-    setDecayRate,
+    setSoftening,
+    setDrag,
     setEmissionRadius,
-    setSpawnDuration,
     setEmitterCount,
-    setEccentricity,
-    setInclination,
-    setOmega,
   } = useGPUCompute();
   const materialRef = useRef<THREE.ShaderMaterial>(null);
 
@@ -81,6 +73,7 @@ export function ParticleSystem({
   const uniforms = useMemo(
     () => ({
       texturePosition: { value: null as THREE.Texture | null },
+      textureVelocity: { value: null as THREE.Texture | null },
       uPointSize: { value: pointSize },
       uBrightness: { value: brightness },
       uAlpha: { value: alpha },
@@ -94,9 +87,13 @@ export function ParticleSystem({
 
   useFrame(() => {
     if (materialRef.current) {
-      const texture = getPositionTexture();
-      if (texture) {
-        materialRef.current.uniforms.texturePosition.value = texture;
+      const posTexture = getPositionTexture();
+      const velTexture = getVelocityTexture();
+      if (posTexture) {
+        materialRef.current.uniforms.texturePosition.value = posTexture;
+      }
+      if (velTexture) {
+        materialRef.current.uniforms.textureVelocity.value = velTexture;
       }
       materialRef.current.uniforms.uPointSize.value = pointSize;
       materialRef.current.uniforms.uBrightness.value = brightness;
@@ -109,13 +106,10 @@ export function ParticleSystem({
     setGravitationalParameter(gravitationalParameter);
     setTimeScale(timeScale);
     setEventHorizon(eventHorizonRadius);
-    setDecayRate(decayRate);
+    setSoftening(softening);
+    setDrag(drag);
     setEmissionRadius(emissionRadius);
-    setSpawnDuration(spawnDuration);
     setEmitterCount(emitterCount);
-    setEccentricity(eccentricity);
-    setInclination(inclination);
-    setOmega(omega);
   });
 
   return (
