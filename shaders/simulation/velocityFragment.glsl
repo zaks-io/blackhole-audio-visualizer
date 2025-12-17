@@ -8,10 +8,18 @@ uniform float uEmitterCount;
 uniform float uInwardAngle;
 uniform float uISCORadius;
 uniform float uISCOStrength;
+uniform float uEmitterSpread;
 uniform bool uDoKick;
 
+// 1D hash that explicitly breaks grid correlation by combining x and y
 float hash(vec2 p) {
-    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+    float n = p.x * 127.1 + p.y * 311.7;
+    return fract(sin(n) * 43758.5453);
+}
+
+float hash2(vec2 p, float seed) {
+    float n = p.x * 127.1 + p.y * 311.7 + seed * 573.9;
+    return fract(sin(n) * 43758.5453);
 }
 
 void main() {
@@ -39,19 +47,37 @@ void main() {
         vec3 r_hat = normalize(pos);
         vec3 tangent = normalize(cross(up, r_hat));
 
-        // Mix tangent and inward based on uInwardAngle
+        // Generate random values with different seeds
+        float rand1 = hash2(uv, 1.0);
+        float rand2 = hash2(uv, 2.0);
+        float rand3 = hash2(uv, 3.0);
+        float rand4 = hash2(uv, 4.0);
+
+        // Base jitter - time-varying to break frame clumping
+        float baseAngleJitter = (hash2(uv, uTime) - 0.5) * 0.1;
+        float baseElevJitter = (hash2(uv, uTime + 100.0) - 0.5) * 0.05;
+        float baseSpeedJitter = (hash2(uv, uTime + 200.0) - 0.5) * 0.2;
+
+        // Horizontal jitter - vary launch angle in orbital plane
+        float angleJitter = baseAngleJitter + (rand1 - 0.5) * uEmitterSpread;
+        vec3 jitteredTangent = tangent * cos(angleJitter) + r_hat * sin(angleJitter);
+
+        // Elevation jitter - vary launch angle up/down from orbital plane
+        float elevationJitter = baseElevJitter + (rand2 - 0.5) * uEmitterSpread * 0.5;
+        vec3 direction = normalize(jitteredTangent * cos(elevationJitter) + up * sin(elevationJitter));
+
+        // Mix with inward based on uInwardAngle
         vec3 inward = -r_hat;
-        vec3 direction = normalize(mix(tangent, inward, uInwardAngle));
+        direction = normalize(mix(direction, inward, uInwardAngle));
 
         vel = direction * orbitalSpeed;
 
-        // Speed jitter to break up banding
-        float speedJitter = (hash(uv + 0.5) - 0.5) * 0.15;
-        vel *= (1.0 + speedJitter);
+        // Speed jitter
+        vel *= (1.0 + baseSpeedJitter + (rand3 - 0.5) * uEmitterSpread * 0.3);
 
-        // Small Y variation for 3D depth
-        float randomY = (hash(uv) - 0.5) * orbitalSpeed * 0.1;
-        vel.y += randomY;
+        // Radial velocity jitter - scales with spread
+        float radialJitter = (rand4 - 0.5) * orbitalSpeed * uEmitterSpread * 0.4;
+        vel += r_hat * radialJitter;
     } else if (uDoKick) {
         // KICK: Apply gravitational acceleration (half-step)
         float r_len = length(pos);

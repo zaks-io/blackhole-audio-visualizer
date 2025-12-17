@@ -11,8 +11,15 @@ uniform float uSpawnRate;
 uniform float uOrbitDecay;
 uniform bool uDoDrift;
 
+// 1D hash that explicitly breaks grid correlation by combining x and y
 float hash(vec2 p) {
-    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+    float n = p.x * 127.1 + p.y * 311.7;
+    return fract(sin(n) * 43758.5453);
+}
+
+float hash2(vec2 p, float seed) {
+    float n = p.x * 127.1 + p.y * 311.7 + seed * 573.9;
+    return fract(sin(n) * 43758.5453);
 }
 
 void main() {
@@ -28,24 +35,23 @@ void main() {
     float r = length(pos);
 
     if (lifetime < 0.0) {
-        // WAITING: count toward spawn (scaled by spawn rate)
-        lifetime += uDeltaTime * uSpawnRate;
+        // WAITING: stochastic spawn - random chance each frame
+        float spawnChance = hash2(uv, uTime);
+        float threshold = uDeltaTime * uSpawnRate * 0.1;
+        if (spawnChance < threshold) {
+            lifetime = 0.0; // spawn now
+        }
         if (lifetime >= 0.0) {
             // Pick which emitter this particle spawns from
-            float emitterIndex = floor(hash(uv) * uEmitterCount);
+            float emitterIndex = floor(hash2(uv, 100.0) * uEmitterCount);
             float baseAngle = emitterIndex * 6.28318530718 / uEmitterCount;
 
-            // Add emitter rotation offset and jitter
-            float angleJitter = (hash(uv + uTime) - 0.5) * 0.6;
-            float angle = baseAngle + uEmitterAngle + angleJitter;
+            float angle = baseAngle + uEmitterAngle;
 
-            // Calculate position with tilt
-            float radJitter = (hash(uv + uTime * 0.1) - 0.5) * 0.2;
-            float rad = uEmissionRadius * (1.0 + radJitter);
+            // Calculate emit position - single point, no offset
+            float rad = uEmissionRadius;
             float x = rad * cos(angle);
             float z = rad * sin(angle);
-
-            // Apply tilt around the X axis
             float tiltAmount = sin(angle) * uEmitterTilt;
             float y = tiltAmount;
 
@@ -54,8 +60,8 @@ void main() {
         }
     } else if (r < uEventHorizon) {
         // HIT CENTER: recycle to emitter queue
-        // Ensure minimum negative value so particle is hidden while waiting
-        lifetime = -(hash(uv + uTime) * 0.9 + 0.1) * (1.0 / max(uSpawnRate, 0.01));
+        float recycleRand = hash2(uv, uTime + 500.0);
+        lifetime = -(recycleRand * 0.9 + 0.1) * (1.0 / max(uSpawnRate, 0.01));
     } else if (uDoDrift) {
         // DRIFT: update position using velocity
         pos = pos + vel * uDeltaTime;

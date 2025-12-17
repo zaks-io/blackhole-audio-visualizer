@@ -28,6 +28,7 @@ interface ParticleSystemProps {
   inwardAngle: number;
   iscoRadius: number;
   iscoStrength: number;
+  emitterSpread: number;
 }
 
 export function ParticleSystem({
@@ -50,6 +51,7 @@ export function ParticleSystem({
   inwardAngle,
   iscoRadius,
   iscoStrength,
+  emitterSpread,
 }: ParticleSystemProps) {
   const {
     getPositionTexture,
@@ -67,6 +69,7 @@ export function ParticleSystem({
     setInwardAngle,
     setISCORadius,
     setISCOStrength,
+    setEmitterSpread,
   } = useGPUCompute();
   const materialRef = useRef<THREE.ShaderMaterial>(null);
 
@@ -79,8 +82,8 @@ export function ParticleSystem({
       pos[i * 3 + 1] = 0;
       pos[i * 3 + 2] = 0;
 
-      const x = (i % TEXTURE_SIZE) / TEXTURE_SIZE;
-      const y = Math.floor(i / TEXTURE_SIZE) / TEXTURE_SIZE;
+      const x = (i % TEXTURE_SIZE + 0.5) / TEXTURE_SIZE;
+      const y = (Math.floor(i / TEXTURE_SIZE) + 0.5) / TEXTURE_SIZE;
       refs[i * 2] = x;
       refs[i * 2 + 1] = y;
     }
@@ -134,6 +137,7 @@ export function ParticleSystem({
     setInwardAngle(inwardAngle);
     setISCORadius(iscoRadius);
     setISCOStrength(iscoStrength);
+    setEmitterSpread(emitterSpread);
   });
 
   return (

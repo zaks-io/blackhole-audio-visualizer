@@ -33,17 +33,18 @@ export function BlackHoleSimulation() {
     timeScale: { value: 5.0, min: 0.1, max: 30, step: 0.1 },
     softening: { value: 1.0, min: 0.01, max: 10, step: 0.1 },
     orbitDecay: { value: 2.0, min: 0, max: 20.0, step: 0.5 },
-    iscoStrength: { value: 0, min: 0, max: 1.0, step: 0.05 },
-    iscoRatio: { value: 10.0, min: 2.0, max: 20.0, step: 1.0 },
+    iscoStrength: { value: 0.5, min: 0, max: 1.0, step: 0.05 },
+    iscoRatio: { value: 3.0, min: 2.0, max: 20.0, step: 1.0 },
   });
 
   const emitterControls = useControls('Emitters', {
     emitRadius: { value: 60, min: 5, max: 200, step: 1 },
-    emitterCount: { value: 1, min: 1, max: 36, step: 1 },
+    emitterCount: { value: 2, min: 1, max: 36, step: 1 },
     emitterAngle: { value: 0, min: 0, max: 6.28, step: 0.1 },
     emitterTilt: { value: 0, min: -30, max: 30, step: 1 },
     inwardAngle: { value: 0, min: -1, max: 1, step: 0.01 },
     spawnRate: { value: 1.0, min: 0.1, max: 10, step: 0.1 },
+    emitterSpread: { value: 0.1, min: 0, max: 2.0, step: 0.05 },
     showEmitters: { value: true },
   });
 
@@ -91,6 +92,7 @@ export function BlackHoleSimulation() {
         inwardAngle={emitterControls.inwardAngle}
         iscoRadius={blackHoleControls.eventHorizonRadius * physicsControls.iscoRatio}
         iscoStrength={physicsControls.iscoStrength}
+        emitterSpread={emitterControls.emitterSpread}
       />
       <BlackHole eventHorizonRadius={blackHoleControls.eventHorizonRadius} />
 
