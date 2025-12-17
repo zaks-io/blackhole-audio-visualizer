@@ -53,7 +53,8 @@ void main() {
         }
     } else if (r < uEventHorizon) {
         // HIT CENTER: recycle to emitter queue
-        lifetime = -hash(uv + uTime) * (1.0 / max(uSpawnRate, 0.01));
+        // Ensure minimum negative value so particle is hidden while waiting
+        lifetime = -(hash(uv + uTime) * 0.9 + 0.1) * (1.0 / max(uSpawnRate, 0.01));
     } else if (uDoDrift) {
         // DRIFT: update position using velocity
         pos = pos + vel * uDeltaTime;
