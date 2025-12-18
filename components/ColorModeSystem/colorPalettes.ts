@@ -118,14 +118,15 @@ export const PALETTE_IDS = (Object.keys(PALETTES) as ColorPaletteId[]).filter(
   (id) => id !== "default"
 );
 
+// Offsets match getAllColors() which excludes "default"
 export const PALETTE_OFFSETS: Record<ColorPaletteId, number> = {
-  default: 0,
-  cool: 8,
-  warm: 16,
-  neon: 24,
-  sunset: 32,
-  ocean: 40,
-  grayscale: 48,
+  default: 0, // Not used since default is filtered out
+  cool: 0,
+  warm: 8,
+  neon: 16,
+  sunset: 24,
+  ocean: 32,
+  grayscale: 40,
 };
 
 export function getAllColors(): string[] {

@@ -1,11 +1,11 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import gsap from "gsap";
-import { levaStore } from "leva";
+import { useVisualizationControls } from "@/hooks/useVisualizationControls";
 import type { PropertyConfig, EaseFunction } from "./propertyRegistry";
 import type { TweenState, UseTweenControlReturn } from "./types";
 
 export function useTweenControl(): UseTweenControlReturn {
-  const store = levaStore;
+  const store = useVisualizationControls;
 
   const [state, setState] = useState<TweenState>({
     selectedProperty: null,
@@ -21,7 +21,7 @@ export function useTweenControl(): UseTweenControlReturn {
 
   const getCurrentValue = useCallback(
     (property: PropertyConfig): number => {
-      return store.get(property.path) as number;
+      return store.getState().getByPath(property.path) as number;
     },
     [store]
   );
@@ -75,7 +75,7 @@ export function useTweenControl(): UseTweenControlReturn {
       duration,
       ease,
       onUpdate: () => {
-        store.setValueAtPath(selectedProperty.path, tweenState.current.value, false);
+        store.getState().setByPath(selectedProperty.path, tweenState.current.value);
         setState((prev) => ({ ...prev, progress: tweenState.current.progress }));
       },
       onComplete: () => {

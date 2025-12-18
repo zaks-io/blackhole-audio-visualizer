@@ -2,12 +2,9 @@
 
 import { useRef, useCallback, useState, useEffect } from "react";
 import { Canvas } from "@react-three/fiber";
-import { Leva } from "leva";
 import { NoToneMapping, SRGBColorSpace } from "three";
 import { BlackHoleSimulation } from "@/components/BlackHoleSimulation";
-import { MicToggleFab } from "@/components/MicToggleFab";
-import { RecordToggleFab } from "@/components/RecordToggleFab";
-import { CameraModeUI } from "@/components/CameraModeUI";
+import { UIOverlay } from "@/components/layout";
 import { TweenControlPanel } from "@/components/TweenControlPanel";
 import { AudioDebugPanel } from "@/components/AudioDebugPanel";
 import { PermissionDialog } from "@/components/PermissionDialog";
@@ -17,6 +14,7 @@ import { useAudioSource } from "@/hooks/useAudioSource";
 import { useRecording } from "@/hooks/useRecording";
 import { useAudioTriggers, type AudioTriggers } from "@/hooks/useAudioTriggers";
 import { useAnimationModes } from "@/hooks/useAnimationModes";
+import { useUIState } from "@/hooks/useUIState";
 
 export default function Home() {
   const {
@@ -37,13 +35,14 @@ export default function Home() {
   const cameraMode = useCameraMode();
   const colorMode = useColorMode();
   const canvasContainerRef = useRef<HTMLDivElement>(null);
+  const { debugPanelsVisible, tweenPanelVisible } = useUIState();
 
   const [triggers, setTriggers] = useState<AudioTriggers | null>(null);
   const [autoMode, setAutoMode] = useState(true);
   const animationFrameRef = useRef<number>(0);
 
   const handleParamsChange = useCallback(() => {
-    // Params change handler for animation modes (will be wired to Leva later)
+    // Params change handler for animation modes
   }, []);
 
   const { setMode, getCurrentMode, availableModes, processTriggersForMode } = useAnimationModes({
@@ -95,10 +94,6 @@ export default function Home() {
 
   return (
     <div className="w-screen h-screen">
-      <Leva
-        titleBar={{ title: "Controls" }}
-        theme={{ sizes: { rootWidth: "340px", controlWidth: "160px" } }}
-      />
       <div ref={canvasContainerRef} className="w-full h-full">
         <Canvas
           camera={{ position: [0, 90, 150], fov: 60 }}
@@ -123,38 +118,43 @@ export default function Home() {
           />
         </Canvas>
       </div>
-      <MicToggleFab
-        isConnected={isConnected}
-        sourceType={sourceType}
+
+      {/* New UI Overlay */}
+      <UIOverlay
+        currentCameraMode={cameraMode.mode}
+        onCameraModeChange={cameraMode.setMode}
+        isCameraTransitioning={cameraMode.isTransitioning}
+        isAudioConnected={isConnected}
+        audioSourceType={sourceType}
         canUseSystemAudio={canUseSystemAudio}
-        onConnect={connect}
-        onDisconnect={disconnect}
-      />
-      <RecordToggleFab
+        onAudioConnect={connect}
+        onAudioDisconnect={disconnect}
         isRecording={isRecording}
-        duration={duration}
-        disabled={!isConnected}
-        onToggle={handleRecordToggle}
+        recordingDuration={duration}
+        recordingError={error}
+        onRecordToggle={handleRecordToggle}
       />
-      {error && (
-        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 bg-red-600 text-white px-4 py-2 rounded-lg">
-          {error}
+
+      {/* Debug panels - conditionally rendered */}
+      {tweenPanelVisible && (
+        <div className="fixed left-6 bottom-24 z-40">
+          <TweenControlPanel />
         </div>
       )}
-      <CameraModeUI
-        currentMode={cameraMode.mode}
-        onModeChange={cameraMode.setMode}
-        isTransitioning={cameraMode.isTransitioning}
-      />
-      <TweenControlPanel />
-      <AudioDebugPanel
-        triggers={triggers}
-        currentMode={getCurrentMode()}
-        onModeChange={setMode}
-        availableModes={availableModes}
-        autoMode={autoMode}
-        onAutoModeChange={setAutoMode}
-      />
+
+      {debugPanelsVisible && (
+        <div className="fixed left-6 top-6 z-40">
+          <AudioDebugPanel
+            triggers={triggers}
+            currentMode={getCurrentMode()}
+            onModeChange={setMode}
+            availableModes={availableModes}
+            autoMode={autoMode}
+            onAutoModeChange={setAutoMode}
+          />
+        </div>
+      )}
+
       <PermissionDialog
         isOpen={showPermissionDialog}
         onClose={closePermissionDialog}
