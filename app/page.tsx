@@ -5,6 +5,7 @@ import { Leva } from 'leva';
 import { BlackHoleSimulation } from '@/components/BlackHoleSimulation';
 import { MicToggleFab } from '@/components/MicToggleFab';
 import { CameraModeUI } from '@/components/CameraModeUI';
+import { TweenControlPanel } from '@/components/TweenControlPanel';
 import { useCameraMode } from '@/components/CameraSystem';
 import { useMicrophone } from '@/hooks/useMicrophone';
 
@@ -42,6 +43,7 @@ export default function Home() {
         onModeChange={cameraMode.setMode}
         isTransitioning={cameraMode.isTransitioning}
       />
+      <TweenControlPanel />
     </div>
   );
 }

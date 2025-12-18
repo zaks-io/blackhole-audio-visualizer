@@ -1,0 +1,80 @@
+export interface PropertyConfig {
+  group: string;
+  key: string;
+  path: string;
+  label: string;
+  min: number;
+  max: number;
+  step: number;
+}
+
+export const PROPERTY_REGISTRY: PropertyConfig[] = [
+  // Black Hole
+  { group: 'Black Hole', key: 'eventHorizonRadius', path: 'Black Hole.eventHorizonRadius', label: 'Event Horizon Radius', min: 0.5, max: 20, step: 0.5 },
+  { group: 'Black Hole', key: 'beatPulse', path: 'Black Hole.beatPulse', label: 'Beat Pulse', min: 0, max: 2, step: 0.1 },
+
+  // Particles
+  { group: 'Particles', key: 'pointSize', path: 'Particles.pointSize', label: 'Point Size', min: 0.1, max: 20, step: 0.1 },
+  { group: 'Particles', key: 'brightness', path: 'Particles.brightness', label: 'Brightness', min: 0.1, max: 5, step: 0.1 },
+  { group: 'Particles', key: 'alpha', path: 'Particles.alpha', label: 'Alpha', min: 0.01, max: 1.0, step: 0.01 },
+  { group: 'Particles', key: 'maxDistance', path: 'Particles.maxDistance', label: 'Max Distance', min: 5, max: 150, step: 1 },
+
+  // Physics
+  { group: 'Physics', key: 'gravity', path: 'Physics.gravity', label: 'Gravity', min: 1000, max: 1000000, step: 10000 },
+  { group: 'Physics', key: 'timeScale', path: 'Physics.timeScale', label: 'Time Scale', min: 0.1, max: 30, step: 0.1 },
+  { group: 'Physics', key: 'softening', path: 'Physics.softening', label: 'Softening', min: 0.01, max: 10, step: 0.1 },
+  { group: 'Physics', key: 'orbitDecay', path: 'Physics.orbitDecay', label: 'Orbit Decay', min: 0, max: 20.0, step: 0.5 },
+  { group: 'Physics', key: 'iscoStrength', path: 'Physics.iscoStrength', label: 'ISCO Strength', min: 0, max: 1.0, step: 0.05 },
+  { group: 'Physics', key: 'iscoRatio', path: 'Physics.iscoRatio', label: 'ISCO Ratio', min: 2.0, max: 20.0, step: 1.0 },
+
+  // Emitters
+  { group: 'Emitters', key: 'emitRadius', path: 'Emitters.emitRadius', label: 'Emit Radius', min: 5, max: 200, step: 1 },
+  { group: 'Emitters', key: 'emitterCount', path: 'Emitters.emitterCount', label: 'Emitter Count', min: 1, max: 36, step: 1 },
+  { group: 'Emitters', key: 'emitterAngle', path: 'Emitters.emitterAngle', label: 'Emitter Angle', min: 0, max: 6.28, step: 0.1 },
+  { group: 'Emitters', key: 'emitterTilt', path: 'Emitters.emitterTilt', label: 'Emitter Tilt', min: -30, max: 30, step: 1 },
+  { group: 'Emitters', key: 'inwardAngle', path: 'Emitters.inwardAngle', label: 'Inward Angle', min: -1, max: 1, step: 0.01 },
+  { group: 'Emitters', key: 'spawnRate', path: 'Emitters.spawnRate', label: 'Spawn Rate', min: 0.1, max: 10, step: 0.1 },
+  { group: 'Emitters', key: 'emitterSpread', path: 'Emitters.emitterSpread', label: 'Emitter Spread', min: 0, max: 1.0, step: 0.01 },
+
+  // Audio
+  { group: 'Audio', key: 'amplitude', path: 'Audio.amplitude', label: 'Amplitude', min: 0, max: 20, step: 0.5 },
+  { group: 'Audio', key: 'onsetDecay', path: 'Audio.onsetDecay', label: 'Onset Decay', min: 0.8, max: 0.99, step: 0.01 },
+  { group: 'Audio', key: 'audioGain', path: 'Audio.audioGain', label: 'Audio Gain', min: 0, max: 3, step: 0.1 },
+  { group: 'Audio', key: 'beatRepulsion', path: 'Audio.beatRepulsion', label: 'Beat Repulsion', min: 0, max: 100, step: 1 },
+];
+
+export const EASE_FUNCTIONS = [
+  'none',
+  'power1.in',
+  'power1.out',
+  'power1.inOut',
+  'power2.in',
+  'power2.out',
+  'power2.inOut',
+  'power3.in',
+  'power3.out',
+  'power3.inOut',
+  'power4.in',
+  'power4.out',
+  'power4.inOut',
+  'back.in',
+  'back.out',
+  'back.inOut',
+  'elastic.in',
+  'elastic.out',
+  'elastic.inOut',
+  'bounce.in',
+  'bounce.out',
+  'bounce.inOut',
+  'circ.in',
+  'circ.out',
+  'circ.inOut',
+  'expo.in',
+  'expo.out',
+  'expo.inOut',
+  'sine.in',
+  'sine.out',
+  'sine.inOut',
+] as const;
+
+export type EaseFunction = (typeof EASE_FUNCTIONS)[number];

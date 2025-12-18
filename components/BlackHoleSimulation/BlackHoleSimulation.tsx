@@ -70,7 +70,7 @@ export function BlackHoleSimulation({ getFrequencyData, isAudioConnected, setOns
   });
 
   const audioControls = useControls('Audio', {
-    amplitude: { value: 10.0, min: 0, max: 20, step: 0.5 },
+    amplitude: { value: 5.0, min: 0, max: 20, step: 0.5 },
     onsetDecay: {
       value: 0.92,
       min: 0.8,
@@ -79,7 +79,7 @@ export function BlackHoleSimulation({ getFrequencyData, isAudioConnected, setOns
       onChange: (v: number) => setOnsetDecay(v),
     },
     audioGain: { value: 1.0, min: 0, max: 3, step: 0.1 },
-    beatRepulsion: { value: 0, min: 0, max: 100, step: 1 },
+    beatRepulsion: { value: 50, min: 0, max: 100, step: 1 },
   });
 
   const [beatIntensity, setBeatIntensity] = useState(0);
