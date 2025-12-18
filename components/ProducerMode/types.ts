@@ -55,4 +55,20 @@ export interface ProducerModeState {
   setIsTweening: (path: string, isTweening: boolean) => void;
   setProgress: (path: string, progress: number) => void;
   resetTween: (path: string, currentValue: number) => void;
+  resetAllTweens: () => void;
+}
+
+export interface PresetParameter {
+  path: string;
+  value: number;
+  duration: number;
+  ease: EaseFunction;
+}
+
+export interface Preset {
+  id: string;
+  name: string;
+  colorPalette: string;
+  parameters: PresetParameter[];
+  createdAt: number;
 }

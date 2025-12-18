@@ -103,6 +103,10 @@ export const useProducerMode = create<ProducerModeState>()(
           },
         }));
       },
+
+      resetAllTweens: () => {
+        set({ tweenStates: {} });
+      },
     }),
     {
       name: "producer-mode",

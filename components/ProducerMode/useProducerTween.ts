@@ -1,11 +1,13 @@
 import { useRef, useCallback, useEffect } from "react";
 import gsap from "gsap";
-import { useVisualizationControls } from "@/hooks/useVisualizationControls";
+import { useVisualizationControls, pathToKey } from "@/hooks/useVisualizationControls";
 import { useProducerMode } from "./useProducerMode";
 import type { ParameterConfig, EaseFunction } from "./types";
 
 export function useProducerTween(config: ParameterConfig) {
   const store = useVisualizationControls;
+  const stateKey = pathToKey[config.path];
+  const currentValue = useVisualizationControls((s) => s[stateKey]) as number;
   const {
     tweenStates,
     initParameter,
@@ -20,7 +22,6 @@ export function useProducerTween(config: ParameterConfig) {
   const tweenRef = useRef<gsap.core.Tween | null>(null);
   const tweenState = useRef({ value: 0, progress: 0 });
 
-  const currentValue = store.getState().getByPath(config.path) as number;
   const paramState = tweenStates[config.path];
 
   useEffect(() => {

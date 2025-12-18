@@ -51,11 +51,12 @@ interface VisualizationControlsActions {
   get: <K extends keyof VisualizationControlsState>(key: K) => VisualizationControlsState[K];
   setByPath: (path: string, value: unknown) => void;
   getByPath: (path: string) => unknown;
+  reset: () => void;
 }
 
 export type VisualizationControlsStore = VisualizationControlsState & VisualizationControlsActions;
 
-const pathToKey: Record<string, keyof VisualizationControlsState> = {
+export const pathToKey: Record<string, keyof VisualizationControlsState> = {
   "Black Hole.eventHorizonRadius": "eventHorizonRadius",
   "Black Hole.iscoRatio": "iscoRatio",
   "Black Hole.beatPulse": "beatPulse",
@@ -87,7 +88,7 @@ const pathToKey: Record<string, keyof VisualizationControlsState> = {
   "Audio.autoColorChange": "autoColorChange",
 };
 
-export const useVisualizationControls = create<VisualizationControlsStore>((set, get) => ({
+const DEFAULT_STATE: VisualizationControlsState = {
   // Black Hole defaults
   eventHorizonRadius: 5,
   iscoRatio: 3.0,
@@ -114,7 +115,7 @@ export const useVisualizationControls = create<VisualizationControlsStore>((set,
   emitterAngle: 0,
   emitterTilt: 0,
   inwardAngle: 0,
-  spawnRate: 1.0,
+  spawnRate: 0.7,
   emitterSpread: 0,
   showEmitters: false,
 
@@ -127,6 +128,10 @@ export const useVisualizationControls = create<VisualizationControlsStore>((set,
   audioGain: 2,
   beatRepulsion: 20,
   autoColorChange: true,
+};
+
+export const useVisualizationControls = create<VisualizationControlsStore>((set, get) => ({
+  ...DEFAULT_STATE,
 
   set: (key, value) => set({ [key]: value }),
 
@@ -146,4 +151,6 @@ export const useVisualizationControls = create<VisualizationControlsStore>((set,
     }
     return undefined;
   },
+
+  reset: () => set(DEFAULT_STATE),
 }));

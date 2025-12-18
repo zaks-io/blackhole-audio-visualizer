@@ -12,6 +12,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useProducerMode } from "./useProducerMode";
 import { ParameterGroup } from "./ParameterGroup";
+import { PresetControls } from "./PresetControls";
 import { PRODUCER_PARAMETERS } from "./producerConfig";
 import { PALETTE_IDS, PALETTES, type ColorPaletteId } from "@/components/ColorModeSystem";
 import { useVisualizationControls } from "@/hooks/useVisualizationControls";
@@ -45,6 +46,9 @@ export function ProducerModePanel() {
             <X className="h-4 w-4" />
           </Button>
         </div>
+
+        {/* Preset Controls */}
+        <PresetControls />
 
         {/* Parameter groups */}
         <div className="flex-1 overflow-y-auto px-3 py-2 scrollbar-thin">
