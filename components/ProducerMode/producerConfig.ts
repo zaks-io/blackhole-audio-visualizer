@@ -125,5 +125,5 @@ export const EASE_OPTIONS: { value: EaseFunction; label: string; group: string }
 
 export const DURATION_PRESETS = [1, 3, 5, 10, 15];
 
-export const DEFAULT_DURATION = 5;
+export const DEFAULT_DURATION = 3;
 export const DEFAULT_EASE: EaseFunction = "power2.inOut";

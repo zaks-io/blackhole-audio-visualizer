@@ -1,9 +1,7 @@
 "use client";
 
-import { Play, Square } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useState, useEffect, useCallback } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
 import { TweenSliderTrack } from "./TweenSliderTrack";
 import { EasingPicker } from "./EasingPicker";
 import { DurationPicker } from "./DurationPicker";
@@ -17,20 +15,36 @@ interface TweenSliderProps {
 export function TweenSlider({ config }: TweenSliderProps) {
   const {
     currentValue,
-    targetValue,
+    targetValue: storeTargetValue,
     duration,
     ease,
     isTweening,
     progress,
-    setTargetValue,
     setDuration,
     setEase,
     startTween,
-    cancelTween,
+    killTween,
   } = useProducerTween(config);
 
+  // Local state for dragging - avoids Zustand updates on every drag event
+  const [localTarget, setLocalTarget] = useState(storeTargetValue);
+
+  // Sync local state when store changes (e.g., after tween completes)
+  useEffect(() => {
+    setLocalTarget(storeTargetValue);
+  }, [storeTargetValue]);
+
+  // Handle commit - kill any running tween and start new one
+  const handleCommit = useCallback(
+    (value: number) => {
+      killTween();
+      startTween(value);
+    },
+    [killTween, startTween]
+  );
+
   const formatValue = config.formatValue || ((v: number) => v.toFixed(config.step < 1 ? 1 : 0));
-  const hasChange = Math.abs(targetValue - currentValue) > config.step;
+  const hasChange = Math.abs(localTarget - currentValue) > config.step;
 
   return (
     <div className="space-y-2">
@@ -46,7 +60,7 @@ export function TweenSlider({ config }: TweenSliderProps) {
               {hasChange && (
                 <>
                   <span className="text-muted-foreground/40">→</span>
-                  <span className="text-primary">{formatValue(targetValue)}</span>
+                  <span className="text-primary">{formatValue(localTarget)}</span>
                 </>
               )}
             </>
@@ -60,10 +74,11 @@ export function TweenSlider({ config }: TweenSliderProps) {
         max={config.max}
         step={config.step}
         currentValue={currentValue}
-        targetValue={targetValue}
+        targetValue={localTarget}
         progress={progress}
         isTweening={isTweening}
-        onTargetChange={setTargetValue}
+        onTargetChange={setLocalTarget}
+        onCommit={handleCommit}
       />
 
       {/* Controls row */}
@@ -72,7 +87,7 @@ export function TweenSlider({ config }: TweenSliderProps) {
           <Tooltip>
             <TooltipTrigger asChild>
               <div>
-                <EasingPicker value={ease} onChange={setEase} disabled={isTweening} />
+                <EasingPicker value={ease} onChange={setEase} />
               </div>
             </TooltipTrigger>
             <TooltipContent side="top" className="text-xs">
@@ -83,35 +98,11 @@ export function TweenSlider({ config }: TweenSliderProps) {
           <Tooltip>
             <TooltipTrigger asChild>
               <div>
-                <DurationPicker value={duration} onChange={setDuration} disabled={isTweening} />
+                <DurationPicker value={duration} onChange={setDuration} />
               </div>
             </TooltipTrigger>
             <TooltipContent side="top" className="text-xs">
               Duration ({duration}s)
-            </TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={isTweening ? cancelTween : startTween}
-                disabled={!hasChange && !isTweening}
-                className={cn(
-                  "h-7 w-7 rounded-md relative",
-                  isTweening
-                    ? "bg-primary/20 hover:bg-primary/30"
-                    : hasChange
-                      ? "hover:bg-primary/20"
-                      : "opacity-40"
-                )}
-              >
-                {isTweening ? <Square className="h-3 w-3" /> : <Play className="h-3.5 w-3.5" />}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="top" className="text-xs">
-              {isTweening ? "Stop" : "Play"}
             </TooltipContent>
           </Tooltip>
         </div>

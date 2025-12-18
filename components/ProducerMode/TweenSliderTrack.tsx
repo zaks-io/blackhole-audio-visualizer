@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useRef, useEffect } from "react";
 import * as SliderPrimitive from "@radix-ui/react-slider";
 import { cn } from "@/lib/utils";
 
@@ -13,6 +13,7 @@ interface TweenSliderTrackProps {
   progress: number;
   isTweening: boolean;
   onTargetChange: (value: number) => void;
+  onCommit?: (value: number) => void;
   disabled?: boolean;
 }
 
@@ -25,8 +26,30 @@ export function TweenSliderTrack({
   progress,
   isTweening,
   onTargetChange,
+  onCommit,
   disabled,
 }: TweenSliderTrackProps) {
+  const isDragging = useRef(false);
+  const latestValue = useRef(targetValue);
+
+  // Keep latest value in sync for the global listener
+  useEffect(() => {
+    latestValue.current = targetValue;
+  }, [targetValue]);
+
+  // Global pointer up listener to catch releases outside the component
+  useEffect(() => {
+    const handlePointerUp = () => {
+      if (isDragging.current) {
+        isDragging.current = false;
+        onCommit?.(latestValue.current);
+      }
+    };
+
+    window.addEventListener("pointerup", handlePointerUp);
+    return () => window.removeEventListener("pointerup", handlePointerUp);
+  }, [onCommit]);
+
   const currentPercent = useMemo(
     () => ((currentValue - min) / (max - min)) * 100,
     [currentValue, min, max]
@@ -48,8 +71,11 @@ export function TweenSliderTrack({
       max={max}
       step={step}
       value={[targetValue]}
+      onPointerDown={() => {
+        isDragging.current = true;
+      }}
       onValueChange={([value]) => onTargetChange(value)}
-      disabled={disabled || isTweening}
+      disabled={disabled}
     >
       <SliderPrimitive.Track className="relative h-2 w-full grow overflow-hidden rounded-full bg-white/10">
         {/* Current value fill (animated during tween) */}
@@ -78,10 +104,10 @@ export function TweenSliderTrack({
       {/* Ghost thumb for target */}
       <SliderPrimitive.Thumb
         className={cn(
-          "block size-4 rounded-full transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
+          "block size-4 rounded-full transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 cursor-grab active:cursor-grabbing",
           isTweening
-            ? "bg-primary/40 border-2 border-primary/60 cursor-not-allowed"
-            : "bg-transparent border-2 border-primary hover:bg-primary/20 cursor-grab active:cursor-grabbing"
+            ? "bg-primary/40 border-2 border-primary/60"
+            : "bg-transparent border-2 border-primary hover:bg-primary/20"
         )}
       />
     </SliderPrimitive.Root>
