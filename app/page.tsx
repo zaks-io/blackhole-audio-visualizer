@@ -39,7 +39,7 @@ export default function Home() {
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   const { debugPanelsVisible, tweenPanelVisible, fpsVisible } = useUIState();
 
-  const [triggers, setTriggers] = useState<AudioTriggers | null>(null);
+  const triggersRef = useRef<AudioTriggers | null>(null);
   const [autoMode, setAutoMode] = useState(true);
   const animationFrameRef = useRef<number>(0);
 
@@ -55,8 +55,7 @@ export default function Home() {
   // Process audio triggers in animation frame loop
   useEffect(() => {
     if (!isConnected) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- Cleanup on disconnect
-      setTriggers(null);
+      triggersRef.current = null;
       return;
     }
 
@@ -64,7 +63,7 @@ export default function Home() {
       const now = performance.now();
       const audioData = getFrequencyData(36);
       const newTriggers = processAudio(audioData, now);
-      setTriggers(newTriggers);
+      triggersRef.current = newTriggers;
       processTriggersForMode(newTriggers, now);
       animationFrameRef.current = requestAnimationFrame(processFrame);
     };
@@ -148,7 +147,7 @@ export default function Home() {
       {debugPanelsVisible && (
         <div className="fixed left-6 top-6 z-40">
           <AudioDebugPanel
-            triggers={triggers}
+            triggersRef={triggersRef}
             currentMode={getCurrentMode()}
             onModeChange={setMode}
             availableModes={availableModes}

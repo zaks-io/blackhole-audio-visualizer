@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useRef, useEffect } from "react";
 import { Environment } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { ParticleSystem } from "./ParticleSystem";
@@ -62,18 +62,18 @@ export function BlackHoleSimulation({
     setOnsetDecay(controls.onsetDecay);
   }, [controls.onsetDecay, setOnsetDecay]);
 
-  const [beatIntensity, setBeatIntensity] = useState(0);
+  const beatIntensityRef = useRef(0);
 
   useFrame((state) => {
     if (isAudioConnected) {
       const data = getFrequencyData(2);
       const beat = Math.max(data.bandOnsets[0] ?? 0, data.bandOnsets[1] ?? 0) * controls.audioGain;
-      setBeatIntensity(beat);
+      beatIntensityRef.current = beat;
       if (controls.autoColorChange) {
         colorMode.processBeat(beat, state.clock.elapsedTime);
       }
     } else {
-      setBeatIntensity(0);
+      beatIntensityRef.current = 0;
     }
   });
 
@@ -132,11 +132,8 @@ export function BlackHoleSimulation({
         emitterTilt={controls.emitterTilt}
         spawnRate={controls.spawnRate}
         inwardAngle={controls.inwardAngle}
-        iscoRadius={
-          controls.eventHorizonRadius *
-          controls.iscoRatio *
-          (1 + beatIntensity * controls.beatPulse)
-        }
+        iscoRadius={controls.eventHorizonRadius * controls.iscoRatio}
+        beatPulse={controls.beatPulse}
         iscoStrength={controls.iscoStrength}
         emitterSpread={controls.emitterSpread}
         audioAmplitude={controls.amplitude}
@@ -146,7 +143,7 @@ export function BlackHoleSimulation({
       />
       <BlackHole
         eventHorizonRadius={controls.eventHorizonRadius}
-        beatIntensity={beatIntensity}
+        beatIntensityRef={beatIntensityRef}
         beatPulse={controls.beatPulse}
       />
 

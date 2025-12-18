@@ -32,6 +32,7 @@ interface ParticleSystemProps {
   spawnRate: number;
   inwardAngle: number;
   iscoRadius: number;
+  beatPulse: number;
   iscoStrength: number;
   emitterSpread: number;
   audioAmplitude: number;
@@ -60,6 +61,7 @@ export function ParticleSystem({
   spawnRate,
   inwardAngle,
   iscoRadius,
+  beatPulse,
   iscoStrength,
   emitterSpread,
   audioAmplitude,
@@ -173,21 +175,22 @@ export function ParticleSystem({
     setEmitterTilt(emitterTilt);
     setSpawnRate(spawnRate);
     setInwardAngle(inwardAngle);
-    setISCORadius(iscoRadius);
     setISCOStrength(iscoStrength);
     setEmitterSpread(emitterSpread);
     setAudioAmplitude(audioAmplitude);
-
     setBeatRepulsion(beatRepulsion);
+
     if (audioEnabled) {
       const audioData = getAudioData(emitterCount);
       setBandOnsets(audioData.bandOnsets, audioData.bandCount);
       const beat = Math.max(audioData.bandOnsets[0] ?? 0, audioData.bandOnsets[1] ?? 0);
       setBeatIntensity(beat);
+      setISCORadius(iscoRadius * (1 + beat * beatPulse));
     } else {
       const emptyOnsets = new Float32Array(36);
       setBandOnsets(emptyOnsets, emitterCount);
       setBeatIntensity(0);
+      setISCORadius(iscoRadius);
     }
   });
 

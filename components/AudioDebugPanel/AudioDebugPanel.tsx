@@ -1,11 +1,12 @@
 "use client";
 
+import type { RefObject } from "react";
 import { useState, useRef, useEffect } from "react";
 import type { AudioTriggers } from "@/hooks/useAudioTriggers";
 import type { AnimationModeId } from "@/hooks/useAnimationModes";
 
 interface AudioDebugPanelProps {
-  triggers: AudioTriggers | null;
+  triggersRef: RefObject<AudioTriggers | null>;
   currentMode: AnimationModeId;
   onModeChange: (mode: AnimationModeId) => void;
   availableModes: AnimationModeId[];
@@ -99,7 +100,7 @@ function NoveltyGraph({ history }: { history: number[] }) {
 }
 
 export function AudioDebugPanel({
-  triggers,
+  triggersRef,
   currentMode,
   onModeChange,
   availableModes,
@@ -107,7 +108,19 @@ export function AudioDebugPanel({
   onAutoModeChange,
 }: AudioDebugPanelProps) {
   const [isVisible, setIsVisible] = useState(false);
+  const [triggers, setTriggers] = useState<AudioTriggers | null>(null);
   const [noveltyHistory, setNoveltyHistory] = useState<number[]>([]);
+
+  // Poll the ref at 10Hz for UI updates (debug panel doesn't need 60fps)
+  useEffect(() => {
+    if (!isVisible) return;
+
+    const interval = setInterval(() => {
+      setTriggers(triggersRef.current);
+    }, 100);
+
+    return () => clearInterval(interval);
+  }, [isVisible, triggersRef]);
 
   useEffect(() => {
     if (triggers) {
