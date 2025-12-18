@@ -6,7 +6,7 @@ import { NoToneMapping, SRGBColorSpace } from "three";
 import { BlackHoleSimulation } from "@/components/BlackHoleSimulation";
 import { FPSMeter } from "@/components/debug/FPSMeter";
 import { FPSTracker } from "@/hooks/useFPSMonitor";
-import { UIOverlay } from "@/components/layout";
+import { UIOverlay, ControlSidebar } from "@/components/layout";
 import { ProducerModePanel } from "@/components/ProducerMode";
 import { AudioDebugPanel } from "@/components/AudioDebugPanel";
 import { PermissionDialog } from "@/components/PermissionDialog";
@@ -94,12 +94,12 @@ export default function Home() {
   }, [isRecording, startRecording, stopRecording, getStream]);
 
   return (
-    <div className="w-screen h-screen grid grid-cols-[auto_1fr]">
-      {/* Producer Mode Panel - pushes content */}
+    <div className="w-screen h-screen grid grid-cols-[auto_1fr_auto]">
+      {/* Producer Mode Panel - pushes content from left */}
       <ProducerModePanel />
 
       {/* Main content area */}
-      <div className="relative w-full h-full">
+      <div className="relative w-full h-full min-w-0">
         <div ref={canvasContainerRef} className="w-full h-full">
           <Canvas
             camera={{ position: [0, 90, 150], fov: 60 }}
@@ -164,6 +164,9 @@ export default function Home() {
 
         {fpsVisible && <FPSMeter />}
       </div>
+
+      {/* Control Sidebar - pushes content from right */}
+      <ControlSidebar />
     </div>
   );
 }

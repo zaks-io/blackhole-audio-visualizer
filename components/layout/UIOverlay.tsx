@@ -1,7 +1,6 @@
 "use client";
 
 import { BottomControlBar } from "./BottomControlBar";
-import { ControlSidebar } from "./ControlSidebar";
 import type { CameraMode } from "@/components/CameraSystem";
 import type { AudioSourceType } from "@/hooks/useAudioSource";
 
@@ -53,9 +52,6 @@ export function UIOverlay({
         recordingDuration={recordingDuration}
         onRecordToggle={onRecordToggle}
       />
-
-      {/* Control Sidebar */}
-      <ControlSidebar />
 
       {/* Error Toast */}
       {recordingError && (
