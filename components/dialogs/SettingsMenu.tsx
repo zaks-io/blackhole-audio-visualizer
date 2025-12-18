@@ -1,6 +1,6 @@
 "use client";
 
-import { Settings, Activity, Sparkles, Gauge } from "lucide-react";
+import { Settings, Activity, Gauge } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
@@ -9,14 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { useUIState } from "@/hooks/useUIState";
 
 export function SettingsMenu() {
-  const {
-    debugPanelsVisible,
-    toggleDebugPanels,
-    tweenPanelVisible,
-    toggleTweenPanel,
-    fpsVisible,
-    toggleFPS,
-  } = useUIState();
+  const { debugPanelsVisible, toggleDebugPanels, fpsVisible, toggleFPS } = useUIState();
 
   return (
     <Popover>
@@ -40,19 +33,6 @@ export function SettingsMenu() {
               id="audio-debug"
               checked={debugPanelsVisible}
               onCheckedChange={toggleDebugPanels}
-            />
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-muted-foreground" />
-              <Label htmlFor="tween-panel" className="text-sm">
-                Property Tween
-              </Label>
-            </div>
-            <Switch
-              id="tween-panel"
-              checked={tweenPanelVisible}
-              onCheckedChange={toggleTweenPanel}
             />
           </div>
           <div className="flex items-center justify-between">

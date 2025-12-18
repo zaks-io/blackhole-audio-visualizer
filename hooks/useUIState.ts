@@ -4,12 +4,10 @@ import { persist } from "zustand/middleware";
 interface UIState {
   sidebarOpen: boolean;
   debugPanelsVisible: boolean;
-  tweenPanelVisible: boolean;
   fpsVisible: boolean;
   toggleSidebar: () => void;
   setSidebarOpen: (open: boolean) => void;
   toggleDebugPanels: () => void;
-  toggleTweenPanel: () => void;
   toggleFPS: () => void;
 }
 
@@ -18,12 +16,10 @@ export const useUIState = create<UIState>()(
     (set) => ({
       sidebarOpen: false,
       debugPanelsVisible: false,
-      tweenPanelVisible: false,
       fpsVisible: false,
       toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
       setSidebarOpen: (open) => set({ sidebarOpen: open }),
       toggleDebugPanels: () => set((state) => ({ debugPanelsVisible: !state.debugPanelsVisible })),
-      toggleTweenPanel: () => set((state) => ({ tweenPanelVisible: !state.tweenPanelVisible })),
       toggleFPS: () => set((state) => ({ fpsVisible: !state.fpsVisible })),
     }),
     {

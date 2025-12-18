@@ -1,6 +1,6 @@
 "use client";
 
-import { PanelRightOpen } from "lucide-react";
+import { PanelRightOpen, SlidersHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -9,6 +9,8 @@ import { AudioSourceButton } from "@/components/audio";
 import { RecordButton } from "@/components/recording";
 import { SettingsMenu } from "@/components/dialogs";
 import { useUIState } from "@/hooks/useUIState";
+import { useProducerMode } from "@/components/ProducerMode";
+import { cn } from "@/lib/utils";
 import type { CameraMode } from "@/components/CameraSystem";
 import type { AudioSourceType } from "@/hooks/useAudioSource";
 
@@ -43,10 +45,35 @@ export function BottomControlBar({
   onRecordToggle,
 }: BottomControlBarProps) {
   const { toggleSidebar } = useUIState();
+  const { isOpen: isProducerModeOpen, toggleOpen: toggleProducerMode } = useProducerMode();
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pb-6 pointer-events-none">
       <div className="glass-panel rounded-full px-4 py-2 flex items-center gap-2 pointer-events-auto">
+        {/* Producer Mode Toggle */}
+        <TooltipProvider delayDuration={300}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleProducerMode}
+                className={cn(
+                  "h-10 w-10 rounded-full",
+                  isProducerModeOpen && "bg-primary/20 text-primary"
+                )}
+              >
+                <SlidersHorizontal className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="text-xs">
+              Producer Mode
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+
+        <Separator orientation="vertical" className="h-6 mx-2" />
+
         {/* Camera Controls */}
         <CameraControls
           currentMode={currentCameraMode}
