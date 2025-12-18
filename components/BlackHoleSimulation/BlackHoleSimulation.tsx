@@ -125,6 +125,7 @@ export function BlackHoleSimulation({ getFrequencyData, isAudioConnected, setOns
       bandEnergies: data.bandEnergies,
       bandOnsets: scaledOnsets,
       bandCount: data.bandCount,
+      spectral: data.spectral,
     };
   };
 

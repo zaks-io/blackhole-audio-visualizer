@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback, useState, useEffect } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { Leva } from 'leva';
 import { NoToneMapping, SRGBColorSpace } from 'three';
@@ -9,17 +9,67 @@ import { MicToggleFab } from '@/components/MicToggleFab';
 import { RecordToggleFab } from '@/components/RecordToggleFab';
 import { CameraModeUI } from '@/components/CameraModeUI';
 import { TweenControlPanel } from '@/components/TweenControlPanel';
+import { AudioDebugPanel } from '@/components/AudioDebugPanel';
 import { useCameraMode } from '@/components/CameraSystem';
 import { useColorMode } from '@/components/ColorModeSystem';
 import { useMicrophone } from '@/hooks/useMicrophone';
 import { useRecording } from '@/hooks/useRecording';
+import { useAudioTriggers, type AudioTriggers } from '@/hooks/useAudioTriggers';
+import { useAnimationModes, type AnimationModeId } from '@/hooks/useAnimationModes';
 
 export default function Home() {
   const { connect, disconnect, getFrequencyData, isConnected, setOnsetDecay, getStream } = useMicrophone();
   const { isRecording, duration, error, startRecording, stopRecording } = useRecording();
+  const { processAudio, reset: resetTriggers } = useAudioTriggers();
   const cameraMode = useCameraMode();
   const colorMode = useColorMode();
   const canvasContainerRef = useRef<HTMLDivElement>(null);
+
+  const [triggers, setTriggers] = useState<AudioTriggers | null>(null);
+  const [autoMode, setAutoMode] = useState(true);
+  const animationFrameRef = useRef<number>(0);
+
+  const handleParamsChange = useCallback(() => {
+    // Params change handler for animation modes (will be wired to Leva later)
+  }, []);
+
+  const { setMode, getCurrentMode, availableModes, processTriggersForMode } = useAnimationModes({
+    onParamsChange: handleParamsChange,
+    autoMode,
+  });
+
+  // Process audio triggers in animation frame loop
+  useEffect(() => {
+    if (!isConnected) {
+      setTriggers(null);
+      return;
+    }
+
+    let lastTime = performance.now();
+
+    const processFrame = () => {
+      const now = performance.now();
+      const audioData = getFrequencyData(36);
+      const newTriggers = processAudio(audioData, now);
+      setTriggers(newTriggers);
+      processTriggersForMode(newTriggers, now);
+      lastTime = now;
+      animationFrameRef.current = requestAnimationFrame(processFrame);
+    };
+
+    animationFrameRef.current = requestAnimationFrame(processFrame);
+
+    return () => {
+      cancelAnimationFrame(animationFrameRef.current);
+    };
+  }, [isConnected, getFrequencyData, processAudio, processTriggersForMode]);
+
+  // Reset triggers when disconnecting
+  useEffect(() => {
+    if (!isConnected) {
+      resetTriggers();
+    }
+  }, [isConnected, resetTriggers]);
 
   const handleMicToggle = () => {
     if (isConnected) {
@@ -88,6 +138,14 @@ export default function Home() {
         isTransitioning={cameraMode.isTransitioning}
       />
       <TweenControlPanel />
+      <AudioDebugPanel
+        triggers={triggers}
+        currentMode={getCurrentMode()}
+        onModeChange={setMode}
+        availableModes={availableModes}
+        autoMode={autoMode}
+        onAutoModeChange={setAutoMode}
+      />
     </div>
   );
 }
