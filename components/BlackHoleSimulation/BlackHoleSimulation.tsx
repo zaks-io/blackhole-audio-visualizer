@@ -44,8 +44,8 @@ interface BlackHoleSimulationProps {
 
 export function BlackHoleSimulation({ getFrequencyData, isAudioConnected, setOnsetDecay, cameraMode, colorMode }: BlackHoleSimulationProps) {
   const blackHoleControls = useControls('Black Hole', {
-    eventHorizonRadius: { value: 3.0, min: 0.5, max: 20, step: 0.5 },
-    beatPulse: { value: 0.5, min: 0, max: 2, step: 0.1 },
+    eventHorizonRadius: { value: 5, min: 0.5, max: 20, step: 0.5 },
+    beatPulse: { value: 2, min: 0, max: 2, step: 0.1 },
   });
 
   const particleControls = useControls('Particles', {
@@ -94,7 +94,7 @@ export function BlackHoleSimulation({ getFrequencyData, isAudioConnected, setOns
       onChange: (v: number) => setOnsetDecay(v),
     },
     audioGain: { value: 1.0, min: 0, max: 3, step: 0.1 },
-    beatRepulsion: { value: 50, min: 0, max: 100, step: 1 },
+    beatRepulsion: { value: 100, min: 0, max: 100, step: 1 },
     autoColorChange: { value: true },
   });
 
