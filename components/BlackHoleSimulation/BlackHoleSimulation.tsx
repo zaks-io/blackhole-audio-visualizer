@@ -1,7 +1,8 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { OrbitControls, Environment } from '@react-three/drei';
+import { useFrame } from '@react-three/fiber';
 import { useControls } from 'leva';
 import { ParticleSystem } from './ParticleSystem';
 import { BlackHole } from './BlackHole';
@@ -24,6 +25,7 @@ interface BlackHoleSimulationProps {
 export function BlackHoleSimulation({ getFrequencyData, isAudioConnected, setOnsetDecay }: BlackHoleSimulationProps) {
   const blackHoleControls = useControls('Black Hole', {
     eventHorizonRadius: { value: 3.0, min: 0.5, max: 20, step: 0.5 },
+    beatPulse: { value: 0.5, min: 0, max: 2, step: 0.1 },
   });
 
   const particleControls = useControls('Particles', {
@@ -67,6 +69,19 @@ export function BlackHoleSimulation({ getFrequencyData, isAudioConnected, setOns
       onChange: (v: number) => setOnsetDecay(v),
     },
     audioGain: { value: 1.0, min: 0, max: 3, step: 0.1 },
+    beatRepulsion: { value: 0, min: 0, max: 100, step: 1 },
+  });
+
+  const [beatIntensity, setBeatIntensity] = useState(0);
+
+  useFrame(() => {
+    if (isAudioConnected) {
+      const data = getFrequencyData(2);
+      const beat = Math.max(data.bandOnsets[0] ?? 0, data.bandOnsets[1] ?? 0) * audioControls.audioGain;
+      setBeatIntensity(beat);
+    } else {
+      setBeatIntensity(0);
+    }
   });
 
   const getAudioData = (bandCount: number): AudioData => {
@@ -123,10 +138,11 @@ export function BlackHoleSimulation({ getFrequencyData, isAudioConnected, setOns
         iscoStrength={physicsControls.iscoStrength}
         emitterSpread={emitterControls.emitterSpread}
         audioAmplitude={audioControls.amplitude}
+        beatRepulsion={audioControls.beatRepulsion}
         getAudioData={getAudioData}
         audioEnabled={isAudioConnected}
       />
-      <BlackHole eventHorizonRadius={blackHoleControls.eventHorizonRadius} />
+      <BlackHole eventHorizonRadius={blackHoleControls.eventHorizonRadius} beatIntensity={beatIntensity} beatPulse={blackHoleControls.beatPulse} />
 
       {/* Emitter position indicators */}
       {emitterControls.showEmitters &&

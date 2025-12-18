@@ -9,6 +9,8 @@ uniform float uInwardAngle;
 uniform float uISCORadius;
 uniform float uISCOStrength;
 uniform float uEmitterSpread;
+uniform float uBeatIntensity;
+uniform float uBeatRepulsion;
 uniform bool uDoKick;
 
 // 1D hash that explicitly breaks grid correlation by combining x and y
@@ -95,6 +97,12 @@ void main() {
 
             // Half-step kick
             vel -= r_hat * accel * uDeltaTime * 0.5;
+
+            // Beat-reactive repulsion from center (scaled relative to gravity)
+            if (uBeatRepulsion > 0.0 && uBeatIntensity > 0.0) {
+                float repulsionAccel = uBeatIntensity * (uBeatRepulsion / 100.0) * accel;
+                vel += r_hat * repulsionAccel * uDeltaTime * 0.5;
+            }
 
             // GLOBAL: Cap velocity below escape velocity so particles can NEVER escape
             // Escape velocity = sqrt(2 * GM / r), we cap at fraction of that

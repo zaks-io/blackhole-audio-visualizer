@@ -42,6 +42,7 @@ interface ParticleSystemProps {
   iscoStrength: number;
   emitterSpread: number;
   audioAmplitude: number;
+  beatRepulsion: number;
   getAudioData: (bandCount: number) => AudioData;
   audioEnabled: boolean;
 }
@@ -67,6 +68,7 @@ export function ParticleSystem({
   iscoStrength,
   emitterSpread,
   audioAmplitude,
+  beatRepulsion,
   getAudioData,
   audioEnabled,
 }: ParticleSystemProps) {
@@ -87,6 +89,8 @@ export function ParticleSystem({
     setISCORadius,
     setISCOStrength,
     setEmitterSpread,
+    setBeatIntensity,
+    setBeatRepulsion,
     setBandOnsets,
     setAudioAmplitude,
   } = useGPUCompute();
@@ -174,12 +178,16 @@ export function ParticleSystem({
     setEmitterSpread(emitterSpread);
     setAudioAmplitude(audioAmplitude);
 
+    setBeatRepulsion(beatRepulsion);
     if (audioEnabled) {
       const audioData = getAudioData(emitterCount);
       setBandOnsets(audioData.bandOnsets, audioData.bandCount);
+      const beat = Math.max(audioData.bandOnsets[0] ?? 0, audioData.bandOnsets[1] ?? 0);
+      setBeatIntensity(beat);
     } else {
       const emptyOnsets = new Float32Array(36);
       setBandOnsets(emptyOnsets, emitterCount);
+      setBeatIntensity(0);
     }
   });
 

@@ -118,6 +118,8 @@ export function useGPUCompute() {
     velocityVariable.material.uniforms.uISCORadius = { value: 9.0 };
     velocityVariable.material.uniforms.uISCOStrength = { value: 0.5 };
     velocityVariable.material.uniforms.uEmitterSpread = { value: 0.1 };
+    velocityVariable.material.uniforms.uBeatIntensity = { value: 0.0 };
+    velocityVariable.material.uniforms.uBeatRepulsion = { value: 0.0 };
     velocityVariable.material.uniforms.uDoKick = { value: false };
 
     // Set dependencies: position and velocity both depend on each other
@@ -277,6 +279,18 @@ export function useGPUCompute() {
     }
   }, []);
 
+  const setBeatIntensity = useCallback((value: number) => {
+    if (velocityVariableRef.current) {
+      velocityVariableRef.current.material.uniforms.uBeatIntensity.value = value;
+    }
+  }, []);
+
+  const setBeatRepulsion = useCallback((value: number) => {
+    if (velocityVariableRef.current) {
+      velocityVariableRef.current.material.uniforms.uBeatRepulsion.value = value;
+    }
+  }, []);
+
   const setBandOnsets = useCallback((onsets: Float32Array, count: number) => {
     if (!bandOnsetsTextureRef.current) return;
     const data = bandOnsetsTextureRef.current.image.data as Float32Array;
@@ -309,6 +323,8 @@ export function useGPUCompute() {
     setISCORadius,
     setISCOStrength,
     setEmitterSpread,
+    setBeatIntensity,
+    setBeatRepulsion,
     setBandOnsets,
     setAudioAmplitude,
   };
