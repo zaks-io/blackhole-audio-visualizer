@@ -10,4 +10,5 @@ export interface CameraPreset {
   rotateAxis: RotateAxis;
   orbitRadius?: number;
   verticalSpeed?: number;
+  startingAngles?: { horizontal: number; vertical: number };
 }

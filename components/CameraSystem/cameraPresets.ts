@@ -19,11 +19,12 @@ export const flybyPreset: CameraPreset = {
 export const topdownPreset: CameraPreset = {
   id: "topdown",
   name: "Top View",
-  position: [0, 150, 50],
+  position: [0, 150, 50], // Fallback, actual position computed from startingAngles
   rotateSpeed: 0.5,
   rotateAxis: "spherical",
   orbitRadius: 150,
   verticalSpeed: 0.2,
+  startingAngles: { horizontal: 0, vertical: -Math.PI / 2 },
 };
 
 export const PRESETS: Record<Exclude<CameraMode, "free">, CameraPreset> = {

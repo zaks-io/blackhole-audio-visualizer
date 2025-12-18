@@ -47,35 +47,64 @@ export function CameraSystem({ mode, onTransitionComplete, timelineRef }: Camera
     const currentPos = { x: camera.position.x, y: camera.position.y, z: camera.position.z };
 
     if (preset.rotateAxis === "spherical") {
-      isSphericalModeRef.current = true;
+      // Don't enable spherical mode yet - wait until transition completes
+      isSphericalModeRef.current = false;
+      const radius = preset.orbitRadius ?? 150;
       sphericalParamsRef.current = {
-        radius: preset.orbitRadius ?? 150,
+        radius,
         hSpeed: preset.rotateSpeed,
         vSpeed: preset.verticalSpeed ?? 0.2,
       };
       controls.autoRotate = false;
 
+      // Use startingAngles to compute target position (same formula as useFrame)
+      const targetH = preset.startingAngles?.horizontal ?? 0;
+      const targetV = preset.startingAngles?.vertical ?? Math.PI / 4;
+      const phi = 0.3 + (Math.sin(targetV) + 1) * 1.25;
+      const computedTarget = {
+        x: radius * Math.sin(phi) * Math.sin(targetH),
+        y: radius * Math.cos(phi),
+        z: radius * Math.sin(phi) * Math.cos(targetH),
+      };
+
+      const currentAngles = { h: anglesRef.current.horizontal, v: anglesRef.current.vertical };
+
       const tl = gsap.timeline({
         onUpdate: () => {
           camera.position.set(currentPos.x, currentPos.y, currentPos.z);
+          anglesRef.current.horizontal = currentAngles.h;
+          anglesRef.current.vertical = currentAngles.v;
           camera.lookAt(0, 0, 0);
         },
         onComplete: () => {
-          const r = sphericalParamsRef.current.radius;
-          const pos = camera.position;
-          anglesRef.current.horizontal = Math.atan2(pos.x, pos.z);
-          anglesRef.current.vertical = Math.acos(pos.y / r);
+          // Now enable spherical mode so useFrame takes over
+          isSphericalModeRef.current = true;
           onTransitionComplete();
         },
       });
 
-      tl.to(currentPos, {
-        x: targetPos[0],
-        y: targetPos[1],
-        z: targetPos[2],
-        duration: 1.5,
-        ease: "power2.inOut",
-      });
+      tl.to(
+        currentPos,
+        {
+          x: computedTarget.x,
+          y: computedTarget.y,
+          z: computedTarget.z,
+          duration: 1.5,
+          ease: "power2.inOut",
+        },
+        0
+      );
+
+      tl.to(
+        currentAngles,
+        {
+          h: targetH,
+          v: targetV,
+          duration: 1.5,
+          ease: "power2.inOut",
+        },
+        0
+      );
 
       timelineRef.current = tl;
     } else {
