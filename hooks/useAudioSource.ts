@@ -1,15 +1,15 @@
-'use client';
+"use client";
 
-import { useState, useCallback } from 'react';
-import { useMicrophone, type AudioData } from './useMicrophone';
+import { useState, useCallback } from "react";
+import { useMicrophone, type AudioData } from "./useMicrophone";
 import {
   isElectron,
   getSystemAudioStream,
   getScreenPermissionStatus,
   requestScreenPermission,
-} from '@/lib/platform';
+} from "@/lib/platform";
 
-export type AudioSourceType = 'microphone' | 'system';
+export type AudioSourceType = "microphone" | "system";
 
 export interface UseAudioSourceReturn {
   connect: (sourceType?: AudioSourceType) => Promise<void>;
@@ -44,26 +44,26 @@ export function useAudioSource(): UseAudioSourceReturn {
   }, []);
 
   const connect = useCallback(
-    async (type: AudioSourceType = 'microphone') => {
+    async (type: AudioSourceType = "microphone") => {
       if (microphone.isConnected) {
         microphone.disconnect();
       }
 
-      if (type === 'system') {
+      if (type === "system") {
         if (!canUseSystemAudio) {
-          console.warn('System audio capture is only available in Electron');
+          console.warn("System audio capture is only available in Electron");
           return;
         }
 
         // Check permission first
         const permissionStatus = await getScreenPermissionStatus();
-        if (permissionStatus !== 'granted') {
+        if (permissionStatus !== "granted") {
           // Try to trigger permission prompt
           await requestScreenPermission();
 
           // Check again
           const newStatus = await getScreenPermissionStatus();
-          if (newStatus !== 'granted') {
+          if (newStatus !== "granted") {
             // Show dialog to guide user
             setShowPermissionDialog(true);
             return;
@@ -73,21 +73,21 @@ export function useAudioSource(): UseAudioSourceReturn {
         const stream = await getSystemAudioStream();
         if (stream) {
           await microphone.connect(stream);
-          setSourceType('system');
+          setSourceType("system");
         } else {
           // Stream failed, show permission dialog
           setShowPermissionDialog(true);
         }
       } else {
         await microphone.connect();
-        setSourceType('microphone');
+        setSourceType("microphone");
       }
     },
     [microphone, canUseSystemAudio]
   );
 
   const disconnect = useCallback(() => {
-    if (sourceType === 'system' && window.electronAPI?.disableLoopbackAudio) {
+    if (sourceType === "system" && window.electronAPI?.disableLoopbackAudio) {
       window.electronAPI.disableLoopbackAudio();
     }
     microphone.disconnect();

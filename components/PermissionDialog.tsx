@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 interface PermissionDialogProps {
   isOpen: boolean;
@@ -25,7 +25,9 @@ export function PermissionDialog({ isOpen, onClose, onOpenSettings }: Permission
                 <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
               </svg>
             </div>
-            <h2 className="text-xl font-semibold text-white">Screen Recording Permission Required</h2>
+            <h2 className="text-xl font-semibold text-white">
+              Screen Recording Permission Required
+            </h2>
           </div>
 
           <p className="text-gray-300 mb-4">
@@ -36,7 +38,7 @@ export function PermissionDialog({ isOpen, onClose, onOpenSettings }: Permission
           <div className="bg-gray-800 rounded-lg p-4 mb-6">
             <h3 className="text-sm font-medium text-gray-200 mb-2">How to enable:</h3>
             <ol className="text-sm text-gray-400 space-y-1 list-decimal list-inside">
-              <li>Click "Open Settings" below</li>
+              <li>Click &quot;Open Settings&quot; below</li>
               <li>Find and enable this app in the list</li>
               <li>Restart the app for changes to take effect</li>
             </ol>

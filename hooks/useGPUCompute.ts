@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { useRef, useMemo, useEffect, useCallback } from 'react';
-import { useThree, useFrame } from '@react-three/fiber';
-import { GPUComputationRenderer } from 'three/examples/jsm/misc/GPUComputationRenderer.js';
-import type { Variable } from 'three/examples/jsm/misc/GPUComputationRenderer.js';
-import * as THREE from 'three';
+import { useRef, useMemo, useEffect, useCallback } from "react";
+import { useThree, useFrame } from "@react-three/fiber";
+import { GPUComputationRenderer } from "three/examples/jsm/misc/GPUComputationRenderer.js";
+import type { Variable } from "three/examples/jsm/misc/GPUComputationRenderer.js";
+import * as THREE from "three";
 import {
   DEFAULT_TEXTURE_SIZE,
   EMISSION_RADIUS,
@@ -12,9 +12,9 @@ import {
   DEFAULT_SOFTENING,
   createInitialPositionTexture,
   createInitialVelocityTexture,
-} from '@/lib/gpu/verletPhysics';
-import positionFragmentShader from '@/shaders/simulation/positionFragment.glsl';
-import velocityFragmentShader from '@/shaders/simulation/velocityFragment.glsl';
+} from "@/lib/gpu/verletPhysics";
+import positionFragmentShader from "@/shaders/simulation/positionFragment.glsl";
+import velocityFragmentShader from "@/shaders/simulation/velocityFragment.glsl";
 
 const MAX_BANDS = 36;
 
@@ -48,9 +48,9 @@ export function useGPUCompute(textureSize: number = DEFAULT_TEXTURE_SIZE) {
     const gpuCompute = new GPUComputationRenderer(textureSize, textureSize, gl);
 
     if (!gl.capabilities.isWebGL2) {
-      const ext = gl.extensions.get('OES_texture_float');
+      const ext = gl.extensions.get("OES_texture_float");
       if (!ext) {
-        console.error('Float textures not supported');
+        console.error("Float textures not supported");
         return;
       }
     }
@@ -74,14 +74,14 @@ export function useGPUCompute(textureSize: number = DEFAULT_TEXTURE_SIZE) {
     // Add velocity variable FIRST so it runs before position
     // Both shaders need to see the same state to detect spawn condition
     const velocityVariable = gpuCompute.addVariable(
-      'textureVelocity',
+      "textureVelocity",
       velocityFragmentShader,
       velocityTexture
     );
 
     // Add position variable second
     const positionVariable = gpuCompute.addVariable(
-      'texturePosition',
+      "texturePosition",
       positionFragmentShader,
       positionTexture
     );
@@ -129,7 +129,7 @@ export function useGPUCompute(textureSize: number = DEFAULT_TEXTURE_SIZE) {
 
     const error = gpuCompute.init();
     if (error !== null) {
-      console.error('GPUComputationRenderer error:', error);
+      console.error("GPUComputationRenderer error:", error);
       return;
     }
 

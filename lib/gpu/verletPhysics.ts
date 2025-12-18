@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+import * as THREE from "three";
 
 export const DEFAULT_TEXTURE_SIZE = 512;
 export const EMISSION_RADIUS = 20.0;

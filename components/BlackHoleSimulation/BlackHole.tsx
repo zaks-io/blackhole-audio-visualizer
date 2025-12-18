@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useRef } from 'react';
-import { useFrame } from '@react-three/fiber';
-import * as THREE from 'three';
+import { useRef } from "react";
+import { useFrame } from "@react-three/fiber";
+import * as THREE from "three";
 
 interface BlackHoleProps {
   eventHorizonRadius: number;
@@ -10,7 +10,11 @@ interface BlackHoleProps {
   beatPulse?: number;
 }
 
-export function BlackHole({ eventHorizonRadius, beatIntensity = 0, beatPulse = 0.3 }: BlackHoleProps) {
+export function BlackHole({
+  eventHorizonRadius,
+  beatIntensity = 0,
+  beatPulse = 0.3,
+}: BlackHoleProps) {
   const meshRef = useRef<THREE.Mesh>(null);
 
   useFrame(() => {

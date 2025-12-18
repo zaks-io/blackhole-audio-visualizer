@@ -1,14 +1,14 @@
-'use client';
+"use client";
 
-import { useRef, useMemo } from 'react';
-import { useFrame } from '@react-three/fiber';
-import * as THREE from 'three';
-import { useGPUCompute } from '@/hooks/useGPUCompute';
-import { DEFAULT_TEXTURE_SIZE } from '@/lib/gpu/verletPhysics';
-import type { AudioData } from '@/hooks/useMicrophone';
-import particleVertexShader from '@/shaders/particles/particleVertex.glsl';
-import particleFragmentShader from '@/shaders/particles/particleFragment.glsl';
-import { getAllColors } from '@/components/ColorModeSystem';
+import { useRef, useMemo } from "react";
+import { useFrame } from "@react-three/fiber";
+import * as THREE from "three";
+import { useGPUCompute } from "@/hooks/useGPUCompute";
+import { DEFAULT_TEXTURE_SIZE } from "@/lib/gpu/verletPhysics";
+import type { AudioData } from "@/hooks/useMicrophone";
+import particleVertexShader from "@/shaders/particles/particleVertex.glsl";
+import particleFragmentShader from "@/shaders/particles/particleFragment.glsl";
+import { getAllColors } from "@/components/ColorModeSystem";
 
 const DEFAULT_ALL_COLORS = getAllColors();
 
@@ -134,6 +134,7 @@ export function ParticleSystem({
       uEventHorizon: { value: eventHorizonRadius },
       uISCORadius: { value: iscoRadius },
     }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- Initial values only, updated in useFrame
     []
   );
 
@@ -193,14 +194,8 @@ export function ParticleSystem({
   return (
     <points frustumCulled={false}>
       <bufferGeometry>
-        <bufferAttribute
-          attach="attributes-position"
-          args={[positions, 3]}
-        />
-        <bufferAttribute
-          attach="attributes-reference"
-          args={[references, 2]}
-        />
+        <bufferAttribute attach="attributes-position" args={[positions, 3]} />
+        <bufferAttribute attach="attributes-reference" args={[references, 2]} />
       </bufferGeometry>
       <shaderMaterial
         ref={materialRef}

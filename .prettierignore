@@ -1,0 +1,7 @@
+.next
+out
+build
+dist-electron
+release
+node_modules
+*.glsl

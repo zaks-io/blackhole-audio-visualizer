@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useRef, useMemo } from 'react';
-import { useThree, useFrame } from '@react-three/fiber';
-import * as THREE from 'three';
+import { useRef, useMemo } from "react";
+import { useThree, useFrame } from "@react-three/fiber";
+import * as THREE from "three";
 
 const trailVertexShader = `
 varying vec2 vUv;
@@ -74,6 +74,7 @@ export function useTrailFBO(width: number, height: number, attenuation = 0.96) {
     const currentTarget = renderTargets[currentIndex];
     const previousTarget = renderTargets[previousIndex];
 
+    // eslint-disable-next-line react-hooks/immutability -- Shader uniforms must be mutated
     fadeMaterial.uniforms.uPreviousFrame.value = previousTarget.texture;
     gl.setRenderTarget(currentTarget);
     gl.render(fadeScene, fadeCamera);

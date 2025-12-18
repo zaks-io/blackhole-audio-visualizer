@@ -1,9 +1,9 @@
-export type CameraMode = 'free' | 'orbital' | 'flyby' | 'topdown';
+export type CameraMode = "free" | "orbital" | "flyby" | "topdown";
 
-export type RotateAxis = 'horizontal' | 'spherical';
+export type RotateAxis = "horizontal" | "spherical";
 
 export interface CameraPreset {
-  id: Exclude<CameraMode, 'free'>;
+  id: Exclude<CameraMode, "free">;
   name: string;
   position: [number, number, number];
   rotateSpeed: number;

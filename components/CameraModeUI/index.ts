@@ -1,1 +1,1 @@
-export { CameraModeUI } from './CameraModeUI';
+export { CameraModeUI } from "./CameraModeUI";

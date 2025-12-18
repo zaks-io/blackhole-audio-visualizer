@@ -1,4 +1,4 @@
-import type { PropertyConfig, EaseFunction } from './propertyRegistry';
+import type { PropertyConfig, EaseFunction } from "./propertyRegistry";
 
 export interface TweenState {
   selectedProperty: PropertyConfig | null;

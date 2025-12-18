@@ -1,14 +1,22 @@
-'use client';
+"use client";
 
-import { useMemo, useState } from 'react';
-import { PROPERTY_REGISTRY, EASE_FUNCTIONS } from './propertyRegistry';
-import { useTweenControl } from './useTweenControl';
-import type { EaseFunction } from './propertyRegistry';
+import { useMemo, useState } from "react";
+import { PROPERTY_REGISTRY, EASE_FUNCTIONS } from "./propertyRegistry";
+import { useTweenControl } from "./useTweenControl";
+import type { EaseFunction } from "./propertyRegistry";
 
 export function TweenControlPanel() {
   const [isVisible, setIsVisible] = useState(true);
-  const { state, currentValue, setSelectedProperty, setTargetValue, setDuration, setEase, startTween, cancelTween } =
-    useTweenControl();
+  const {
+    state,
+    currentValue,
+    setSelectedProperty,
+    setTargetValue,
+    setDuration,
+    setEase,
+    startTween,
+    cancelTween,
+  } = useTweenControl();
 
   const { selectedProperty, targetValue, duration, ease, isTweening, progress } = state;
 
@@ -43,7 +51,12 @@ export function TweenControlPanel() {
           className="text-gray-400 hover:text-white"
           title="Hide panel"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+            className="h-5 w-5"
+          >
             <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
           </svg>
         </button>
@@ -53,7 +66,7 @@ export function TweenControlPanel() {
         <label className="mb-1 block text-xs text-gray-400">Property</label>
         <select
           className="w-full rounded border border-gray-600 bg-gray-800 px-2 py-1.5 text-sm text-white focus:border-blue-500 focus:outline-none"
-          value={selectedProperty?.path ?? ''}
+          value={selectedProperty?.path ?? ""}
           onChange={(e) => {
             const prop = PROPERTY_REGISTRY.find((p) => p.path === e.target.value);
             setSelectedProperty(prop ?? null);
@@ -76,7 +89,7 @@ export function TweenControlPanel() {
         <>
           <div className="mb-3 flex items-center justify-between">
             <span className="text-xs text-gray-400">Current</span>
-            <span className="font-mono text-sm text-white">{currentValue?.toFixed(2) ?? '-'}</span>
+            <span className="font-mono text-sm text-white">{currentValue?.toFixed(2) ?? "-"}</span>
           </div>
 
           <div className="mb-3">
@@ -126,10 +139,7 @@ export function TweenControlPanel() {
             <div className="mb-3">
               <div className="mb-1 text-xs text-gray-400">{Math.round(progress * 100)}%</div>
               <div className="h-2 w-full overflow-hidden rounded-full bg-gray-700">
-                <div
-                  className="h-full bg-blue-500"
-                  style={{ width: `${progress * 100}%` }}
-                />
+                <div className="h-full bg-blue-500" style={{ width: `${progress * 100}%` }} />
               </div>
             </div>
           )}

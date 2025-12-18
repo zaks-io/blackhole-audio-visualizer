@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback } from "react";
 
 interface RecordingState {
   isRecording: boolean;
@@ -10,10 +10,10 @@ interface RecordingState {
 
 function downloadRecording(blob: Blob) {
   const url = URL.createObjectURL(blob);
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
   const filename = `visualization-${timestamp}.webm`;
 
-  const a = document.createElement('a');
+  const a = document.createElement("a");
   a.href = url;
   a.download = filename;
   document.body.appendChild(a);
@@ -44,11 +44,11 @@ export function useRecording(fps = 60, videoBitsPerSecond = 100_000_000) {
 
   const startRecording = useCallback(
     (canvas: HTMLCanvasElement, audioStream: MediaStream | null) => {
-      const vpCodecs = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
+      const vpCodecs = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"];
       const mimeType = vpCodecs.find((codec) => MediaRecorder.isTypeSupported(codec));
 
       if (!mimeType) {
-        setState((prev) => ({ ...prev, error: 'WebM recording not supported in this browser' }));
+        setState((prev) => ({ ...prev, error: "WebM recording not supported in this browser" }));
         return false;
       }
 
@@ -85,7 +85,7 @@ export function useRecording(fps = 60, videoBitsPerSecond = 100_000_000) {
       mediaRecorder.onerror = () => {
         setState((prev) => ({
           ...prev,
-          error: 'Recording error occurred',
+          error: "Recording error occurred",
           isRecording: false,
         }));
         cleanupInterval();

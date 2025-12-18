@@ -1,22 +1,22 @@
-'use client';
+"use client";
 
-import { useRef, useCallback, useState, useEffect } from 'react';
-import { Canvas } from '@react-three/fiber';
-import { Leva } from 'leva';
-import { NoToneMapping, SRGBColorSpace } from 'three';
-import { BlackHoleSimulation } from '@/components/BlackHoleSimulation';
-import { MicToggleFab } from '@/components/MicToggleFab';
-import { RecordToggleFab } from '@/components/RecordToggleFab';
-import { CameraModeUI } from '@/components/CameraModeUI';
-import { TweenControlPanel } from '@/components/TweenControlPanel';
-import { AudioDebugPanel } from '@/components/AudioDebugPanel';
-import { PermissionDialog } from '@/components/PermissionDialog';
-import { useCameraMode } from '@/components/CameraSystem';
-import { useColorMode } from '@/components/ColorModeSystem';
-import { useAudioSource } from '@/hooks/useAudioSource';
-import { useRecording } from '@/hooks/useRecording';
-import { useAudioTriggers, type AudioTriggers } from '@/hooks/useAudioTriggers';
-import { useAnimationModes, type AnimationModeId } from '@/hooks/useAnimationModes';
+import { useRef, useCallback, useState, useEffect } from "react";
+import { Canvas } from "@react-three/fiber";
+import { Leva } from "leva";
+import { NoToneMapping, SRGBColorSpace } from "three";
+import { BlackHoleSimulation } from "@/components/BlackHoleSimulation";
+import { MicToggleFab } from "@/components/MicToggleFab";
+import { RecordToggleFab } from "@/components/RecordToggleFab";
+import { CameraModeUI } from "@/components/CameraModeUI";
+import { TweenControlPanel } from "@/components/TweenControlPanel";
+import { AudioDebugPanel } from "@/components/AudioDebugPanel";
+import { PermissionDialog } from "@/components/PermissionDialog";
+import { useCameraMode } from "@/components/CameraSystem";
+import { useColorMode } from "@/components/ColorModeSystem";
+import { useAudioSource } from "@/hooks/useAudioSource";
+import { useRecording } from "@/hooks/useRecording";
+import { useAudioTriggers, type AudioTriggers } from "@/hooks/useAudioTriggers";
+import { useAnimationModes } from "@/hooks/useAnimationModes";
 
 export default function Home() {
   const {
@@ -54,11 +54,10 @@ export default function Home() {
   // Process audio triggers in animation frame loop
   useEffect(() => {
     if (!isConnected) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Cleanup on disconnect
       setTriggers(null);
       return;
     }
-
-    let lastTime = performance.now();
 
     const processFrame = () => {
       const now = performance.now();
@@ -66,7 +65,6 @@ export default function Home() {
       const newTriggers = processAudio(audioData, now);
       setTriggers(newTriggers);
       processTriggersForMode(newTriggers, now);
-      lastTime = now;
       animationFrameRef.current = requestAnimationFrame(processFrame);
     };
 
@@ -88,7 +86,7 @@ export default function Home() {
     if (isRecording) {
       stopRecording();
     } else {
-      const canvas = canvasContainerRef.current?.querySelector('canvas');
+      const canvas = canvasContainerRef.current?.querySelector("canvas");
       if (canvas) {
         startRecording(canvas, getStream());
       }
@@ -98,8 +96,8 @@ export default function Home() {
   return (
     <div className="w-screen h-screen">
       <Leva
-        titleBar={{ title: 'Controls' }}
-        theme={{ sizes: { rootWidth: '340px', controlWidth: '160px' } }}
+        titleBar={{ title: "Controls" }}
+        theme={{ sizes: { rootWidth: "340px", controlWidth: "160px" } }}
       />
       <div ref={canvasContainerRef} className="w-full h-full">
         <Canvas
@@ -108,7 +106,7 @@ export default function Home() {
             antialias: true,
             alpha: false,
             preserveDrawingBuffer: true,
-            powerPreference: 'high-performance',
+            powerPreference: "high-performance",
           }}
           dpr={2}
           onCreated={({ gl }) => {

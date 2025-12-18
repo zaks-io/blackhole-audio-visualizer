@@ -1,4 +1,4 @@
-export type ScreenPermissionStatus = 'granted' | 'denied' | 'restricted' | 'unknown';
+export type ScreenPermissionStatus = "granted" | "denied" | "restricted" | "unknown";
 
 export interface ElectronAPI {
   isElectron: boolean;

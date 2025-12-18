@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useState, useRef, useEffect } from 'react';
-import type { AudioTriggers } from '@/hooks/useAudioTriggers';
-import type { AnimationModeId } from '@/hooks/useAnimationModes';
+import { useState, useRef, useEffect } from "react";
+import type { AudioTriggers } from "@/hooks/useAudioTriggers";
+import type { AnimationModeId } from "@/hooks/useAnimationModes";
 
 interface AudioDebugPanelProps {
   triggers: AudioTriggers | null;
@@ -13,14 +13,22 @@ interface AudioDebugPanelProps {
   onAutoModeChange: (enabled: boolean) => void;
 }
 
-function ProgressBar({ value, label, color = 'blue' }: { value: number; label: string; color?: string }) {
+function ProgressBar({
+  value,
+  label,
+  color = "blue",
+}: {
+  value: number;
+  label: string;
+  color?: string;
+}) {
   const colorClasses: Record<string, string> = {
-    blue: 'bg-blue-500',
-    green: 'bg-green-500',
-    yellow: 'bg-yellow-500',
-    red: 'bg-red-500',
-    purple: 'bg-purple-500',
-    cyan: 'bg-cyan-500',
+    blue: "bg-blue-500",
+    green: "bg-green-500",
+    yellow: "bg-yellow-500",
+    red: "bg-red-500",
+    purple: "bg-purple-500",
+    cyan: "bg-cyan-500",
   };
 
   return (
@@ -43,7 +51,7 @@ function TriggerIndicator({ active, label }: { active: boolean; label: string })
   return (
     <div
       className={`rounded px-2 py-1 text-xs font-medium transition-all ${
-        active ? 'bg-green-500 text-white' : 'bg-gray-700 text-gray-400'
+        active ? "bg-green-500 text-white" : "bg-gray-700 text-gray-400"
       }`}
     >
       {label}
@@ -58,18 +66,18 @@ function NoveltyGraph({ history }: { history: number[] }) {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
     const width = canvas.width;
     const height = canvas.height;
 
-    ctx.fillStyle = '#1f2937';
+    ctx.fillStyle = "#1f2937";
     ctx.fillRect(0, 0, width, height);
 
     if (history.length < 2) return;
 
-    ctx.strokeStyle = '#22d3ee';
+    ctx.strokeStyle = "#22d3ee";
     ctx.lineWidth = 1;
     ctx.beginPath();
 
@@ -103,13 +111,14 @@ export function AudioDebugPanel({
 
   useEffect(() => {
     if (triggers) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Syncing external trigger data to local history
       setNoveltyHistory((prev) => {
         const next = [...prev, triggers.novelty.novelty];
         if (next.length > 100) next.shift();
         return next;
       });
     }
-  }, [triggers?.novelty.novelty]);
+  }, [triggers]);
 
   if (!isVisible) {
     return (
@@ -130,8 +139,17 @@ export function AudioDebugPanel({
     <div className="fixed left-6 top-6 z-50 w-72 rounded-lg border border-gray-700 bg-gray-900/90 shadow-xl backdrop-blur-sm">
       <div className="flex items-center justify-between border-b border-gray-700 p-3">
         <h3 className="text-sm font-semibold text-white">Audio Analysis</h3>
-        <button onClick={() => setIsVisible(false)} className="text-gray-400 hover:text-white" title="Hide panel">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
+        <button
+          onClick={() => setIsVisible(false)}
+          className="text-gray-400 hover:text-white"
+          title="Hide panel"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+            className="h-5 w-5"
+          >
             <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
           </svg>
         </button>
@@ -142,7 +160,7 @@ export function AudioDebugPanel({
         <div className="mb-4">
           <div className="mb-2 flex items-center justify-between">
             <span className="text-xs font-medium text-gray-300">BPM</span>
-            <span className="font-mono text-lg font-bold text-white">{bpm?.bpm || '--'}</span>
+            <span className="font-mono text-lg font-bold text-white">{bpm?.bpm || "--"}</span>
           </div>
           <ProgressBar value={bpm?.confidence || 0} label="Confidence" color="green" />
           <ProgressBar value={bpm?.beatPhase || 0} label="Beat Phase" color="purple" />
@@ -152,7 +170,11 @@ export function AudioDebugPanel({
         <div className="mb-4">
           <div className="mb-2 text-xs font-medium text-gray-300">Spectral Features</div>
           <ProgressBar value={spectral?.rms || 0} label="RMS (Loudness)" color="blue" />
-          <ProgressBar value={spectral?.spectralCentroid || 0} label="Centroid (Brightness)" color="yellow" />
+          <ProgressBar
+            value={spectral?.spectralCentroid || 0}
+            label="Centroid (Brightness)"
+            color="yellow"
+          />
           <ProgressBar value={spectral?.spectralFlux || 0} label="Flux (Change)" color="cyan" />
           <ProgressBar value={spectral?.subBassRatio || 0} label="Sub-Bass Ratio" color="red" />
         </div>
@@ -161,11 +183,13 @@ export function AudioDebugPanel({
         <div className="mb-4">
           <div className="mb-2 flex items-center justify-between">
             <span className="text-xs font-medium text-gray-300">Novelty Curve</span>
-            <span className="font-mono text-xs text-gray-400">{((novelty?.novelty || 0) * 100).toFixed(0)}%</span>
+            <span className="font-mono text-xs text-gray-400">
+              {((novelty?.novelty || 0) * 100).toFixed(0)}%
+            </span>
           </div>
           <NoveltyGraph history={noveltyHistory} />
           <div className="mt-1 flex items-center justify-between text-xs text-gray-400">
-            <span>Trend: {novelty?.energyTrend || 'stable'}</span>
+            <span>Trend: {novelty?.energyTrend || "stable"}</span>
             <span>Section: {(novelty?.sectionAge || 0).toFixed(1)}s</span>
           </div>
         </div>

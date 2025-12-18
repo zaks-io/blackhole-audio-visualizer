@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useRef, useCallback } from 'react';
-import type { AudioData, SpectralFeatures } from './useMicrophone';
-import { useBPMTracker, type BPMData } from './useBPMTracker';
-import { useNoveltyDetection, type NoveltyData } from './useNoveltyDetection';
+import { useRef, useCallback } from "react";
+import type { AudioData, SpectralFeatures } from "./useMicrophone";
+import { useBPMTracker, type BPMData } from "./useBPMTracker";
+import { useNoveltyDetection, type NoveltyData } from "./useNoveltyDetection";
 
 export interface AudioTriggers {
   // Beat-synced triggers
@@ -50,7 +50,7 @@ const DEFAULT_TRIGGERS: AudioTriggers = {
   novelty: {
     novelty: 0,
     noveltyPeak: false,
-    energyTrend: 'stable',
+    energyTrend: "stable",
     sectionAge: 0,
     avgEnergy: 0,
     energyDelta: 0,
@@ -133,10 +133,11 @@ export function useAudioTriggers() {
 
       // Buildup detection: energy trend building for > 4 seconds
       triggers.buildupDetected =
-        noveltyData.energyTrend === 'building' && noveltyData.sectionAge > BUILDUP_DURATION;
+        noveltyData.energyTrend === "building" && noveltyData.sectionAge > BUILDUP_DURATION;
 
       // Breakdown detection: low RMS + low density (only during near-silence)
-      triggers.breakdownDetected = spectral.rms < BREAKDOWN_RMS_THRESHOLD && avgDensity < BREAKDOWN_DENSITY_THRESHOLD;
+      triggers.breakdownDetected =
+        spectral.rms < BREAKDOWN_RMS_THRESHOLD && avgDensity < BREAKDOWN_DENSITY_THRESHOLD;
 
       // Song change detection: extended silence or significant BPM shift
       if (spectral.rms < SILENCE_THRESHOLD) {

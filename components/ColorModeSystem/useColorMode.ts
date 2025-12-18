@@ -1,11 +1,11 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef } from "react";
 import {
   PALETTES,
   PALETTE_IDS,
   PALETTE_OFFSETS,
   getAllColors,
   type ColorPaletteId,
-} from './colorPalettes';
+} from "./colorPalettes";
 
 interface UseColorModeReturn {
   paletteId: ColorPaletteId;
@@ -16,7 +16,7 @@ interface UseColorModeReturn {
 }
 
 export function useColorMode(): UseColorModeReturn {
-  const [paletteId, setPaletteId] = useState<ColorPaletteId>('grayscale');
+  const [paletteId, setPaletteId] = useState<ColorPaletteId>("grayscale");
   const lastTriggerTimeRef = useRef(0);
   const silenceStartRef = useRef<number | null>(null);
 

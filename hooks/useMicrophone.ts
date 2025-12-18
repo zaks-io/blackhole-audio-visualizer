@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useState, useRef, useCallback } from 'react';
-import Meyda from 'meyda';
+import { useState, useRef, useCallback } from "react";
+import Meyda from "meyda";
 
 type MeydaAnalyzer = ReturnType<typeof Meyda.createMeydaAnalyzer>;
 
@@ -79,111 +79,114 @@ export function useMicrophone() {
     onsetDecayRef.current = value;
   }, []);
 
-  const connect = useCallback(async (externalStream?: MediaStream) => {
-    if (isConnected) return;
+  const connect = useCallback(
+    async (externalStream?: MediaStream) => {
+      if (isConnected) return;
 
-    const stream =
-      externalStream ??
-      (await navigator.mediaDevices.getUserMedia({
-        audio: {
-          sampleRate: 48000,
-          channelCount: 2,
-          echoCancellation: false,
-          noiseSuppression: false,
-          autoGainControl: false,
-        },
-      }));
+      const stream =
+        externalStream ??
+        (await navigator.mediaDevices.getUserMedia({
+          audio: {
+            sampleRate: 48000,
+            channelCount: 2,
+            echoCancellation: false,
+            noiseSuppression: false,
+            autoGainControl: false,
+          },
+        }));
 
-    streamRef.current = stream;
-    const audioContext = new AudioContext();
+      streamRef.current = stream;
+      const audioContext = new AudioContext();
 
-    if (audioContext.state === 'suspended') {
-      await audioContext.resume();
-    }
+      if (audioContext.state === "suspended") {
+        await audioContext.resume();
+      }
 
-    const source = audioContext.createMediaStreamSource(stream);
-    const analyser = audioContext.createAnalyser();
+      const source = audioContext.createMediaStreamSource(stream);
+      const analyser = audioContext.createAnalyser();
 
-    analyser.fftSize = 256;
-    analyser.smoothingTimeConstant = 0.8;
+      analyser.fftSize = 256;
+      analyser.smoothingTimeConstant = 0.8;
 
-    source.connect(analyser);
+      source.connect(analyser);
 
-    audioContextRef.current = audioContext;
-    analyserRef.current = analyser;
-    dataArrayRef.current = new Uint8Array(analyser.frequencyBinCount);
+      audioContextRef.current = audioContext;
+      analyserRef.current = analyser;
+      dataArrayRef.current = new Uint8Array(analyser.frequencyBinCount);
 
-    // Initialize Meyda analyzer for spectral features
-    const meydaAnalyzer = Meyda.createMeydaAnalyzer({
-      audioContext,
-      source,
-      bufferSize: 512,
-      featureExtractors: [
-        'rms',
-        'spectralCentroid',
-        'spectralFlatness',
-        'spectralRolloff',
-        'zcr',
-        'amplitudeSpectrum',
-      ],
-      callback: (features: MeydaFeatures | null) => {
-        if (!features) return;
+      // Initialize Meyda analyzer for spectral features
+      const meydaAnalyzer = Meyda.createMeydaAnalyzer({
+        audioContext,
+        source,
+        bufferSize: 512,
+        featureExtractors: [
+          "rms",
+          "spectralCentroid",
+          "spectralFlatness",
+          "spectralRolloff",
+          "zcr",
+          "amplitudeSpectrum",
+        ],
+        callback: (features: MeydaFeatures | null) => {
+          if (!features) return;
 
-        const spectral = spectralFeaturesRef.current;
-        const numBins = 512 / 2; // bufferSize / 2 = number of frequency bins
-        const nyquist = audioContext.sampleRate / 2;
+          const spectral = spectralFeaturesRef.current;
+          const numBins = 512 / 2; // bufferSize / 2 = number of frequency bins
+          const nyquist = audioContext.sampleRate / 2;
 
-        // RMS (already 0-1 range, but can exceed 1 for loud signals)
-        spectral.rms = Math.min(1, features.rms || 0);
+          // RMS (already 0-1 range, but can exceed 1 for loud signals)
+          spectral.rms = Math.min(1, features.rms || 0);
 
-        // Spectral centroid: Meyda returns bin index, normalize to 0-1
-        spectral.spectralCentroid = Math.min(1, (features.spectralCentroid || 0) / numBins);
+          // Spectral centroid: Meyda returns bin index, normalize to 0-1
+          spectral.spectralCentroid = Math.min(1, (features.spectralCentroid || 0) / numBins);
 
-        // Spectral flatness: already 0-1
-        spectral.spectralFlatness = features.spectralFlatness || 0;
+          // Spectral flatness: already 0-1
+          spectral.spectralFlatness = features.spectralFlatness || 0;
 
-        // Spectral rolloff: Meyda returns bin index, normalize to 0-1
-        spectral.spectralRolloff = Math.min(1, (features.spectralRolloff || 0) / numBins);
+          // Spectral rolloff: Meyda returns bin index, normalize to 0-1
+          spectral.spectralRolloff = Math.min(1, (features.spectralRolloff || 0) / numBins);
 
-        // Zero crossing rate: normalize (typical range 0-0.5)
-        spectral.zcr = Math.min(1, (features.zcr || 0) * 2);
+          // Zero crossing rate: normalize (typical range 0-0.5)
+          spectral.zcr = Math.min(1, (features.zcr || 0) * 2);
 
-        // Calculate spectral flux from amplitude spectrum
-        const spectrum = features.amplitudeSpectrum;
-        if (spectrum && prevSpectrumRef.current) {
-          let flux = 0;
-          for (let i = 0; i < spectrum.length; i++) {
-            const diff = spectrum[i] - prevSpectrumRef.current[i];
-            flux += diff > 0 ? diff * diff : 0; // Only positive changes (onset)
-          }
-          spectral.spectralFlux = Math.min(1, Math.sqrt(flux) / 10);
-        }
-        if (spectrum) {
-          prevSpectrumRef.current = new Float32Array(spectrum);
-        }
-
-        // Calculate sub-bass ratio (energy in 0-100Hz relative to total)
-        if (spectrum) {
-          const binSize = nyquist / spectrum.length;
-          const subBassBins = Math.ceil(100 / binSize);
-          let subBassEnergy = 0;
-          let totalEnergy = 0;
-          for (let i = 0; i < spectrum.length; i++) {
-            const energy = spectrum[i] * spectrum[i];
-            totalEnergy += energy;
-            if (i < subBassBins) {
-              subBassEnergy += energy;
+          // Calculate spectral flux from amplitude spectrum
+          const spectrum = features.amplitudeSpectrum;
+          if (spectrum && prevSpectrumRef.current) {
+            let flux = 0;
+            for (let i = 0; i < spectrum.length; i++) {
+              const diff = spectrum[i] - prevSpectrumRef.current[i];
+              flux += diff > 0 ? diff * diff : 0; // Only positive changes (onset)
             }
+            spectral.spectralFlux = Math.min(1, Math.sqrt(flux) / 10);
           }
-          spectral.subBassRatio = totalEnergy > 0 ? subBassEnergy / totalEnergy : 0;
-        }
-      },
-    });
-    meydaAnalyzer.start();
-    meydaAnalyzerRef.current = meydaAnalyzer;
+          if (spectrum) {
+            prevSpectrumRef.current = new Float32Array(spectrum);
+          }
 
-    setIsConnected(true);
-  }, [isConnected]);
+          // Calculate sub-bass ratio (energy in 0-100Hz relative to total)
+          if (spectrum) {
+            const binSize = nyquist / spectrum.length;
+            const subBassBins = Math.ceil(100 / binSize);
+            let subBassEnergy = 0;
+            let totalEnergy = 0;
+            for (let i = 0; i < spectrum.length; i++) {
+              const energy = spectrum[i] * spectrum[i];
+              totalEnergy += energy;
+              if (i < subBassBins) {
+                subBassEnergy += energy;
+              }
+            }
+            spectral.subBassRatio = totalEnergy > 0 ? subBassEnergy / totalEnergy : 0;
+          }
+        },
+      });
+      meydaAnalyzer.start();
+      meydaAnalyzerRef.current = meydaAnalyzer;
+
+      setIsConnected(true);
+    },
+    [isConnected]
+  );
 
   const getFrequencyData = useCallback((bandCount: number): AudioData => {
     const analyser = analyserRef.current;

@@ -1,22 +1,22 @@
-'use client';
+"use client";
 
-import { useMemo, useState } from 'react';
-import { Environment } from '@react-three/drei';
-import { useFrame } from '@react-three/fiber';
-import { useControls } from 'leva';
-import { ParticleSystem } from './ParticleSystem';
-import { BlackHole } from './BlackHole';
-import { CameraSystem } from '@/components/CameraSystem';
-import { PALETTE_IDS, type ColorPaletteId } from '@/components/ColorModeSystem';
-import type { AudioData } from '@/hooks/useMicrophone';
-import type { CameraMode } from '@/components/CameraSystem';
+import { useMemo, useState } from "react";
+import { Environment } from "@react-three/drei";
+import { useFrame } from "@react-three/fiber";
+import { useControls } from "leva";
+import { ParticleSystem } from "./ParticleSystem";
+import { BlackHole } from "./BlackHole";
+import { CameraSystem } from "@/components/CameraSystem";
+import { PALETTE_IDS, type ColorPaletteId } from "@/components/ColorModeSystem";
+import type { AudioData } from "@/hooks/useMicrophone";
+import type { CameraMode } from "@/components/CameraSystem";
 
 const SKYBOX_OPTIONS = {
-  'None': '',
-  'Starmap': './starmap_2020_4k.exr',
-  'Hazy Nebulae': './HDR_hazy_nebulae_4k.exr',
-  'Blue Nebulae': './HDR_rich_blue_nebulae_1_4k.exr',
-  'Multi Nebulae': './HDR_rich_multi_nebulae_2_4k.exr',
+  None: "",
+  Starmap: "./starmap_2020_4k.exr",
+  "Hazy Nebulae": "./HDR_hazy_nebulae_4k.exr",
+  "Blue Nebulae": "./HDR_rich_blue_nebulae_1_4k.exr",
+  "Multi Nebulae": "./HDR_rich_multi_nebulae_2_4k.exr",
 };
 
 interface CameraModeProps {
@@ -42,14 +42,20 @@ interface BlackHoleSimulationProps {
   colorMode: ColorModeProps;
 }
 
-export function BlackHoleSimulation({ getFrequencyData, isAudioConnected, setOnsetDecay, cameraMode, colorMode }: BlackHoleSimulationProps) {
-  const blackHoleControls = useControls('Black Hole', {
+export function BlackHoleSimulation({
+  getFrequencyData,
+  isAudioConnected,
+  setOnsetDecay,
+  cameraMode,
+  colorMode,
+}: BlackHoleSimulationProps) {
+  const blackHoleControls = useControls("Black Hole", {
     eventHorizonRadius: { value: 5, min: 0.5, max: 20, step: 0.5 },
     iscoRatio: { value: 3.0, min: 2.0, max: 20.0, step: 1.0 },
     beatPulse: { value: 2, min: 0, max: 2, step: 0.1 },
   });
 
-  const particleControls = useControls('Particles', {
+  const particleControls = useControls("Particles", {
     textureSize: { value: 512, min: 128, max: 1024, step: 128 },
     pointSize: { value: 1.0, min: 0.1, max: 20, step: 0.1 },
     brightness: { value: 1.5, min: 0.1, max: 5, step: 0.1 },
@@ -62,7 +68,7 @@ export function BlackHoleSimulation({ getFrequencyData, isAudioConnected, setOns
     },
   });
 
-  const physicsControls = useControls('Physics', {
+  const physicsControls = useControls("Physics", {
     gravity: { value: 100000, min: 1000, max: 1000000, step: 10000 },
     timeScale: { value: 5.0, min: 0.1, max: 30, step: 0.1 },
     softening: { value: 1.0, min: 0.01, max: 10, step: 0.1 },
@@ -70,7 +76,7 @@ export function BlackHoleSimulation({ getFrequencyData, isAudioConnected, setOns
     iscoStrength: { value: 0.5, min: 0, max: 1.0, step: 0.05 },
   });
 
-  const emitterControls = useControls('Emitters', {
+  const emitterControls = useControls("Emitters", {
     emitRadius: { value: 200, min: 5, max: 200, step: 1 },
     emitterCount: { value: 36, min: 1, max: 36, step: 1 },
     emitterAngle: { value: 0, min: 0, max: 6.28, step: 0.1 },
@@ -81,11 +87,11 @@ export function BlackHoleSimulation({ getFrequencyData, isAudioConnected, setOns
     showEmitters: { value: false },
   });
 
-  const skyboxControls = useControls('Skybox', {
-    skybox: { value: 'Hazy Nebulae', options: Object.keys(SKYBOX_OPTIONS) },
+  const skyboxControls = useControls("Skybox", {
+    skybox: { value: "Hazy Nebulae", options: Object.keys(SKYBOX_OPTIONS) },
   });
 
-  const audioControls = useControls('Audio', {
+  const audioControls = useControls("Audio", {
     amplitude: { value: 5, min: 0, max: 20, step: 0.5 },
     onsetDecay: {
       value: 0.92,
@@ -104,7 +110,8 @@ export function BlackHoleSimulation({ getFrequencyData, isAudioConnected, setOns
   useFrame((state) => {
     if (isAudioConnected) {
       const data = getFrequencyData(2);
-      const beat = Math.max(data.bandOnsets[0] ?? 0, data.bandOnsets[1] ?? 0) * audioControls.audioGain;
+      const beat =
+        Math.max(data.bandOnsets[0] ?? 0, data.bandOnsets[1] ?? 0) * audioControls.audioGain;
       setBeatIntensity(beat);
       if (audioControls.autoColorChange) {
         colorMode.processBeat(beat, state.clock.elapsedTime);
@@ -140,13 +147,18 @@ export function BlackHoleSimulation({ getFrequencyData, isAudioConnected, setOns
       positions.push([x, y, z]);
     }
     return positions;
-  }, [emitterControls.emitRadius, emitterControls.emitterCount, emitterControls.emitterAngle, emitterControls.emitterTilt]);
+  }, [
+    emitterControls.emitRadius,
+    emitterControls.emitterCount,
+    emitterControls.emitterAngle,
+    emitterControls.emitterTilt,
+  ]);
 
   const skyboxPath = SKYBOX_OPTIONS[skyboxControls.skybox as keyof typeof SKYBOX_OPTIONS];
 
   return (
     <>
-      <color attach="background" args={['#000000']} />
+      <color attach="background" args={["#000000"]} />
       {skyboxPath && <Environment files={skyboxPath} background />}
 
       <ParticleSystem
@@ -169,7 +181,11 @@ export function BlackHoleSimulation({ getFrequencyData, isAudioConnected, setOns
         emitterTilt={emitterControls.emitterTilt}
         spawnRate={emitterControls.spawnRate}
         inwardAngle={emitterControls.inwardAngle}
-        iscoRadius={blackHoleControls.eventHorizonRadius * blackHoleControls.iscoRatio * (1 + beatIntensity * blackHoleControls.beatPulse)}
+        iscoRadius={
+          blackHoleControls.eventHorizonRadius *
+          blackHoleControls.iscoRatio *
+          (1 + beatIntensity * blackHoleControls.beatPulse)
+        }
         iscoStrength={physicsControls.iscoStrength}
         emitterSpread={emitterControls.emitterSpread}
         audioAmplitude={audioControls.amplitude}
@@ -177,7 +193,11 @@ export function BlackHoleSimulation({ getFrequencyData, isAudioConnected, setOns
         getAudioData={getAudioData}
         audioEnabled={isAudioConnected}
       />
-      <BlackHole eventHorizonRadius={blackHoleControls.eventHorizonRadius} beatIntensity={beatIntensity} beatPulse={blackHoleControls.beatPulse} />
+      <BlackHole
+        eventHorizonRadius={blackHoleControls.eventHorizonRadius}
+        beatIntensity={beatIntensity}
+        beatPulse={blackHoleControls.beatPulse}
+      />
 
       {/* Emitter position indicators */}
       {emitterControls.showEmitters &&

@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback } from "react";
 
 export interface BPMData {
   bpm: number;

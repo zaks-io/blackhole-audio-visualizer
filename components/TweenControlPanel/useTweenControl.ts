@@ -1,8 +1,8 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
-import gsap from 'gsap';
-import { levaStore } from 'leva';
-import type { PropertyConfig, EaseFunction } from './propertyRegistry';
-import type { TweenState, UseTweenControlReturn } from './types';
+import { useState, useRef, useCallback, useEffect } from "react";
+import gsap from "gsap";
+import { levaStore } from "leva";
+import type { PropertyConfig, EaseFunction } from "./propertyRegistry";
+import type { TweenState, UseTweenControlReturn } from "./types";
 
 export function useTweenControl(): UseTweenControlReturn {
   const store = levaStore;
@@ -11,7 +11,7 @@ export function useTweenControl(): UseTweenControlReturn {
     selectedProperty: null,
     targetValue: 0,
     duration: 1.0,
-    ease: 'power2.inOut',
+    ease: "power2.inOut",
     isTweening: false,
     progress: 0,
   });

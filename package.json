@@ -14,7 +14,19 @@
     "electron:build": "bun run build:electron && bun run electron:compile",
     "electron:package": "bun run electron:build && electron-builder",
     "electron:package:mac": "bun run electron:build && electron-builder --mac",
-    "electron:package:win": "bun run electron:build && electron-builder --win"
+    "electron:package:win": "bun run electron:build && electron-builder --win",
+    "prepare": "husky",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,css}": [
+      "prettier --write"
+    ]
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",
@@ -44,6 +56,10 @@
     "electron-builder": "^26.0.12",
     "eslint": "^9",
     "eslint-config-next": "16.0.10",
+    "eslint-config-prettier": "^10.1.8",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
+    "prettier": "^3.7.4",
     "raw-loader": "^4.0.2",
     "tailwindcss": "^4",
     "typescript": "^5",

@@ -1,7 +1,7 @@
-import type { ScreenPermissionStatus } from '@/types/electron';
+import type { ScreenPermissionStatus } from "@/types/electron";
 
 export function isElectron(): boolean {
-  return typeof window !== 'undefined' && !!window.electronAPI?.isElectron;
+  return typeof window !== "undefined" && !!window.electronAPI?.isElectron;
 }
 
 export function isWeb(): boolean {
@@ -14,7 +14,7 @@ export function canCaptureSystemAudio(): boolean {
 
 export async function getScreenPermissionStatus(): Promise<ScreenPermissionStatus> {
   if (!isElectron() || !window.electronAPI) {
-    return 'unknown';
+    return "unknown";
   }
   return window.electronAPI.getScreenPermissionStatus();
 }
@@ -50,13 +50,13 @@ export async function getSystemAudioStream(): Promise<MediaStream | null> {
 
     // Check if we have audio tracks
     if (stream.getAudioTracks().length === 0) {
-      console.error('No audio tracks in stream');
+      console.error("No audio tracks in stream");
       return null;
     }
 
     return stream;
   } catch (error) {
-    console.error('Failed to get system audio stream:', error);
+    console.error("Failed to get system audio stream:", error);
     return null;
   }
 }

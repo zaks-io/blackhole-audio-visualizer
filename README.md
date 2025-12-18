@@ -35,11 +35,13 @@ This starts Next.js dev server and launches Electron.
 ### Building
 
 **Web:**
+
 ```bash
 bun run build
 ```
 
 **Desktop:**
+
 ```bash
 # macOS
 bun run electron:package:mac

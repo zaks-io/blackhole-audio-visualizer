@@ -40,6 +40,7 @@ bun lint                   # Run ESLint
 ### Particle Physics
 
 Particles spawn at configurable emitter positions around the black hole. GPU shaders handle:
+
 - Gravitational attraction (configurable GM)
 - ISCO (innermost stable circular orbit) effects
 - Beat-reactive repulsion force

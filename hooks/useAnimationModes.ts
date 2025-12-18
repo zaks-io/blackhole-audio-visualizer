@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useRef, useCallback, useEffect } from 'react';
-import { gsap } from 'gsap';
-import type { AudioTriggers } from './useAudioTriggers';
+import { useRef, useCallback, useEffect } from "react";
+import { gsap } from "gsap";
+import type { AudioTriggers } from "./useAudioTriggers";
 
 export interface AnimationParams {
   // Black Hole
@@ -65,13 +65,13 @@ const DEFAULT_PARAMS: AnimationParams = {
 
 export const ANIMATION_MODES: Record<string, AnimationMode> = {
   default: {
-    name: 'Default',
+    name: "Default",
     params: { ...DEFAULT_PARAMS },
     transitionDuration: 2000,
   },
 
   calm: {
-    name: 'Calm',
+    name: "Calm",
     params: {
       beatPulse: 0.5,
       brightness: 1.0,
@@ -87,7 +87,7 @@ export const ANIMATION_MODES: Record<string, AnimationMode> = {
   },
 
   intense: {
-    name: 'Intense',
+    name: "Intense",
     params: {
       beatPulse: 2.0,
       brightness: 2.5,
@@ -104,7 +104,7 @@ export const ANIMATION_MODES: Record<string, AnimationMode> = {
   },
 
   drop: {
-    name: 'Drop',
+    name: "Drop",
     params: {
       eventHorizonRadius: 8,
       iscoRatio: 2.5,
@@ -124,7 +124,7 @@ export const ANIMATION_MODES: Record<string, AnimationMode> = {
   },
 
   buildup: {
-    name: 'Buildup',
+    name: "Buildup",
     params: {
       beatPulse: 1.5,
       brightness: 2.0,
@@ -140,7 +140,7 @@ export const ANIMATION_MODES: Record<string, AnimationMode> = {
   },
 
   breakdown: {
-    name: 'Breakdown',
+    name: "Breakdown",
     params: {
       beatPulse: 0.3,
       brightness: 0.8,
@@ -157,7 +157,7 @@ export const ANIMATION_MODES: Record<string, AnimationMode> = {
   },
 
   spiral: {
-    name: 'Spiral',
+    name: "Spiral",
     params: {
       emitRadius: 100,
       emitterTilt: 20,
@@ -171,7 +171,7 @@ export const ANIMATION_MODES: Record<string, AnimationMode> = {
   },
 
   wide: {
-    name: 'Wide',
+    name: "Wide",
     params: {
       emitRadius: 200,
       emitterTilt: 0,
@@ -193,7 +193,7 @@ interface UseAnimationModesOptions {
 }
 
 export function useAnimationModes({ onParamsChange, autoMode = true }: UseAnimationModesOptions) {
-  const currentModeRef = useRef<AnimationModeId>('default');
+  const currentModeRef = useRef<AnimationModeId>("default");
   const currentParamsRef = useRef<AnimationParams>({ ...DEFAULT_PARAMS });
   const tweenRef = useRef<gsap.core.Tween | null>(null);
   const lastTriggerTimeRef = useRef<number>(0);
@@ -218,7 +218,7 @@ export function useAnimationModes({ onParamsChange, autoMode = true }: UseAnimat
       tweenRef.current = gsap.to(currentParamsRef.current, {
         ...targetParams,
         duration: mode.transitionDuration / 1000,
-        ease: 'power2.inOut',
+        ease: "power2.inOut",
         onUpdate: () => {
           onParamsChange({ ...currentParamsRef.current });
         },
@@ -236,30 +236,30 @@ export function useAnimationModes({ onParamsChange, autoMode = true }: UseAnimat
 
       // Priority-based mode selection
       if (triggers.dropDetected) {
-        transitionTo('drop');
+        transitionTo("drop");
         lastTriggerTimeRef.current = timestamp;
         cooldownRef.current = 5000; // Longer cooldown after drop
-      } else if (triggers.buildupDetected && currentModeRef.current !== 'buildup') {
-        transitionTo('buildup');
+      } else if (triggers.buildupDetected && currentModeRef.current !== "buildup") {
+        transitionTo("buildup");
         lastTriggerTimeRef.current = timestamp;
         cooldownRef.current = 2000;
-      } else if (triggers.breakdownDetected && currentModeRef.current !== 'breakdown') {
-        transitionTo('breakdown');
+      } else if (triggers.breakdownDetected && currentModeRef.current !== "breakdown") {
+        transitionTo("breakdown");
         lastTriggerTimeRef.current = timestamp;
         cooldownRef.current = 2000;
       } else if (triggers.possibleSongChange) {
         // Reset to default on song change
-        transitionTo('default');
+        transitionTo("default");
         lastTriggerTimeRef.current = timestamp;
         cooldownRef.current = 5000;
-      } else if (triggers.intensity > 0.6 && currentModeRef.current === 'calm') {
+      } else if (triggers.intensity > 0.6 && currentModeRef.current === "calm") {
         // Transition from calm to intense when energy picks up
-        transitionTo('intense');
+        transitionTo("intense");
         lastTriggerTimeRef.current = timestamp;
         cooldownRef.current = 3000;
-      } else if (triggers.intensity < 0.2 && currentModeRef.current === 'intense') {
+      } else if (triggers.intensity < 0.2 && currentModeRef.current === "intense") {
         // Transition from intense to calm when energy drops
-        transitionTo('calm');
+        transitionTo("calm");
         lastTriggerTimeRef.current = timestamp;
         cooldownRef.current = 3000;
       }

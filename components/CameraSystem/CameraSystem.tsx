@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import { useRef, useEffect } from 'react';
-import { useFrame, useThree } from '@react-three/fiber';
-import { OrbitControls } from '@react-three/drei';
-import gsap from 'gsap';
-import { PRESETS } from './cameraPresets';
-import type { CameraMode } from './types';
-import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
+import { useRef, useEffect } from "react";
+import { useFrame, useThree } from "@react-three/fiber";
+import { OrbitControls } from "@react-three/drei";
+import gsap from "gsap";
+import { PRESETS } from "./cameraPresets";
+import type { CameraMode } from "./types";
+import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 
 interface CameraSystemProps {
   mode: CameraMode;
@@ -15,11 +15,7 @@ interface CameraSystemProps {
   timelineRef: React.MutableRefObject<gsap.core.Timeline | null>;
 }
 
-export function CameraSystem({
-  mode,
-  onTransitionComplete,
-  timelineRef,
-}: CameraSystemProps) {
+export function CameraSystem({ mode, onTransitionComplete, timelineRef }: CameraSystemProps) {
   const { camera } = useThree();
   const controlsRef = useRef<OrbitControlsImpl>(null);
   const prevModeRef = useRef<CameraMode>(mode);
@@ -39,7 +35,7 @@ export function CameraSystem({
     const controls = controlsRef.current;
     if (!controls) return;
 
-    if (mode === 'free') {
+    if (mode === "free") {
       controls.autoRotate = false;
       isSphericalModeRef.current = false;
       onTransitionComplete();
@@ -50,7 +46,7 @@ export function CameraSystem({
     const targetPos = preset.position;
     const currentPos = { x: camera.position.x, y: camera.position.y, z: camera.position.z };
 
-    if (preset.rotateAxis === 'spherical') {
+    if (preset.rotateAxis === "spherical") {
       isSphericalModeRef.current = true;
       sphericalParamsRef.current = {
         radius: preset.orbitRadius ?? 150,
@@ -78,7 +74,7 @@ export function CameraSystem({
         y: targetPos[1],
         z: targetPos[2],
         duration: 1.5,
-        ease: 'power2.inOut',
+        ease: "power2.inOut",
       });
 
       timelineRef.current = tl;
@@ -101,7 +97,7 @@ export function CameraSystem({
         y: targetPos[1],
         z: targetPos[2],
         duration: 1.5,
-        ease: 'power2.inOut',
+        ease: "power2.inOut",
       });
 
       timelineRef.current = tl;
@@ -117,7 +113,7 @@ export function CameraSystem({
   }, [timelineRef]);
 
   useFrame((_, delta) => {
-    if (isSphericalModeRef.current && mode !== 'free') {
+    if (isSphericalModeRef.current && mode !== "free") {
       const { radius, hSpeed, vSpeed } = sphericalParamsRef.current;
 
       anglesRef.current.horizontal += delta * hSpeed;
