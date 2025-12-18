@@ -29,9 +29,8 @@ interface ParticleSystemProps {
   iscoRadius: number;
   iscoStrength: number;
   emitterSpread: number;
-  audioWaveSpeed: number;
   audioAmplitude: number;
-  getAudioData: () => { bass: number; mid: number; high: number };
+  getAudioData: () => { bass: number; mid: number; high: number; bassOnset: number; midOnset: number; highOnset: number };
   audioEnabled: boolean;
 }
 
@@ -56,7 +55,6 @@ export function ParticleSystem({
   iscoRadius,
   iscoStrength,
   emitterSpread,
-  audioWaveSpeed,
   audioAmplitude,
   getAudioData,
   audioEnabled,
@@ -78,8 +76,7 @@ export function ParticleSystem({
     setISCORadius,
     setISCOStrength,
     setEmitterSpread,
-    setAudioData,
-    setAudioWaveSpeed,
+    setAudioOnset,
     setAudioAmplitude,
   } = useGPUCompute();
   const materialRef = useRef<THREE.ShaderMaterial>(null);
@@ -149,14 +146,13 @@ export function ParticleSystem({
     setISCORadius(iscoRadius);
     setISCOStrength(iscoStrength);
     setEmitterSpread(emitterSpread);
-    setAudioWaveSpeed(audioWaveSpeed);
     setAudioAmplitude(audioAmplitude);
 
     if (audioEnabled) {
-      const { bass, mid, high } = getAudioData();
-      setAudioData(bass, mid, high);
+      const { bassOnset, midOnset, highOnset } = getAudioData();
+      setAudioOnset(bassOnset, midOnset, highOnset);
     } else {
-      setAudioData(0, 0, 0);
+      setAudioOnset(0, 0, 0);
     }
   });
 

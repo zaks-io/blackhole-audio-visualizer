@@ -84,10 +84,9 @@ export function useGPUCompute() {
     positionVariable.material.uniforms.uSpawnRate = { value: 1.0 };
     positionVariable.material.uniforms.uOrbitDecay = { value: 2.0 };
     positionVariable.material.uniforms.uDoDrift = { value: false };
-    positionVariable.material.uniforms.uAudioBass = { value: 0.0 };
-    positionVariable.material.uniforms.uAudioMid = { value: 0.0 };
-    positionVariable.material.uniforms.uAudioHigh = { value: 0.0 };
-    positionVariable.material.uniforms.uAudioWaveSpeed = { value: 2.0 };
+    positionVariable.material.uniforms.uBassOnset = { value: 0.0 };
+    positionVariable.material.uniforms.uMidOnset = { value: 0.0 };
+    positionVariable.material.uniforms.uHighOnset = { value: 0.0 };
     positionVariable.material.uniforms.uAudioAmplitude = { value: 1.0 };
 
     // Set up uniforms for velocity shader
@@ -258,17 +257,11 @@ export function useGPUCompute() {
     }
   }, []);
 
-  const setAudioData = useCallback((bass: number, mid: number, high: number) => {
+  const setAudioOnset = useCallback((bassOnset: number, midOnset: number, highOnset: number) => {
     if (positionVariableRef.current) {
-      positionVariableRef.current.material.uniforms.uAudioBass.value = bass;
-      positionVariableRef.current.material.uniforms.uAudioMid.value = mid;
-      positionVariableRef.current.material.uniforms.uAudioHigh.value = high;
-    }
-  }, []);
-
-  const setAudioWaveSpeed = useCallback((value: number) => {
-    if (positionVariableRef.current) {
-      positionVariableRef.current.material.uniforms.uAudioWaveSpeed.value = value;
+      positionVariableRef.current.material.uniforms.uBassOnset.value = bassOnset;
+      positionVariableRef.current.material.uniforms.uMidOnset.value = midOnset;
+      positionVariableRef.current.material.uniforms.uHighOnset.value = highOnset;
     }
   }, []);
 
@@ -295,8 +288,7 @@ export function useGPUCompute() {
     setISCORadius,
     setISCOStrength,
     setEmitterSpread,
-    setAudioData,
-    setAudioWaveSpeed,
+    setAudioOnset,
     setAudioAmplitude,
   };
 }

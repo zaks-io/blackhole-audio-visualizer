@@ -6,6 +6,9 @@ export interface AudioData {
   bass: number;
   mid: number;
   high: number;
+  bassOnset: number;
+  midOnset: number;
+  highOnset: number;
 }
 
 export function useMicrophone() {
@@ -13,6 +16,13 @@ export function useMicrophone() {
   const analyserRef = useRef<AnalyserNode | null>(null);
   const dataArrayRef = useRef<Uint8Array<ArrayBuffer> | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
+  const prevAudioRef = useRef({ bass: 0, mid: 0, high: 0 });
+  const onsetRef = useRef({ bass: 0, mid: 0, high: 0 });
+  const onsetDecayRef = useRef(0.92);
+
+  const setOnsetDecay = useCallback((value: number) => {
+    onsetDecayRef.current = value;
+  }, []);
 
   const connect = useCallback(async () => {
     if (isConnected) return;
@@ -37,7 +47,7 @@ export function useMicrophone() {
     const analyser = analyserRef.current;
     const dataArray = dataArrayRef.current;
     if (!analyser || !dataArray) {
-      return { bass: 0, mid: 0, high: 0 };
+      return { bass: 0, mid: 0, high: 0, bassOnset: 0, midOnset: 0, highOnset: 0 };
     }
 
     analyser.getByteFrequencyData(dataArray);
@@ -61,10 +71,31 @@ export function useMicrophone() {
       highSum += data[i];
     }
 
+    const bass = bassSum / 10 / 255;
+    const mid = midSum / 40 / 255;
+    const high = highSum / 78 / 255;
+
+    // Onset detection: detect sudden increases (transients)
+    const bassOnsetRaw = Math.max(0, bass - prevAudioRef.current.bass);
+    const midOnsetRaw = Math.max(0, mid - prevAudioRef.current.mid);
+    const highOnsetRaw = Math.max(0, high - prevAudioRef.current.high);
+
+    // Envelope follower: fast attack, slow decay
+    const decay = onsetDecayRef.current;
+    onsetRef.current.bass = Math.max(bassOnsetRaw, onsetRef.current.bass * decay);
+    onsetRef.current.mid = Math.max(midOnsetRaw, onsetRef.current.mid * decay);
+    onsetRef.current.high = Math.max(highOnsetRaw, onsetRef.current.high * decay);
+
+    // Store current values for next frame comparison
+    prevAudioRef.current = { bass, mid, high };
+
     return {
-      bass: bassSum / 10 / 255,
-      mid: midSum / 40 / 255,
-      high: highSum / 78 / 255,
+      bass,
+      mid,
+      high,
+      bassOnset: onsetRef.current.bass,
+      midOnset: onsetRef.current.mid,
+      highOnset: onsetRef.current.high,
     };
   }, []);
 
@@ -78,5 +109,5 @@ export function useMicrophone() {
     setIsConnected(false);
   }, []);
 
-  return { connect, disconnect, getFrequencyData, isConnected };
+  return { connect, disconnect, getFrequencyData, isConnected, setOnsetDecay };
 }

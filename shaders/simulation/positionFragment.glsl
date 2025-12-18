@@ -10,10 +10,9 @@ uniform float uEmitterTilt;
 uniform float uSpawnRate;
 uniform float uOrbitDecay;
 uniform bool uDoDrift;
-uniform float uAudioBass;
-uniform float uAudioMid;
-uniform float uAudioHigh;
-uniform float uAudioWaveSpeed;
+uniform float uBassOnset;
+uniform float uMidOnset;
+uniform float uHighOnset;
 uniform float uAudioAmplitude;
 
 // 1D hash that explicitly breaks grid correlation by combining x and y
@@ -59,13 +58,10 @@ void main() {
             float z = rad * sin(angle);
             float tiltAmount = sin(angle) * uEmitterTilt;
 
-            // Audio wave propagation - each emitter angle gets phase offset
-            float wavePhase = angle + uTime * uAudioWaveSpeed;
-            float audioWave = sin(wavePhase) * uAudioBass * uAudioAmplitude * 15.0
-                            + sin(wavePhase * 2.0) * uAudioMid * uAudioAmplitude * 8.0
-                            + sin(wavePhase * 4.0) * uAudioHigh * uAudioAmplitude * 4.0;
-
-            float y = tiltAmount + audioWave;
+            // Beat-reactive Y offset - oscillates around 0
+            float audioEnergy = uBassOnset * 20.0 + uMidOnset * 10.0 + uHighOnset * 5.0;
+            float oscillation = sin(uTime * 8.0);
+            float y = tiltAmount + audioEnergy * oscillation * uAudioAmplitude;
 
             pos = vec3(x, y, z);
             lifetime = 1.0;

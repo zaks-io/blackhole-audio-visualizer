@@ -7,7 +7,7 @@ import { MicToggleFab } from '@/components/MicToggleFab';
 import { useMicrophone } from '@/hooks/useMicrophone';
 
 export default function Home() {
-  const { connect, getFrequencyData, isConnected } = useMicrophone();
+  const { connect, getFrequencyData, isConnected, setOnsetDecay } = useMicrophone();
 
   const handleMicToggle = () => {
     if (!isConnected) {
@@ -29,6 +29,7 @@ export default function Home() {
         <BlackHoleSimulation
           getFrequencyData={getFrequencyData}
           isAudioConnected={isConnected}
+          setOnsetDecay={setOnsetDecay}
         />
       </Canvas>
       <MicToggleFab isConnected={isConnected} onToggle={handleMicToggle} />

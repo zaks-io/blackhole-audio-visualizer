@@ -18,9 +18,10 @@ const SKYBOX_OPTIONS = {
 interface BlackHoleSimulationProps {
   getFrequencyData: () => AudioData;
   isAudioConnected: boolean;
+  setOnsetDecay: (value: number) => void;
 }
 
-export function BlackHoleSimulation({ getFrequencyData, isAudioConnected }: BlackHoleSimulationProps) {
+export function BlackHoleSimulation({ getFrequencyData, isAudioConnected, setOnsetDecay }: BlackHoleSimulationProps) {
   const blackHoleControls = useControls('Black Hole', {
     eventHorizonRadius: { value: 3.0, min: 0.5, max: 20, step: 0.5 },
   });
@@ -59,19 +60,28 @@ export function BlackHoleSimulation({ getFrequencyData, isAudioConnected }: Blac
   });
 
   const audioControls = useControls('Audio', {
-    waveSpeed: { value: 2.0, min: 0.1, max: 10, step: 0.1 },
-    amplitude: { value: 1.0, min: 0, max: 3, step: 0.1 },
+    amplitude: { value: 3.0, min: 0, max: 5, step: 0.1 },
+    onsetDecay: {
+      value: 0.92,
+      min: 0.8,
+      max: 0.99,
+      step: 0.01,
+      onChange: (v: number) => setOnsetDecay(v),
+    },
     bassGain: { value: 1.0, min: 0, max: 3, step: 0.1 },
     midGain: { value: 1.0, min: 0, max: 3, step: 0.1 },
     highGain: { value: 1.0, min: 0, max: 3, step: 0.1 },
   });
 
   const getAudioData = () => {
-    const { bass, mid, high } = getFrequencyData();
+    const { bass, mid, high, bassOnset, midOnset, highOnset } = getFrequencyData();
     return {
       bass: bass * audioControls.bassGain,
       mid: mid * audioControls.midGain,
       high: high * audioControls.highGain,
+      bassOnset: bassOnset * audioControls.bassGain,
+      midOnset: midOnset * audioControls.midGain,
+      highOnset: highOnset * audioControls.highGain,
     };
   };
 
@@ -116,7 +126,6 @@ export function BlackHoleSimulation({ getFrequencyData, isAudioConnected }: Blac
         iscoRadius={blackHoleControls.eventHorizonRadius * physicsControls.iscoRatio}
         iscoStrength={physicsControls.iscoStrength}
         emitterSpread={emitterControls.emitterSpread}
-        audioWaveSpeed={audioControls.waveSpeed}
         audioAmplitude={audioControls.amplitude}
         getAudioData={getAudioData}
         audioEnabled={isAudioConnected}
