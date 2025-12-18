@@ -45,6 +45,7 @@ interface BlackHoleSimulationProps {
 export function BlackHoleSimulation({ getFrequencyData, isAudioConnected, setOnsetDecay, cameraMode, colorMode }: BlackHoleSimulationProps) {
   const blackHoleControls = useControls('Black Hole', {
     eventHorizonRadius: { value: 5, min: 0.5, max: 20, step: 0.5 },
+    iscoRatio: { value: 3.0, min: 2.0, max: 20.0, step: 1.0 },
     beatPulse: { value: 2, min: 0, max: 2, step: 0.1 },
   });
 
@@ -64,19 +65,18 @@ export function BlackHoleSimulation({ getFrequencyData, isAudioConnected, setOns
     gravity: { value: 100000, min: 1000, max: 1000000, step: 10000 },
     timeScale: { value: 5.0, min: 0.1, max: 30, step: 0.1 },
     softening: { value: 1.0, min: 0.01, max: 10, step: 0.1 },
-    orbitDecay: { value: 2.0, min: 0, max: 20.0, step: 0.5 },
+    orbitDecay: { value: 1, min: 0, max: 20.0, step: 0.5 },
     iscoStrength: { value: 0.5, min: 0, max: 1.0, step: 0.05 },
-    iscoRatio: { value: 3.0, min: 2.0, max: 20.0, step: 1.0 },
   });
 
   const emitterControls = useControls('Emitters', {
-    emitRadius: { value: 60, min: 5, max: 200, step: 1 },
-    emitterCount: { value: 3, min: 1, max: 36, step: 1 },
+    emitRadius: { value: 200, min: 5, max: 200, step: 1 },
+    emitterCount: { value: 36, min: 1, max: 36, step: 1 },
     emitterAngle: { value: 0, min: 0, max: 6.28, step: 0.1 },
     emitterTilt: { value: 0, min: -30, max: 30, step: 1 },
     inwardAngle: { value: 0, min: -1, max: 1, step: 0.01 },
     spawnRate: { value: 1.0, min: 0.1, max: 10, step: 0.1 },
-    emitterSpread: { value: 0.05, min: 0, max: 1.0, step: 0.01 },
+    emitterSpread: { value: 0, min: 0, max: 1.0, step: 0.01 },
     showEmitters: { value: false },
   });
 
@@ -85,15 +85,15 @@ export function BlackHoleSimulation({ getFrequencyData, isAudioConnected, setOns
   });
 
   const audioControls = useControls('Audio', {
-    amplitude: { value: 5.0, min: 0, max: 20, step: 0.5 },
+    amplitude: { value: 5, min: 0, max: 20, step: 0.5 },
     onsetDecay: {
-      value: 0.92,
+      value: 1,
       min: 0.8,
-      max: 0.99,
+      max: 1,
       step: 0.01,
       onChange: (v: number) => setOnsetDecay(v),
     },
-    audioGain: { value: 1.0, min: 0, max: 3, step: 0.1 },
+    audioGain: { value: 2, min: 0, max: 3, step: 0.1 },
     beatRepulsion: { value: 100, min: 0, max: 100, step: 1 },
     autoColorChange: { value: true },
   });
@@ -165,7 +165,7 @@ export function BlackHoleSimulation({ getFrequencyData, isAudioConnected, setOns
         emitterTilt={emitterControls.emitterTilt}
         spawnRate={emitterControls.spawnRate}
         inwardAngle={emitterControls.inwardAngle}
-        iscoRadius={blackHoleControls.eventHorizonRadius * physicsControls.iscoRatio}
+        iscoRadius={blackHoleControls.eventHorizonRadius * blackHoleControls.iscoRatio * (1 + beatIntensity * blackHoleControls.beatPulse)}
         iscoStrength={physicsControls.iscoStrength}
         emitterSpread={emitterControls.emitterSpread}
         audioAmplitude={audioControls.amplitude}
