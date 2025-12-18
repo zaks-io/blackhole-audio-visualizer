@@ -10,9 +10,9 @@ interface CameraModeUIProps {
 
 const MODES: { id: CameraMode; label: string; icon: string }[] = [
   { id: "free", label: "Free Look", icon: "👁" },
-  { id: "orbital", label: "Orbital", icon: "○" },
-  { id: "flyby", label: "Flyby", icon: "↗" },
-  { id: "topdown", label: "Top View", icon: "⬇" },
+  { id: "circle", label: "Circle", icon: "○" },
+  { id: "closeup", label: "Close Up", icon: "↗" },
+  { id: "orbit", label: "Orbit", icon: "⬇" },
 ];
 
 export function CameraModeUI({ currentMode, onModeChange, isTransitioning }: CameraModeUIProps) {

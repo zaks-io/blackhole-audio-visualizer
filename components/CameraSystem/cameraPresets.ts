@@ -1,24 +1,24 @@
 import type { CameraPreset, CameraMode } from "./types";
 
-export const orbitalPreset: CameraPreset = {
-  id: "orbital",
-  name: "Orbital",
-  position: [150, 60, 0],
+export const circlePreset: CameraPreset = {
+  id: "circle",
+  name: "Circle",
+  position: [220, 80, 0],
   rotateSpeed: 1,
   rotateAxis: "horizontal",
 };
 
-export const flybyPreset: CameraPreset = {
-  id: "flyby",
-  name: "Flyby",
-  position: [80, 20, 80],
-  rotateSpeed: 3,
+export const closeupPreset: CameraPreset = {
+  id: "closeup",
+  name: "Close Up",
+  position: [50, 15, 50],
+  rotateSpeed: -3,
   rotateAxis: "horizontal",
 };
 
-export const topdownPreset: CameraPreset = {
-  id: "topdown",
-  name: "Top View",
+export const orbitPreset: CameraPreset = {
+  id: "orbit",
+  name: "Orbit",
   position: [0, 150, 50], // Fallback, actual position computed from startingAngles
   rotateSpeed: 0.5,
   rotateAxis: "spherical",
@@ -28,7 +28,7 @@ export const topdownPreset: CameraPreset = {
 };
 
 export const PRESETS: Record<Exclude<CameraMode, "free">, CameraPreset> = {
-  orbital: orbitalPreset,
-  flyby: flybyPreset,
-  topdown: topdownPreset,
+  circle: circlePreset,
+  closeup: closeupPreset,
+  orbit: orbitPreset,
 };

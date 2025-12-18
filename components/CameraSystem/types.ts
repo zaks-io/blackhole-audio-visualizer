@@ -1,4 +1,4 @@
-export type CameraMode = "free" | "orbital" | "flyby" | "topdown";
+export type CameraMode = "free" | "circle" | "closeup" | "orbit";
 
 export type RotateAxis = "horizontal" | "spherical";
 

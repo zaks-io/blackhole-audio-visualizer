@@ -1,8 +1,13 @@
 "use client";
 
-import { Eye, Orbit, ArrowUpRight, ArrowDown } from "lucide-react";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Video } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import type { CameraMode } from "@/components/CameraSystem";
 
@@ -12,11 +17,11 @@ interface CameraControlsProps {
   isTransitioning: boolean;
 }
 
-const CAMERA_MODES: { id: CameraMode; label: string; icon: React.ReactNode }[] = [
-  { id: "free", label: "Free Look", icon: <Eye className="h-4 w-4" /> },
-  { id: "orbital", label: "Orbital", icon: <Orbit className="h-4 w-4" /> },
-  { id: "flyby", label: "Flyby", icon: <ArrowUpRight className="h-4 w-4" /> },
-  { id: "topdown", label: "Top View", icon: <ArrowDown className="h-4 w-4" /> },
+const CAMERA_MODES: { id: CameraMode; label: string }[] = [
+  { id: "free", label: "Free Look" },
+  { id: "circle", label: "Circle" },
+  { id: "closeup", label: "Close Up" },
+  { id: "orbit", label: "Orbit" },
 ];
 
 export function CameraControls({
@@ -25,38 +30,29 @@ export function CameraControls({
   isTransitioning,
 }: CameraControlsProps) {
   return (
-    <TooltipProvider delayDuration={300}>
-      <ToggleGroup
-        type="single"
-        value={currentMode}
-        onValueChange={(value) => {
-          if (value) onModeChange(value as CameraMode);
-        }}
-        className="gap-1"
+    <Select
+      value={currentMode}
+      onValueChange={(value) => onModeChange(value as CameraMode)}
+      disabled={isTransitioning}
+    >
+      <SelectTrigger
+        className={cn(
+          "h-10 w-auto gap-2 rounded-full border-0 bg-transparent px-3",
+          "hover:bg-accent/50",
+          "focus:ring-0 focus-visible:ring-0",
+          isTransitioning && "opacity-50 cursor-wait"
+        )}
       >
+        <Video className="h-4 w-4" />
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
         {CAMERA_MODES.map((mode) => (
-          <Tooltip key={mode.id}>
-            <TooltipTrigger asChild>
-              <ToggleGroupItem
-                value={mode.id}
-                disabled={isTransitioning && mode.id !== "free"}
-                className={cn(
-                  "h-10 w-10 rounded-full",
-                  "data-[state=on]:bg-primary data-[state=on]:text-primary-foreground",
-                  "data-[state=on]:glow-cyan-sm",
-                  "transition-all duration-200",
-                  isTransitioning && mode.id !== "free" && "opacity-50 cursor-wait"
-                )}
-              >
-                {mode.icon}
-              </ToggleGroupItem>
-            </TooltipTrigger>
-            <TooltipContent side="top" className="text-xs">
-              {mode.label}
-            </TooltipContent>
-          </Tooltip>
+          <SelectItem key={mode.id} value={mode.id}>
+            {mode.label}
+          </SelectItem>
         ))}
-      </ToggleGroup>
-    </TooltipProvider>
+      </SelectContent>
+    </Select>
   );
 }
