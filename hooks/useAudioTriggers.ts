@@ -5,6 +5,20 @@ import type { AudioData, SpectralFeatures } from "./useMicrophone";
 import { useBPMTracker, type BPMData } from "./useBPMTracker";
 import { useNoveltyDetection, type NoveltyData } from "./useNoveltyDetection";
 
+export interface TriggerSettings {
+  dropRmsThreshold: number;
+  dropSubBassThreshold: number;
+  buildupDuration: number;
+  energyTrendThreshold: number;
+}
+
+export const DEFAULT_TRIGGER_SETTINGS: TriggerSettings = {
+  dropRmsThreshold: 0.25,
+  dropSubBassThreshold: 0.3,
+  buildupDuration: 2,
+  energyTrendThreshold: 0.08,
+};
+
 export interface AudioTriggers {
   // Beat-synced triggers
   onBeat: boolean;
@@ -46,6 +60,9 @@ const DEFAULT_TRIGGERS: AudioTriggers = {
     isOnBeat: false,
     timeSinceLastBeat: 0,
     beatCount: 0,
+    rawOnset: false,
+    threshold: 0,
+    avgEnergy: 0,
   },
   novelty: {
     novelty: 0,
@@ -63,22 +80,23 @@ const DEFAULT_TRIGGERS: AudioTriggers = {
     spectralRolloff: 0,
     zcr: 0,
     subBassRatio: 0,
+    bassEnergy: 0,
+    perceptualSharpness: 0,
   },
 };
 
-// Detection thresholds
-const DROP_RMS_SPIKE = 0.4;
-const DROP_SUBBASS_SPIKE = 0.5;
-const BUILDUP_DURATION = 4; // seconds
-const BREAKDOWN_RMS_THRESHOLD = 0.05; // Very quiet
-const BREAKDOWN_DENSITY_THRESHOLD = 0.02; // Very sparse
+// Fixed thresholds (not configurable via UI)
+const BREAKDOWN_RMS_THRESHOLD = 0.05;
+const BREAKDOWN_DENSITY_THRESHOLD = 0.02;
 const SILENCE_THRESHOLD = 0.02;
-const SILENCE_DURATION = 2000; // ms for song change detection
-const BPM_CHANGE_THRESHOLD = 0.1; // 10% BPM shift
+const SILENCE_DURATION = 2000;
+const BPM_CHANGE_THRESHOLD = 0.1;
 
-export function useAudioTriggers() {
+export function useAudioTriggers(settings: TriggerSettings = DEFAULT_TRIGGER_SETTINGS) {
   const { processBeat, reset: resetBPM } = useBPMTracker();
-  const { processFrame: processNovelty, reset: resetNovelty } = useNoveltyDetection();
+  const { processFrame: processNovelty, reset: resetNovelty } = useNoveltyDetection(
+    settings.energyTrendThreshold
+  );
 
   const triggersRef = useRef<AudioTriggers>({ ...DEFAULT_TRIGGERS });
   const prevBPMRef = useRef<number>(0);
@@ -89,10 +107,11 @@ export function useAudioTriggers() {
   const processAudio = useCallback(
     (audioData: AudioData, timestamp: number): AudioTriggers => {
       const triggers = triggersRef.current;
-      const { bandOnsets, spectral } = audioData;
+      const { spectral } = audioData;
 
-      // Calculate overall onset (use first few bands for beat detection)
-      const beatOnset = Math.max(bandOnsets[0], bandOnsets[1], bandOnsets[2]);
+      // Use bass-weighted onset for better kick detection
+      // Combines spectralFlux (general transients) with bassEnergy (low freq)
+      const beatOnset = spectral.spectralFlux * 0.6 + spectral.bassEnergy * 0.4;
 
       // Process BPM tracking
       const bpmData = processBeat(beatOnset, timestamp);
@@ -105,14 +124,14 @@ export function useAudioTriggers() {
       // Copy spectral data
       triggers.spectral = { ...spectral };
 
-      // Beat triggers
-      triggers.onBeat = bpmData.isOnBeat && bpmData.beatCount !== prevBeatCountRef.current;
+      // Beat triggers - use rawOnset as fallback when BPM isn't established yet
+      const beatCountChanged = bpmData.beatCount !== prevBeatCountRef.current;
+      triggers.onBeat = (bpmData.isOnBeat || bpmData.rawOnset) && beatCountChanged;
       triggers.onDownbeat = triggers.onBeat && bpmData.beatCount % 4 === 0;
       prevBeatCountRef.current = bpmData.beatCount;
 
-      // Calculate onset density (transients per second)
-      const totalOnset = Array.from(bandOnsets).reduce((a, b) => a + b, 0) / bandOnsets.length;
-      onsetDensityHistoryRef.current.push(totalOnset);
+      // Calculate onset density from spectralFlux history
+      onsetDensityHistoryRef.current.push(spectral.spectralFlux);
       if (onsetDensityHistoryRef.current.length > 60) {
         onsetDensityHistoryRef.current.shift();
       }
@@ -128,12 +147,12 @@ export function useAudioTriggers() {
       // Drop detection: novelty peak + RMS spike + sub-bass spike
       triggers.dropDetected =
         noveltyData.noveltyPeak &&
-        spectral.rms > DROP_RMS_SPIKE &&
-        spectral.subBassRatio > DROP_SUBBASS_SPIKE;
+        spectral.rms > settings.dropRmsThreshold &&
+        spectral.subBassRatio > settings.dropSubBassThreshold;
 
-      // Buildup detection: energy trend building for > 4 seconds
+      // Buildup detection: energy trend building for configured duration
       triggers.buildupDetected =
-        noveltyData.energyTrend === "building" && noveltyData.sectionAge > BUILDUP_DURATION;
+        noveltyData.energyTrend === "building" && noveltyData.sectionAge > settings.buildupDuration;
 
       // Breakdown detection: low RMS + low density (only during near-silence)
       triggers.breakdownDetected =
@@ -164,7 +183,7 @@ export function useAudioTriggers() {
 
       return { ...triggers };
     },
-    [processBeat, processNovelty]
+    [processBeat, processNovelty, settings]
   );
 
   const reset = useCallback(() => {

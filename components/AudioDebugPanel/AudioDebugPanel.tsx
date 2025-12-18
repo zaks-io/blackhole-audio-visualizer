@@ -2,7 +2,7 @@
 
 import type { RefObject } from "react";
 import { useState, useRef, useEffect } from "react";
-import type { AudioTriggers } from "@/hooks/useAudioTriggers";
+import type { AudioTriggers, TriggerSettings } from "@/hooks/useAudioTriggers";
 import type { AnimationModeId } from "@/hooks/useAnimationModes";
 
 interface AudioDebugPanelProps {
@@ -12,6 +12,8 @@ interface AudioDebugPanelProps {
   availableModes: AnimationModeId[];
   autoMode: boolean;
   onAutoModeChange: (enabled: boolean) => void;
+  triggerSettings: TriggerSettings;
+  onTriggerSettingsChange: (settings: TriggerSettings) => void;
 }
 
 function ProgressBar({
@@ -56,6 +58,40 @@ function TriggerIndicator({ active, label }: { active: boolean; label: string })
       }`}
     >
       {label}
+    </div>
+  );
+}
+
+function Slider({
+  label,
+  value,
+  min,
+  max,
+  step,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <div className="mb-2">
+      <div className="mb-1 flex justify-between text-xs">
+        <span className="text-gray-400">{label}</span>
+        <span className="font-mono text-white">{value.toFixed(2)}</span>
+      </div>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(e) => onChange(parseFloat(e.target.value))}
+        className="h-1 w-full cursor-pointer appearance-none rounded-lg bg-gray-700 accent-blue-500"
+      />
     </div>
   );
 }
@@ -106,10 +142,13 @@ export function AudioDebugPanel({
   availableModes,
   autoMode,
   onAutoModeChange,
+  triggerSettings,
+  onTriggerSettingsChange,
 }: AudioDebugPanelProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [triggers, setTriggers] = useState<AudioTriggers | null>(null);
   const [noveltyHistory, setNoveltyHistory] = useState<number[]>([]);
+  const [showTriggerSettings, setShowTriggerSettings] = useState(false);
 
   // Poll the ref at 10Hz for UI updates (debug panel doesn't need 60fps)
   useEffect(() => {
@@ -188,8 +227,14 @@ export function AudioDebugPanel({
             label="Centroid (Brightness)"
             color="yellow"
           />
-          <ProgressBar value={spectral?.spectralFlux || 0} label="Flux (Change)" color="cyan" />
+          <ProgressBar value={spectral?.spectralFlux || 0} label="Flux (Onset)" color="cyan" />
+          <ProgressBar value={spectral?.bassEnergy || 0} label="Bass Energy" color="red" />
           <ProgressBar value={spectral?.subBassRatio || 0} label="Sub-Bass Ratio" color="red" />
+          <ProgressBar
+            value={spectral?.perceptualSharpness || 0}
+            label="Sharpness"
+            color="purple"
+          />
         </div>
 
         {/* Novelty Graph */}
@@ -218,6 +263,61 @@ export function AudioDebugPanel({
             <TriggerIndicator active={triggers?.breakdownDetected || false} label="Breakdown" />
             <TriggerIndicator active={triggers?.possibleSongChange || false} label="Song Change" />
           </div>
+        </div>
+
+        {/* Trigger Settings */}
+        <div className="mb-4">
+          <button
+            onClick={() => setShowTriggerSettings(!showTriggerSettings)}
+            className="mb-2 flex w-full items-center justify-between text-xs font-medium text-gray-300 hover:text-white"
+          >
+            <span>Trigger Settings</span>
+            <span>{showTriggerSettings ? "▼" : "▶"}</span>
+          </button>
+          {showTriggerSettings && (
+            <div className="space-y-1">
+              <Slider
+                label="Drop RMS"
+                value={triggerSettings.dropRmsThreshold}
+                min={0.1}
+                max={0.6}
+                step={0.01}
+                onChange={(v) =>
+                  onTriggerSettingsChange({ ...triggerSettings, dropRmsThreshold: v })
+                }
+              />
+              <Slider
+                label="Drop Sub-Bass"
+                value={triggerSettings.dropSubBassThreshold}
+                min={0.1}
+                max={0.6}
+                step={0.01}
+                onChange={(v) =>
+                  onTriggerSettingsChange({ ...triggerSettings, dropSubBassThreshold: v })
+                }
+              />
+              <Slider
+                label="Buildup Duration (s)"
+                value={triggerSettings.buildupDuration}
+                min={1}
+                max={8}
+                step={0.5}
+                onChange={(v) =>
+                  onTriggerSettingsChange({ ...triggerSettings, buildupDuration: v })
+                }
+              />
+              <Slider
+                label="Energy Trend"
+                value={triggerSettings.energyTrendThreshold}
+                min={0.02}
+                max={0.3}
+                step={0.01}
+                onChange={(v) =>
+                  onTriggerSettingsChange({ ...triggerSettings, energyTrendThreshold: v })
+                }
+              />
+            </div>
+          )}
         </div>
 
         {/* Mode Selection */}

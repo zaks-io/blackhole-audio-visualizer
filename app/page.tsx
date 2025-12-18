@@ -14,7 +14,12 @@ import { useCameraMode } from "@/components/CameraSystem";
 import { useColorMode } from "@/components/ColorModeSystem";
 import { useAudioSource } from "@/hooks/useAudioSource";
 import { useRecording } from "@/hooks/useRecording";
-import { useAudioTriggers, type AudioTriggers } from "@/hooks/useAudioTriggers";
+import {
+  useAudioTriggers,
+  type AudioTriggers,
+  type TriggerSettings,
+  DEFAULT_TRIGGER_SETTINGS,
+} from "@/hooks/useAudioTriggers";
 import { useAnimationModes } from "@/hooks/useAnimationModes";
 import { useUIState } from "@/hooks/useUIState";
 
@@ -33,7 +38,8 @@ export default function Home() {
     openScreenRecordingSettings,
   } = useAudioSource();
   const { isRecording, duration, error, startRecording, stopRecording } = useRecording();
-  const { processAudio, reset: resetTriggers } = useAudioTriggers();
+  const [triggerSettings, setTriggerSettings] = useState<TriggerSettings>(DEFAULT_TRIGGER_SETTINGS);
+  const { processAudio, reset: resetTriggers } = useAudioTriggers(triggerSettings);
   const cameraMode = useCameraMode();
   const colorMode = useColorMode();
   const canvasContainerRef = useRef<HTMLDivElement>(null);
@@ -152,6 +158,8 @@ export default function Home() {
               availableModes={availableModes}
               autoMode={autoMode}
               onAutoModeChange={setAutoMode}
+              triggerSettings={triggerSettings}
+              onTriggerSettingsChange={setTriggerSettings}
             />
           </div>
         )}
