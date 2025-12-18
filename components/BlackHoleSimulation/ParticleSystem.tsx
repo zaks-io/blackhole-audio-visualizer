@@ -5,15 +5,27 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useGPUCompute } from '@/hooks/useGPUCompute';
 import { TEXTURE_SIZE, PARTICLE_COUNT } from '@/lib/gpu/verletPhysics';
+import type { AudioData } from '@/hooks/useMicrophone';
 import particleVertexShader from '@/shaders/particles/particleVertex.glsl';
 import particleFragmentShader from '@/shaders/particles/particleFragment.glsl';
+
+// 8 distinct primary design colors
+const DEFAULT_EMITTER_COLORS = [
+  '#ff6b35', // Orange
+  '#f7c948', // Yellow
+  '#7ed321', // Green
+  '#00d4aa', // Teal
+  '#4a90d9', // Blue
+  '#7b68ee', // Purple
+  '#ff69b4', // Pink
+  '#ff4757', // Red
+];
 
 interface ParticleSystemProps {
   pointSize: number;
   brightness: number;
   alpha: number;
-  innerColor: string;
-  outerColor: string;
+  emitterColors?: string[];
   maxDistance: number;
   gravitationalParameter: number;
   timeScale: number;
@@ -30,7 +42,7 @@ interface ParticleSystemProps {
   iscoStrength: number;
   emitterSpread: number;
   audioAmplitude: number;
-  getAudioData: () => { bass: number; mid: number; high: number; bassOnset: number; midOnset: number; highOnset: number };
+  getAudioData: (bandCount: number) => AudioData;
   audioEnabled: boolean;
 }
 
@@ -38,8 +50,7 @@ export function ParticleSystem({
   pointSize,
   brightness,
   alpha,
-  innerColor,
-  outerColor,
+  emitterColors = DEFAULT_EMITTER_COLORS,
   maxDistance,
   gravitationalParameter,
   timeScale,
@@ -76,7 +87,7 @@ export function ParticleSystem({
     setISCORadius,
     setISCOStrength,
     setEmitterSpread,
-    setAudioOnset,
+    setBandOnsets,
     setAudioAmplitude,
   } = useGPUCompute();
   const materialRef = useRef<THREE.ShaderMaterial>(null);
@@ -99,6 +110,16 @@ export function ParticleSystem({
     return { positions: pos, references: refs };
   }, []);
 
+  // Create color array for shader (8 colors)
+  const colorArray = useMemo(() => {
+    const colors: THREE.Color[] = [];
+    for (let i = 0; i < 8; i++) {
+      const colorHex = emitterColors[i % emitterColors.length];
+      colors.push(new THREE.Color(colorHex));
+    }
+    return colors;
+  }, []);
+
   const uniforms = useMemo(
     () => ({
       texturePosition: { value: null as THREE.Texture | null },
@@ -106,8 +127,7 @@ export function ParticleSystem({
       uPointSize: { value: pointSize },
       uBrightness: { value: brightness },
       uAlpha: { value: alpha },
-      uColorInner: { value: new THREE.Color(innerColor) },
-      uColorOuter: { value: new THREE.Color(outerColor) },
+      uEmitterColors: { value: colorArray },
       uMaxDistance: { value: maxDistance },
       uEventHorizon: { value: eventHorizonRadius },
     }),
@@ -127,10 +147,14 @@ export function ParticleSystem({
       materialRef.current.uniforms.uPointSize.value = pointSize;
       materialRef.current.uniforms.uBrightness.value = brightness;
       materialRef.current.uniforms.uAlpha.value = alpha;
-      materialRef.current.uniforms.uColorInner.value.set(innerColor);
-      materialRef.current.uniforms.uColorOuter.value.set(outerColor);
       materialRef.current.uniforms.uMaxDistance.value = maxDistance;
       materialRef.current.uniforms.uEventHorizon.value = eventHorizonRadius;
+
+      // Update colors if they changed
+      for (let i = 0; i < 8; i++) {
+        const colorHex = emitterColors[i % emitterColors.length];
+        materialRef.current.uniforms.uEmitterColors.value[i].set(colorHex);
+      }
     }
     setGravitationalParameter(gravitationalParameter);
     setTimeScale(timeScale);
@@ -149,10 +173,11 @@ export function ParticleSystem({
     setAudioAmplitude(audioAmplitude);
 
     if (audioEnabled) {
-      const { bassOnset, midOnset, highOnset } = getAudioData();
-      setAudioOnset(bassOnset, midOnset, highOnset);
+      const audioData = getAudioData(emitterCount);
+      setBandOnsets(audioData.bandOnsets, audioData.bandCount);
     } else {
-      setAudioOnset(0, 0, 0);
+      const emptyOnsets = new Float32Array(36);
+      setBandOnsets(emptyOnsets, emitterCount);
     }
   });
 
@@ -161,15 +186,11 @@ export function ParticleSystem({
       <bufferGeometry>
         <bufferAttribute
           attach="attributes-position"
-          count={PARTICLE_COUNT}
-          array={positions}
-          itemSize={3}
+          args={[positions, 3]}
         />
         <bufferAttribute
           attach="attributes-reference"
-          count={PARTICLE_COUNT}
-          array={references}
-          itemSize={2}
+          args={[references, 2]}
         />
       </bufferGeometry>
       <shaderMaterial

@@ -16,17 +16,32 @@ import {
 import positionFragmentShader from '@/shaders/simulation/positionFragment.glsl';
 import velocityFragmentShader from '@/shaders/simulation/velocityFragment.glsl';
 
+const MAX_BANDS = 36;
+
 export function useGPUCompute() {
   const { gl } = useThree();
   const gpuComputeRef = useRef<GPUComputationRenderer | null>(null);
   const positionVariableRef = useRef<Variable | null>(null);
   const velocityVariableRef = useRef<Variable | null>(null);
   const timeScaleRef = useRef(0.5);
+  const bandOnsetsTextureRef = useRef<THREE.DataTexture | null>(null);
 
   const textures = useMemo(() => {
     const initialPosition = createInitialPositionTexture(EMISSION_RADIUS);
     const initialVelocity = createInitialVelocityTexture(initialPosition, DEFAULT_GM);
-    return { initialPosition, initialVelocity };
+
+    // Create band onsets texture (1 x MAX_BANDS, RGBA float, only R channel used)
+    const bandOnsetsData = new Float32Array(MAX_BANDS * 4);
+    const bandOnsetsTexture = new THREE.DataTexture(
+      bandOnsetsData,
+      MAX_BANDS,
+      1,
+      THREE.RGBAFormat,
+      THREE.FloatType
+    );
+    bandOnsetsTexture.needsUpdate = true;
+
+    return { initialPosition, initialVelocity, bandOnsetsTexture };
   }, []);
 
   useEffect(() => {
@@ -84,10 +99,12 @@ export function useGPUCompute() {
     positionVariable.material.uniforms.uSpawnRate = { value: 1.0 };
     positionVariable.material.uniforms.uOrbitDecay = { value: 2.0 };
     positionVariable.material.uniforms.uDoDrift = { value: false };
-    positionVariable.material.uniforms.uBassOnset = { value: 0.0 };
-    positionVariable.material.uniforms.uMidOnset = { value: 0.0 };
-    positionVariable.material.uniforms.uHighOnset = { value: 0.0 };
+    positionVariable.material.uniforms.uBandOnsetsTexture = { value: textures.bandOnsetsTexture };
+    positionVariable.material.uniforms.uBandCount = { value: 2.0 };
     positionVariable.material.uniforms.uAudioAmplitude = { value: 1.0 };
+
+    // Store ref to band onsets texture for updates
+    bandOnsetsTextureRef.current = textures.bandOnsetsTexture;
 
     // Set up uniforms for velocity shader
     velocityVariable.material.uniforms.uTime = { value: 0 };
@@ -120,6 +137,8 @@ export function useGPUCompute() {
     return () => {
       textures.initialPosition.dispose();
       textures.initialVelocity.dispose();
+      textures.bandOnsetsTexture.dispose();
+      bandOnsetsTextureRef.current = null;
     };
   }, [gl, textures]);
 
@@ -203,6 +222,7 @@ export function useGPUCompute() {
   const setEmitterCount = useCallback((value: number) => {
     if (positionVariableRef.current) {
       positionVariableRef.current.material.uniforms.uEmitterCount.value = value;
+      positionVariableRef.current.material.uniforms.uBandCount.value = value;
     }
     if (velocityVariableRef.current) {
       velocityVariableRef.current.material.uniforms.uEmitterCount.value = value;
@@ -257,12 +277,13 @@ export function useGPUCompute() {
     }
   }, []);
 
-  const setAudioOnset = useCallback((bassOnset: number, midOnset: number, highOnset: number) => {
-    if (positionVariableRef.current) {
-      positionVariableRef.current.material.uniforms.uBassOnset.value = bassOnset;
-      positionVariableRef.current.material.uniforms.uMidOnset.value = midOnset;
-      positionVariableRef.current.material.uniforms.uHighOnset.value = highOnset;
+  const setBandOnsets = useCallback((onsets: Float32Array, count: number) => {
+    if (!bandOnsetsTextureRef.current) return;
+    const data = bandOnsetsTextureRef.current.image.data as Float32Array;
+    for (let i = 0; i < count && i < MAX_BANDS; i++) {
+      data[i * 4] = onsets[i]; // R channel = onset value
     }
+    bandOnsetsTextureRef.current.needsUpdate = true;
   }, []);
 
   const setAudioAmplitude = useCallback((value: number) => {
@@ -288,7 +309,7 @@ export function useGPUCompute() {
     setISCORadius,
     setISCOStrength,
     setEmitterSpread,
-    setAudioOnset,
+    setBandOnsets,
     setAudioAmplitude,
   };
 }

@@ -10,9 +10,8 @@ uniform float uEmitterTilt;
 uniform float uSpawnRate;
 uniform float uOrbitDecay;
 uniform bool uDoDrift;
-uniform float uBassOnset;
-uniform float uMidOnset;
-uniform float uHighOnset;
+uniform sampler2D uBandOnsetsTexture;
+uniform float uBandCount;
 uniform float uAudioAmplitude;
 
 // 1D hash that explicitly breaks grid correlation by combining x and y
@@ -39,12 +38,9 @@ void main() {
     float r = length(pos);
 
     if (lifetime < 0.0) {
-        // WAITING: stochastic spawn - random chance each frame
-        float spawnChance = hash2(uv, uTime);
-        float threshold = uDeltaTime * uSpawnRate * 0.1;
-        if (spawnChance < threshold) {
-            lifetime = 0.0; // spawn now
-        }
+        // WAITING: count up toward 0 based on spawn rate
+        lifetime += uDeltaTime * uSpawnRate;
+
         if (lifetime >= 0.0) {
             // Pick which emitter this particle spawns from
             float emitterIndex = floor(hash2(uv, 100.0) * uEmitterCount);
@@ -58,12 +54,23 @@ void main() {
             float z = rad * sin(angle);
             float tiltAmount = sin(angle) * uEmitterTilt;
 
-            // Beat-reactive Y offset - oscillates around 0
-            float audioEnergy = uBassOnset * 20.0 + uMidOnset * 10.0 + uHighOnset * 5.0;
-            float oscillation = sin(uTime * 8.0);
+            // Sample this emitter's band onset from texture
+            // Texture is 1D (36 x 1), sample at center of texel
+            float bandU = (emitterIndex + 0.5) / 36.0;
+            float bandOnset = texture2D(uBandOnsetsTexture, vec2(bandU, 0.5)).r;
+
+            // Beat-reactive Y offset - oscillates based on this band's onset
+            float audioEnergy = bandOnset * 15.0;
+            float oscillation = sin(uTime * 8.0 + emitterIndex * 0.5);
             float y = tiltAmount + audioEnergy * oscillation * uAudioAmplitude;
 
-            pos = vec3(x, y, z);
+            // Tiny arc offset to break banding, plus user-controlled spread
+            float h1 = fract(sin(dot(uv, vec2(12.9898, 78.233))) * 43758.5453);
+            float baseArc = (h1 - 0.5) * 0.05; // minimal base to break patterns
+            float spawnAngle = angle + baseArc;
+            float spawnX = rad * cos(spawnAngle);
+            float spawnZ = rad * sin(spawnAngle);
+            pos = vec3(spawnX, y, spawnZ);
             lifetime = 1.0;
         }
     } else if (r < uEventHorizon) {

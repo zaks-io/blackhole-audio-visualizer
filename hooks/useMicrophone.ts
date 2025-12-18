@@ -3,12 +3,24 @@
 import { useState, useRef, useCallback } from 'react';
 
 export interface AudioData {
-  bass: number;
-  mid: number;
-  high: number;
-  bassOnset: number;
-  midOnset: number;
-  highOnset: number;
+  bandEnergies: Float32Array;
+  bandOnsets: Float32Array;
+  bandCount: number;
+}
+
+const MAX_BANDS = 36;
+
+// Get logarithmic frequency band boundaries for perceptually balanced bands
+function getBandBoundaries(binCount: number, bandCount: number): number[] {
+  const boundaries: number[] = [0];
+  const logMin = Math.log(1);
+  const logMax = Math.log(binCount);
+
+  for (let i = 1; i <= bandCount; i++) {
+    const logVal = logMin + (logMax - logMin) * (i / bandCount);
+    boundaries.push(Math.round(Math.exp(logVal)));
+  }
+  return boundaries;
 }
 
 export function useMicrophone() {
@@ -16,9 +28,15 @@ export function useMicrophone() {
   const analyserRef = useRef<AnalyserNode | null>(null);
   const dataArrayRef = useRef<Uint8Array<ArrayBuffer> | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
-  const prevAudioRef = useRef({ bass: 0, mid: 0, high: 0 });
-  const onsetRef = useRef({ bass: 0, mid: 0, high: 0 });
+
+  // Dynamic band arrays
+  const prevBandEnergiesRef = useRef<Float32Array>(new Float32Array(MAX_BANDS));
+  const bandOnsetsRef = useRef<Float32Array>(new Float32Array(MAX_BANDS));
   const onsetDecayRef = useRef(0.92);
+
+  // Reusable output arrays to avoid GC pressure
+  const outputEnergiesRef = useRef<Float32Array>(new Float32Array(MAX_BANDS));
+  const outputOnsetsRef = useRef<Float32Array>(new Float32Array(MAX_BANDS));
 
   const setOnsetDecay = useCallback((value: number) => {
     onsetDecayRef.current = value;
@@ -43,59 +61,65 @@ export function useMicrophone() {
     setIsConnected(true);
   }, [isConnected]);
 
-  const getFrequencyData = useCallback((): AudioData => {
+  const getFrequencyData = useCallback((bandCount: number): AudioData => {
     const analyser = analyserRef.current;
     const dataArray = dataArrayRef.current;
+
+    const clampedBandCount = Math.min(Math.max(1, bandCount), MAX_BANDS);
+    const energies = outputEnergiesRef.current;
+    const onsets = outputOnsetsRef.current;
+
     if (!analyser || !dataArray) {
-      return { bass: 0, mid: 0, high: 0, bassOnset: 0, midOnset: 0, highOnset: 0 };
+      energies.fill(0);
+      onsets.fill(0);
+      return { bandEnergies: energies, bandOnsets: onsets, bandCount: clampedBandCount };
     }
 
     analyser.getByteFrequencyData(dataArray);
-    const data = dataArray;
+    const binCount = dataArray.length; // 128 bins
 
-    // Calculate average for each frequency band
-    // Bass: bins 0-10 (~0-860Hz at 44.1kHz sample rate)
-    // Mid: bins 10-50 (~860-4300Hz)
-    // High: bins 50-128 (~4300-11000Hz)
-    let bassSum = 0;
-    let midSum = 0;
-    let highSum = 0;
+    // Get logarithmic band boundaries
+    const boundaries = getBandBoundaries(binCount, clampedBandCount);
 
-    for (let i = 0; i < 10; i++) {
-      bassSum += data[i];
-    }
-    for (let i = 10; i < 50; i++) {
-      midSum += data[i];
-    }
-    for (let i = 50; i < 128; i++) {
-      highSum += data[i];
-    }
-
-    const bass = bassSum / 10 / 255;
-    const mid = midSum / 40 / 255;
-    const high = highSum / 78 / 255;
-
-    // Onset detection: detect sudden increases (transients)
-    const bassOnsetRaw = Math.max(0, bass - prevAudioRef.current.bass);
-    const midOnsetRaw = Math.max(0, mid - prevAudioRef.current.mid);
-    const highOnsetRaw = Math.max(0, high - prevAudioRef.current.high);
-
-    // Envelope follower: fast attack, slow decay
     const decay = onsetDecayRef.current;
-    onsetRef.current.bass = Math.max(bassOnsetRaw, onsetRef.current.bass * decay);
-    onsetRef.current.mid = Math.max(midOnsetRaw, onsetRef.current.mid * decay);
-    onsetRef.current.high = Math.max(highOnsetRaw, onsetRef.current.high * decay);
+    const prevEnergies = prevBandEnergiesRef.current;
+    const currentOnsets = bandOnsetsRef.current;
 
-    // Store current values for next frame comparison
-    prevAudioRef.current = { bass, mid, high };
+    // Calculate energy for each band
+    for (let band = 0; band < clampedBandCount; band++) {
+      const startBin = boundaries[band];
+      const endBin = boundaries[band + 1];
+      const binRange = Math.max(1, endBin - startBin);
+
+      let sum = 0;
+      for (let i = startBin; i < endBin; i++) {
+        sum += dataArray[i];
+      }
+
+      const energy = sum / binRange / 255;
+      energies[band] = energy;
+
+      // Onset detection: detect sudden increases (transients)
+      const onsetRaw = Math.max(0, energy - prevEnergies[band]);
+
+      // Envelope follower: fast attack, slow decay
+      currentOnsets[band] = Math.max(onsetRaw, currentOnsets[band] * decay);
+      onsets[band] = currentOnsets[band];
+
+      // Store current energy for next frame
+      prevEnergies[band] = energy;
+    }
+
+    // Zero out unused bands
+    for (let band = clampedBandCount; band < MAX_BANDS; band++) {
+      energies[band] = 0;
+      onsets[band] = 0;
+    }
 
     return {
-      bass,
-      mid,
-      high,
-      bassOnset: onsetRef.current.bass,
-      midOnset: onsetRef.current.mid,
-      highOnset: onsetRef.current.high,
+      bandEnergies: energies,
+      bandOnsets: onsets,
+      bandCount: clampedBandCount,
     };
   }, []);
 

@@ -16,7 +16,7 @@ const SKYBOX_OPTIONS = {
 };
 
 interface BlackHoleSimulationProps {
-  getFrequencyData: () => AudioData;
+  getFrequencyData: (bandCount: number) => AudioData;
   isAudioConnected: boolean;
   setOnsetDecay: (value: number) => void;
 }
@@ -30,8 +30,6 @@ export function BlackHoleSimulation({ getFrequencyData, isAudioConnected, setOns
     pointSize: { value: 1.0, min: 0.1, max: 20, step: 0.1 },
     brightness: { value: 1.5, min: 0.1, max: 5, step: 0.1 },
     alpha: { value: 0.8, min: 0.01, max: 1.0, step: 0.01 },
-    innerColor: '#ff6600',
-    outerColor: '#0066ff',
     maxDistance: { value: 60, min: 5, max: 150, step: 1 },
   });
 
@@ -46,12 +44,12 @@ export function BlackHoleSimulation({ getFrequencyData, isAudioConnected, setOns
 
   const emitterControls = useControls('Emitters', {
     emitRadius: { value: 60, min: 5, max: 200, step: 1 },
-    emitterCount: { value: 2, min: 1, max: 36, step: 1 },
+    emitterCount: { value: 8, min: 1, max: 36, step: 1 },
     emitterAngle: { value: 0, min: 0, max: 6.28, step: 0.1 },
     emitterTilt: { value: 0, min: -30, max: 30, step: 1 },
     inwardAngle: { value: 0, min: -1, max: 1, step: 0.01 },
     spawnRate: { value: 1.0, min: 0.1, max: 10, step: 0.1 },
-    emitterSpread: { value: 0.1, min: 0, max: 2.0, step: 0.05 },
+    emitterSpread: { value: 0.05, min: 0, max: 1.0, step: 0.01 },
     showEmitters: { value: false },
   });
 
@@ -60,7 +58,7 @@ export function BlackHoleSimulation({ getFrequencyData, isAudioConnected, setOns
   });
 
   const audioControls = useControls('Audio', {
-    amplitude: { value: 3.0, min: 0, max: 5, step: 0.1 },
+    amplitude: { value: 10.0, min: 0, max: 20, step: 0.5 },
     onsetDecay: {
       value: 0.92,
       min: 0.8,
@@ -68,20 +66,20 @@ export function BlackHoleSimulation({ getFrequencyData, isAudioConnected, setOns
       step: 0.01,
       onChange: (v: number) => setOnsetDecay(v),
     },
-    bassGain: { value: 1.0, min: 0, max: 3, step: 0.1 },
-    midGain: { value: 1.0, min: 0, max: 3, step: 0.1 },
-    highGain: { value: 1.0, min: 0, max: 3, step: 0.1 },
+    audioGain: { value: 1.0, min: 0, max: 3, step: 0.1 },
   });
 
-  const getAudioData = () => {
-    const { bass, mid, high, bassOnset, midOnset, highOnset } = getFrequencyData();
+  const getAudioData = (bandCount: number): AudioData => {
+    const data = getFrequencyData(bandCount);
+    // Apply gain to all band onsets
+    const scaledOnsets = new Float32Array(data.bandOnsets.length);
+    for (let i = 0; i < data.bandOnsets.length; i++) {
+      scaledOnsets[i] = data.bandOnsets[i] * audioControls.audioGain;
+    }
     return {
-      bass: bass * audioControls.bassGain,
-      mid: mid * audioControls.midGain,
-      high: high * audioControls.highGain,
-      bassOnset: bassOnset * audioControls.bassGain,
-      midOnset: midOnset * audioControls.midGain,
-      highOnset: highOnset * audioControls.highGain,
+      bandEnergies: data.bandEnergies,
+      bandOnsets: scaledOnsets,
+      bandCount: data.bandCount,
     };
   };
 
@@ -109,8 +107,6 @@ export function BlackHoleSimulation({ getFrequencyData, isAudioConnected, setOns
         pointSize={particleControls.pointSize}
         brightness={particleControls.brightness}
         alpha={particleControls.alpha}
-        innerColor={particleControls.innerColor}
-        outerColor={particleControls.outerColor}
         maxDistance={particleControls.maxDistance}
         gravitationalParameter={physicsControls.gravity}
         timeScale={physicsControls.timeScale}

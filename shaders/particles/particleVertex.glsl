@@ -1,17 +1,24 @@
 uniform sampler2D texturePosition;
+uniform sampler2D textureVelocity;
 uniform float uPointSize;
 
 attribute vec2 reference;
 
 varying float vDistance;
 varying vec3 vPosition;
+varying float vEmitterIndex;
 
 void main() {
     vec4 posData = texture2D(texturePosition, reference);
+    vec4 velData = texture2D(textureVelocity, reference);
+
     vec3 pos = posData.xyz;
     float lifetime = posData.w;
+    float emitterIndex = velData.w;
+
     vPosition = pos;
     vDistance = length(pos);
+    vEmitterIndex = emitterIndex;
 
     vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
     gl_Position = projectionMatrix * mvPosition;

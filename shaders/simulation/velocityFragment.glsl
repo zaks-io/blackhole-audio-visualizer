@@ -34,9 +34,13 @@ void main() {
 
     float r = length(pos);
 
+    // Compute emitter index consistently with position shader (same hash seed)
+    float emitterIndex = floor(hash2(uv, 100.0) * uEmitterCount);
+
     if (lifetime < 0.0) {
-        // WAITING: no velocity
-        vel = vec3(0.0);
+        // WAITING: no velocity, preserve emitter index
+        gl_FragColor = vec4(0.0, 0.0, 0.0, emitterIndex);
+        return;
     } else if (length(vel) < 0.1) {
         // JUST SPAWNED: set orbital velocity with inward angle
         float r_len = length(pos);
@@ -53,10 +57,10 @@ void main() {
         float rand3 = hash2(uv, 3.0);
         float rand4 = hash2(uv, 4.0);
 
-        // Base jitter - time-varying to break frame clumping
-        float baseAngleJitter = (hash2(uv, uTime) - 0.5) * 0.1;
-        float baseElevJitter = (hash2(uv, uTime + 100.0) - 0.5) * 0.05;
-        float baseSpeedJitter = (hash2(uv, uTime + 200.0) - 0.5) * 0.2;
+        // All jitter now scales with uEmitterSpread - when spread is 0, no jitter
+        float baseAngleJitter = (hash2(uv, uTime) - 0.5) * 0.1 * uEmitterSpread;
+        float baseElevJitter = (hash2(uv, uTime + 100.0) - 0.5) * 0.05 * uEmitterSpread;
+        float baseSpeedJitter = (hash2(uv, uTime + 200.0) - 0.5) * 0.2 * uEmitterSpread;
 
         // Horizontal jitter - vary launch angle in orbital plane
         float angleJitter = baseAngleJitter + (rand1 - 0.5) * uEmitterSpread;
@@ -72,7 +76,7 @@ void main() {
 
         vel = direction * orbitalSpeed;
 
-        // Speed jitter
+        // Speed jitter - also fully controlled by spread
         vel *= (1.0 + baseSpeedJitter + (rand3 - 0.5) * uEmitterSpread * 0.3);
 
         // Radial velocity jitter - scales with spread
@@ -124,5 +128,5 @@ void main() {
         }
     }
 
-    gl_FragColor = vec4(vel, 1.0);
+    gl_FragColor = vec4(vel, emitterIndex);
 }
