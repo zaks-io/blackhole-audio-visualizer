@@ -11,6 +11,7 @@ uniform float uISCOStrength;
 uniform float uEmitterSpread;
 uniform float uBeatIntensity;
 uniform float uBeatRepulsion;
+uniform float uPaletteOffset;
 uniform bool uDoKick;
 
 // 1D hash that explicitly breaks grid correlation by combining x and y
@@ -33,6 +34,7 @@ void main() {
     vec3 pos = posData.xyz;
     float lifetime = posData.w;
     vec3 vel = velData.xyz;
+    float colorIndex = velData.w;
 
     float r = length(pos);
 
@@ -40,8 +42,10 @@ void main() {
     float emitterIndex = floor(hash2(uv, 100.0) * uEmitterCount);
 
     if (lifetime < 0.0) {
-        // WAITING: no velocity, preserve emitter index
-        gl_FragColor = vec4(0.0, 0.0, 0.0, emitterIndex);
+        // WAITING: compute color index based on current palette
+        // This updates each frame so particle gets the active palette when it spawns
+        colorIndex = mod(emitterIndex, 8.0) + uPaletteOffset;
+        gl_FragColor = vec4(0.0, 0.0, 0.0, colorIndex);
         return;
     } else if (length(vel) < 0.1) {
         // JUST SPAWNED: set orbital velocity with inward angle
@@ -136,5 +140,6 @@ void main() {
         }
     }
 
-    gl_FragColor = vec4(vel, emitterIndex);
+    // Preserve colorIndex - it was set at spawn time and shouldn't change
+    gl_FragColor = vec4(vel, colorIndex);
 }

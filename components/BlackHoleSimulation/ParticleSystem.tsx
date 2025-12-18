@@ -8,24 +8,16 @@ import { TEXTURE_SIZE, PARTICLE_COUNT } from '@/lib/gpu/verletPhysics';
 import type { AudioData } from '@/hooks/useMicrophone';
 import particleVertexShader from '@/shaders/particles/particleVertex.glsl';
 import particleFragmentShader from '@/shaders/particles/particleFragment.glsl';
+import { getAllColors } from '@/components/ColorModeSystem';
 
-// 8 distinct primary design colors
-const DEFAULT_EMITTER_COLORS = [
-  '#ff6b35', // Orange
-  '#f7c948', // Yellow
-  '#7ed321', // Green
-  '#00d4aa', // Teal
-  '#4a90d9', // Blue
-  '#7b68ee', // Purple
-  '#ff69b4', // Pink
-  '#ff4757', // Red
-];
+const DEFAULT_ALL_COLORS = getAllColors();
 
 interface ParticleSystemProps {
   pointSize: number;
   brightness: number;
   alpha: number;
-  emitterColors?: string[];
+  allColors?: string[];
+  paletteOffset?: number;
   maxDistance: number;
   gravitationalParameter: number;
   timeScale: number;
@@ -51,7 +43,8 @@ export function ParticleSystem({
   pointSize,
   brightness,
   alpha,
-  emitterColors = DEFAULT_EMITTER_COLORS,
+  allColors = DEFAULT_ALL_COLORS,
+  paletteOffset = 0,
   maxDistance,
   gravitationalParameter,
   timeScale,
@@ -93,6 +86,7 @@ export function ParticleSystem({
     setBeatRepulsion,
     setBandOnsets,
     setAudioAmplitude,
+    setPaletteOffset,
   } = useGPUCompute();
   const materialRef = useRef<THREE.ShaderMaterial>(null);
 
@@ -114,15 +108,15 @@ export function ParticleSystem({
     return { positions: pos, references: refs };
   }, []);
 
-  // Create color array for shader (8 colors)
+  // Create color array for shader (56 colors - all palettes)
   const colorArray = useMemo(() => {
     const colors: THREE.Color[] = [];
-    for (let i = 0; i < 8; i++) {
-      const colorHex = emitterColors[i % emitterColors.length];
+    for (let i = 0; i < 56; i++) {
+      const colorHex = allColors[i % allColors.length];
       colors.push(new THREE.Color(colorHex));
     }
     return colors;
-  }, []);
+  }, [allColors]);
 
   const uniforms = useMemo(
     () => ({
@@ -157,11 +151,12 @@ export function ParticleSystem({
       materialRef.current.uniforms.uISCORadius.value = iscoRadius;
 
       // Update colors if they changed
-      for (let i = 0; i < 8; i++) {
-        const colorHex = emitterColors[i % emitterColors.length];
+      for (let i = 0; i < 56; i++) {
+        const colorHex = allColors[i % allColors.length];
         materialRef.current.uniforms.uEmitterColors.value[i].set(colorHex);
       }
     }
+    setPaletteOffset(paletteOffset);
     setGravitationalParameter(gravitationalParameter);
     setTimeScale(timeScale);
     setEventHorizon(eventHorizonRadius);

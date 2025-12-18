@@ -1,8 +1,8 @@
 varying float vDistance;
 varying vec3 vPosition;
-varying float vEmitterIndex;
+varying float vColorIndex;
 
-uniform vec3 uEmitterColors[8];
+uniform vec3 uEmitterColors[56];
 uniform float uMaxDistance;
 uniform float uBrightness;
 uniform float uAlpha;
@@ -24,8 +24,8 @@ void main() {
     // Soft edge
     float edgeAlpha = 1.0 - smoothstep(0.3, 0.5, dist);
 
-    // Color based on emitter index (cycles through 8 colors)
-    int colorIndex = int(mod(vEmitterIndex, 8.0));
+    // Color based on stored color index (set at spawn time)
+    int colorIndex = int(vColorIndex);
     vec3 color = uEmitterColors[colorIndex];
 
     // Brightness varies with distance (brighter near center for depth)

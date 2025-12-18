@@ -7,6 +7,7 @@ import { useControls } from 'leva';
 import { ParticleSystem } from './ParticleSystem';
 import { BlackHole } from './BlackHole';
 import { CameraSystem } from '@/components/CameraSystem';
+import { PALETTE_IDS, type ColorPaletteId } from '@/components/ColorModeSystem';
 import type { AudioData } from '@/hooks/useMicrophone';
 import type { CameraMode } from '@/components/CameraSystem';
 
@@ -25,14 +26,23 @@ interface CameraModeProps {
   timelineRef: React.MutableRefObject<gsap.core.Timeline | null>;
 }
 
+interface ColorModeProps {
+  paletteId: ColorPaletteId;
+  paletteOffset: number;
+  allColors: string[];
+  setPalette: (id: ColorPaletteId) => void;
+  processBeat: (intensity: number, time: number) => void;
+}
+
 interface BlackHoleSimulationProps {
   getFrequencyData: (bandCount: number) => AudioData;
   isAudioConnected: boolean;
   setOnsetDecay: (value: number) => void;
   cameraMode: CameraModeProps;
+  colorMode: ColorModeProps;
 }
 
-export function BlackHoleSimulation({ getFrequencyData, isAudioConnected, setOnsetDecay, cameraMode }: BlackHoleSimulationProps) {
+export function BlackHoleSimulation({ getFrequencyData, isAudioConnected, setOnsetDecay, cameraMode, colorMode }: BlackHoleSimulationProps) {
   const blackHoleControls = useControls('Black Hole', {
     eventHorizonRadius: { value: 3.0, min: 0.5, max: 20, step: 0.5 },
     beatPulse: { value: 0.5, min: 0, max: 2, step: 0.1 },
@@ -43,6 +53,11 @@ export function BlackHoleSimulation({ getFrequencyData, isAudioConnected, setOns
     brightness: { value: 1.5, min: 0.1, max: 5, step: 0.1 },
     alpha: { value: 0.8, min: 0.01, max: 1.0, step: 0.01 },
     maxDistance: { value: 60, min: 5, max: 150, step: 1 },
+    colorPalette: {
+      value: colorMode.paletteId,
+      options: PALETTE_IDS,
+      onChange: (v: ColorPaletteId) => colorMode.setPalette(v),
+    },
   });
 
   const physicsControls = useControls('Physics', {
@@ -80,15 +95,19 @@ export function BlackHoleSimulation({ getFrequencyData, isAudioConnected, setOns
     },
     audioGain: { value: 1.0, min: 0, max: 3, step: 0.1 },
     beatRepulsion: { value: 50, min: 0, max: 100, step: 1 },
+    autoColorChange: { value: true },
   });
 
   const [beatIntensity, setBeatIntensity] = useState(0);
 
-  useFrame(() => {
+  useFrame((state) => {
     if (isAudioConnected) {
       const data = getFrequencyData(2);
       const beat = Math.max(data.bandOnsets[0] ?? 0, data.bandOnsets[1] ?? 0) * audioControls.audioGain;
       setBeatIntensity(beat);
+      if (audioControls.autoColorChange) {
+        colorMode.processBeat(beat, state.clock.elapsedTime);
+      }
     } else {
       setBeatIntensity(0);
     }
@@ -133,6 +152,8 @@ export function BlackHoleSimulation({ getFrequencyData, isAudioConnected, setOns
         brightness={particleControls.brightness}
         alpha={particleControls.alpha}
         maxDistance={particleControls.maxDistance}
+        allColors={colorMode.allColors}
+        paletteOffset={colorMode.paletteOffset}
         gravitationalParameter={physicsControls.gravity}
         timeScale={physicsControls.timeScale}
         eventHorizonRadius={blackHoleControls.eventHorizonRadius}

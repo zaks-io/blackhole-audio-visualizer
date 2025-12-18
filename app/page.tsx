@@ -7,11 +7,13 @@ import { MicToggleFab } from '@/components/MicToggleFab';
 import { CameraModeUI } from '@/components/CameraModeUI';
 import { TweenControlPanel } from '@/components/TweenControlPanel';
 import { useCameraMode } from '@/components/CameraSystem';
+import { useColorMode } from '@/components/ColorModeSystem';
 import { useMicrophone } from '@/hooks/useMicrophone';
 
 export default function Home() {
   const { connect, getFrequencyData, isConnected, setOnsetDecay } = useMicrophone();
   const cameraMode = useCameraMode();
+  const colorMode = useColorMode();
 
   const handleMicToggle = () => {
     if (!isConnected) {
@@ -35,6 +37,7 @@ export default function Home() {
           isAudioConnected={isConnected}
           setOnsetDecay={setOnsetDecay}
           cameraMode={cameraMode}
+          colorMode={colorMode}
         />
       </Canvas>
       <MicToggleFab isConnected={isConnected} onToggle={handleMicToggle} />

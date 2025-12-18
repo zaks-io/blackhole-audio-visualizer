@@ -120,6 +120,7 @@ export function useGPUCompute() {
     velocityVariable.material.uniforms.uEmitterSpread = { value: 0.1 };
     velocityVariable.material.uniforms.uBeatIntensity = { value: 0.0 };
     velocityVariable.material.uniforms.uBeatRepulsion = { value: 0.0 };
+    velocityVariable.material.uniforms.uPaletteOffset = { value: 0.0 };
     velocityVariable.material.uniforms.uDoKick = { value: false };
 
     // Set dependencies: position and velocity both depend on each other
@@ -306,6 +307,12 @@ export function useGPUCompute() {
     }
   }, []);
 
+  const setPaletteOffset = useCallback((value: number) => {
+    if (velocityVariableRef.current) {
+      velocityVariableRef.current.material.uniforms.uPaletteOffset.value = value;
+    }
+  }, []);
+
   return {
     getPositionTexture,
     getVelocityTexture,
@@ -327,5 +334,6 @@ export function useGPUCompute() {
     setBeatRepulsion,
     setBandOnsets,
     setAudioAmplitude,
+    setPaletteOffset,
   };
 }
