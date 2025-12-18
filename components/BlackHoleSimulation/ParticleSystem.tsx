@@ -130,6 +130,7 @@ export function ParticleSystem({
       uEmitterColors: { value: colorArray },
       uMaxDistance: { value: maxDistance },
       uEventHorizon: { value: eventHorizonRadius },
+      uISCORadius: { value: iscoRadius },
     }),
     []
   );
@@ -149,6 +150,7 @@ export function ParticleSystem({
       materialRef.current.uniforms.uAlpha.value = alpha;
       materialRef.current.uniforms.uMaxDistance.value = maxDistance;
       materialRef.current.uniforms.uEventHorizon.value = eventHorizonRadius;
+      materialRef.current.uniforms.uISCORadius.value = iscoRadius;
 
       // Update colors if they changed
       for (let i = 0; i < 8; i++) {

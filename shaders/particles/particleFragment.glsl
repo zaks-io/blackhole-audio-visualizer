@@ -7,11 +7,11 @@ uniform float uMaxDistance;
 uniform float uBrightness;
 uniform float uAlpha;
 uniform float uEventHorizon;
+uniform float uISCORadius;
 
 void main() {
-    // Fade out only when extremely close to event horizon
-    float fadeStart = uEventHorizon * 1.1;
-    float distanceFade = smoothstep(uEventHorizon, fadeStart, vDistance);
+    // Fade from ISCO to event horizon
+    float distanceFade = smoothstep(uEventHorizon, uISCORadius, vDistance);
 
     // Discard particles that have reached the event horizon
     if (vDistance < uEventHorizon) discard;
