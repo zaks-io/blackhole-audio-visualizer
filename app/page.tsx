@@ -4,6 +4,8 @@ import { useRef, useCallback, useState, useEffect } from "react";
 import { Canvas } from "@react-three/fiber";
 import { NoToneMapping, SRGBColorSpace } from "three";
 import { BlackHoleSimulation } from "@/components/BlackHoleSimulation";
+import { FPSMeter } from "@/components/debug/FPSMeter";
+import { FPSTracker } from "@/hooks/useFPSMonitor";
 import { UIOverlay } from "@/components/layout";
 import { TweenControlPanel } from "@/components/TweenControlPanel";
 import { AudioDebugPanel } from "@/components/AudioDebugPanel";
@@ -35,7 +37,7 @@ export default function Home() {
   const cameraMode = useCameraMode();
   const colorMode = useColorMode();
   const canvasContainerRef = useRef<HTMLDivElement>(null);
-  const { debugPanelsVisible, tweenPanelVisible } = useUIState();
+  const { debugPanelsVisible, tweenPanelVisible, fpsVisible } = useUIState();
 
   const [triggers, setTriggers] = useState<AudioTriggers | null>(null);
   const [autoMode, setAutoMode] = useState(true);
@@ -116,6 +118,7 @@ export default function Home() {
             cameraMode={cameraMode}
             colorMode={colorMode}
           />
+          <FPSTracker />
         </Canvas>
       </div>
 
@@ -160,6 +163,8 @@ export default function Home() {
         onClose={closePermissionDialog}
         onOpenSettings={openScreenRecordingSettings}
       />
+
+      {fpsVisible && <FPSMeter />}
     </div>
   );
 }
