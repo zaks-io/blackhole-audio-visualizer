@@ -1,6 +1,6 @@
 "use client";
 
-import { PanelRightOpen, SlidersHorizontal } from "lucide-react";
+import { SlidersHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -8,7 +8,6 @@ import { CameraControls } from "@/components/camera";
 import { AudioSourceButton } from "@/components/audio";
 import { RecordButton } from "@/components/recording";
 import { SettingsMenu } from "@/components/dialogs";
-import { useUIState } from "@/hooks/useUIState";
 import { useProducerMode } from "@/components/ProducerMode";
 import { cn } from "@/lib/utils";
 import type { CameraMode } from "@/components/CameraSystem";
@@ -44,7 +43,6 @@ export function BottomControlBar({
   recordingDuration,
   onRecordToggle,
 }: BottomControlBarProps) {
-  const { toggleSidebar } = useUIState();
   const { isOpen: isProducerModeOpen, toggleOpen: toggleProducerMode } = useProducerMode();
 
   return (
@@ -102,27 +100,8 @@ export function BottomControlBar({
 
         <Separator orientation="vertical" className="h-6 mx-2" />
 
-        {/* Settings & Sidebar Toggle */}
-        <div className="flex items-center gap-1">
-          <SettingsMenu />
-          <TooltipProvider delayDuration={300}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={toggleSidebar}
-                  className="h-10 w-10 rounded-full"
-                >
-                  <PanelRightOpen className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="top" className="text-xs">
-                Open Controls
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
+        {/* Settings */}
+        <SettingsMenu />
       </div>
     </div>
   );

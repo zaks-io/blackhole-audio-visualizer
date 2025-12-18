@@ -37,7 +37,7 @@ export default function Home() {
   const cameraMode = useCameraMode();
   const colorMode = useColorMode();
   const canvasContainerRef = useRef<HTMLDivElement>(null);
-  const { debugPanelsVisible, fpsVisible } = useUIState();
+  const { debugPanelsVisible, fpsVisible, devControlsVisible } = useUIState();
 
   const triggersRef = useRef<AudioTriggers | null>(null);
   const [autoMode, setAutoMode] = useState(true);
@@ -166,7 +166,7 @@ export default function Home() {
       </div>
 
       {/* Control Sidebar - pushes content from right */}
-      <ControlSidebar />
+      {devControlsVisible && <ControlSidebar />}
     </div>
   );
 }

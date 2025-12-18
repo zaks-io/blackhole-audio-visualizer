@@ -1,6 +1,6 @@
 "use client";
 
-import { Settings, Activity, Gauge } from "lucide-react";
+import { Settings, Activity, Gauge, Code } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
@@ -9,7 +9,14 @@ import { Separator } from "@/components/ui/separator";
 import { useUIState } from "@/hooks/useUIState";
 
 export function SettingsMenu() {
-  const { debugPanelsVisible, toggleDebugPanels, fpsVisible, toggleFPS } = useUIState();
+  const {
+    debugPanelsVisible,
+    toggleDebugPanels,
+    fpsVisible,
+    toggleFPS,
+    devControlsVisible,
+    toggleDevControls,
+  } = useUIState();
 
   return (
     <Popover>
@@ -43,6 +50,19 @@ export function SettingsMenu() {
               </Label>
             </div>
             <Switch id="fps-meter" checked={fpsVisible} onCheckedChange={toggleFPS} />
+          </div>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Code className="h-4 w-4 text-muted-foreground" />
+              <Label htmlFor="dev-controls" className="text-sm">
+                Developer Controls
+              </Label>
+            </div>
+            <Switch
+              id="dev-controls"
+              checked={devControlsVisible}
+              onCheckedChange={toggleDevControls}
+            />
           </div>
         </div>
       </PopoverContent>
