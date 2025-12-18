@@ -2,16 +2,25 @@
   "name": "music-viz-particles",
   "version": "0.1.0",
   "private": true,
+  "main": "dist-electron/main.js",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:electron": "cross-env BUILD_TARGET=electron next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "electron:compile": "tsc -p electron/tsconfig.json",
+    "electron:dev": "concurrently \"next dev\" \"wait-on http://localhost:3000 && bun run electron:compile && cross-env NODE_ENV=development electron .\"",
+    "electron:build": "bun run build:electron && bun run electron:compile",
+    "electron:package": "bun run electron:build && electron-builder",
+    "electron:package:mac": "bun run electron:build && electron-builder --mac",
+    "electron:package:win": "bun run electron:build && electron-builder --win"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.4.2",
     "@react-three/postprocessing": "^3.0.4",
+    "electron-audio-loopback": "^1.0.6",
     "gsap": "^3.14.2",
     "jszip": "^3.10.1",
     "leva": "^0.10.1",
@@ -24,14 +33,20 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/electron": "^1.6.12",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/three": "^0.182.0",
+    "concurrently": "^9.2.1",
+    "cross-env": "^10.1.0",
+    "electron": "^38.7.2",
+    "electron-builder": "^26.0.12",
     "eslint": "^9",
     "eslint-config-next": "16.0.10",
     "raw-loader": "^4.0.2",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "wait-on": "^9.0.3"
   }
 }

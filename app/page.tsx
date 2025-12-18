@@ -10,15 +10,28 @@ import { RecordToggleFab } from '@/components/RecordToggleFab';
 import { CameraModeUI } from '@/components/CameraModeUI';
 import { TweenControlPanel } from '@/components/TweenControlPanel';
 import { AudioDebugPanel } from '@/components/AudioDebugPanel';
+import { PermissionDialog } from '@/components/PermissionDialog';
 import { useCameraMode } from '@/components/CameraSystem';
 import { useColorMode } from '@/components/ColorModeSystem';
-import { useMicrophone } from '@/hooks/useMicrophone';
+import { useAudioSource } from '@/hooks/useAudioSource';
 import { useRecording } from '@/hooks/useRecording';
 import { useAudioTriggers, type AudioTriggers } from '@/hooks/useAudioTriggers';
 import { useAnimationModes, type AnimationModeId } from '@/hooks/useAnimationModes';
 
 export default function Home() {
-  const { connect, disconnect, getFrequencyData, isConnected, setOnsetDecay, getStream } = useMicrophone();
+  const {
+    connect,
+    disconnect,
+    getFrequencyData,
+    isConnected,
+    setOnsetDecay,
+    getStream,
+    sourceType,
+    canUseSystemAudio,
+    showPermissionDialog,
+    closePermissionDialog,
+    openScreenRecordingSettings,
+  } = useAudioSource();
   const { isRecording, duration, error, startRecording, stopRecording } = useRecording();
   const { processAudio, reset: resetTriggers } = useAudioTriggers();
   const cameraMode = useCameraMode();
@@ -71,14 +84,6 @@ export default function Home() {
     }
   }, [isConnected, resetTriggers]);
 
-  const handleMicToggle = () => {
-    if (isConnected) {
-      disconnect();
-    } else {
-      connect();
-    }
-  };
-
   const handleRecordToggle = useCallback(() => {
     if (isRecording) {
       stopRecording();
@@ -120,7 +125,13 @@ export default function Home() {
           />
         </Canvas>
       </div>
-      <MicToggleFab isConnected={isConnected} onToggle={handleMicToggle} />
+      <MicToggleFab
+        isConnected={isConnected}
+        sourceType={sourceType}
+        canUseSystemAudio={canUseSystemAudio}
+        onConnect={connect}
+        onDisconnect={disconnect}
+      />
       <RecordToggleFab
         isRecording={isRecording}
         duration={duration}
@@ -145,6 +156,11 @@ export default function Home() {
         availableModes={availableModes}
         autoMode={autoMode}
         onAutoModeChange={setAutoMode}
+      />
+      <PermissionDialog
+        isOpen={showPermissionDialog}
+        onClose={closePermissionDialog}
+        onOpenSettings={openScreenRecordingSettings}
       />
     </div>
   );

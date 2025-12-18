@@ -13,10 +13,10 @@ import type { CameraMode } from '@/components/CameraSystem';
 
 const SKYBOX_OPTIONS = {
   'None': '',
-  'Starmap': '/starmap_2020_4k.exr',
-  'Hazy Nebulae': '/HDR_hazy_nebulae_4k.exr',
-  'Blue Nebulae': '/HDR_rich_blue_nebulae_1_4k.exr',
-  'Multi Nebulae': '/HDR_rich_multi_nebulae_2_4k.exr',
+  'Starmap': './starmap_2020_4k.exr',
+  'Hazy Nebulae': './HDR_hazy_nebulae_4k.exr',
+  'Blue Nebulae': './HDR_rich_blue_nebulae_1_4k.exr',
+  'Multi Nebulae': './HDR_rich_multi_nebulae_2_4k.exr',
 };
 
 interface CameraModeProps {

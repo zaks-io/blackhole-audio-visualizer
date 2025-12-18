@@ -79,20 +79,28 @@ export function useMicrophone() {
     onsetDecayRef.current = value;
   }, []);
 
-  const connect = useCallback(async () => {
+  const connect = useCallback(async (externalStream?: MediaStream) => {
     if (isConnected) return;
 
-    const stream = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        sampleRate: 48000,
-        channelCount: 2,
-        echoCancellation: false,
-        noiseSuppression: false,
-        autoGainControl: false,
-      },
-    });
+    const stream =
+      externalStream ??
+      (await navigator.mediaDevices.getUserMedia({
+        audio: {
+          sampleRate: 48000,
+          channelCount: 2,
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false,
+        },
+      }));
+
     streamRef.current = stream;
     const audioContext = new AudioContext();
+
+    if (audioContext.state === 'suspended') {
+      await audioContext.resume();
+    }
+
     const source = audioContext.createMediaStreamSource(stream);
     const analyser = audioContext.createAnalyser();
 
@@ -198,7 +206,7 @@ export function useMicrophone() {
     }
 
     analyser.getByteFrequencyData(dataArray);
-    const binCount = dataArray.length; // 128 bins
+    const binCount = dataArray.length;
 
     // Get logarithmic band boundaries
     const boundaries = getBandBoundaries(binCount, clampedBandCount);

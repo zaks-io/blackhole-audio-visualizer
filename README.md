@@ -1,36 +1,72 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Music Viz Particles
+
+Real-time music visualization featuring a GPU-accelerated black hole particle simulation. Particles orbit and fall into a central black hole, with physics and colors responding dynamically to audio frequency data and beat detection.
+
+## Features
+
+- **GPU Particle System**: Thousands of particles simulated via WebGL compute shaders
+- **Audio Reactive**: Real-time frequency analysis and beat detection using Meyda.js
+- **Multiple Audio Sources**: Microphone input (web & desktop) or system audio capture (desktop only)
+- **Color Palettes**: Multiple color schemes with beat-reactive palette transitions
+- **Customizable Physics**: Gravity, orbit decay, ISCO effects, and more via Leva controls
+- **Camera Modes**: Multiple camera presets with smooth GSAP transitions
+- **Video Recording**: Export visualizations as video files
+- **Cross Platform**: Runs as a web app or native desktop app
 
 ## Getting Started
 
-First, run the development server:
+### Web Development
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
+bun install
 bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Desktop App Development
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+bun run electron:dev
+```
 
-## Learn More
+This starts Next.js dev server and launches Electron.
 
-To learn more about Next.js, take a look at the following resources:
+### Building
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+**Web:**
+```bash
+bun run build
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+**Desktop:**
+```bash
+# macOS
+bun run electron:package:mac
 
-## Deploy on Vercel
+# Windows
+bun run electron:package:win
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Built apps are output to the `release/` directory.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Audio Input
+
+**Web App:** Uses microphone input only. Grant microphone permission when prompted.
+
+**Desktop App:** Supports both microphone and system audio capture. System audio capture requires Screen Recording permission on macOS (the app will prompt you to enable it in System Preferences).
+
+## Tech Stack
+
+- [Next.js](https://nextjs.org) - React framework
+- [React Three Fiber](https://docs.pmnd.rs/react-three-fiber) - Three.js React renderer
+- [Three.js](https://threejs.org) - WebGL graphics
+- [Meyda](https://meyda.js.org) - Audio feature extraction
+- [Leva](https://github.com/pmndrs/leva) - GUI controls
+- [GSAP](https://greensock.com/gsap) - Animation library
+- [Electron](https://www.electronjs.org) - Desktop app framework
+- [electron-audio-loopback](https://github.com/nickcoutsos/electron-audio-loopback) - System audio capture
+
+## License
+
+MIT
