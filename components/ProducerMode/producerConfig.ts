@@ -2,6 +2,30 @@ import type { ParameterGroup, EaseFunction } from "./types";
 
 export const PRODUCER_PARAMETERS: ParameterGroup[] = [
   {
+    name: "Black Hole",
+    parameters: [
+      {
+        path: "Black Hole.eventHorizonRadius",
+        label: "Event Horizon",
+        min: 0.5,
+        max: 20,
+        step: 0.5,
+      },
+    ],
+  },
+  {
+    name: "Particles",
+    parameters: [
+      {
+        path: "Particles.pointSize",
+        label: "Point Size",
+        min: 0.1,
+        max: 20,
+        step: 0.1,
+      },
+    ],
+  },
+  {
     name: "Physics",
     parameters: [
       {
@@ -18,6 +42,13 @@ export const PRODUCER_PARAMETERS: ParameterGroup[] = [
         min: 0,
         max: 20,
         step: 0.5,
+      },
+      {
+        path: "Physics.softening",
+        label: "Softening",
+        min: 0.01,
+        max: 10,
+        step: 0.1,
       },
     ],
   },
@@ -37,6 +68,13 @@ export const PRODUCER_PARAMETERS: ParameterGroup[] = [
         min: 0,
         max: 1,
         step: 0.01,
+      },
+      {
+        path: "Emitters.emitRadius",
+        label: "Emitter Radius",
+        min: 5,
+        max: 200,
+        step: 1,
       },
     ],
   },

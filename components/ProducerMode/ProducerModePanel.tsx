@@ -1,14 +1,25 @@
 "use client";
 
-import { X, SlidersHorizontal } from "lucide-react";
+import { X, SlidersHorizontal, Palette } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { useProducerMode } from "./useProducerMode";
 import { ParameterGroup } from "./ParameterGroup";
 import { PRODUCER_PARAMETERS } from "./producerConfig";
+import { PALETTE_IDS, PALETTES, type ColorPaletteId } from "@/components/ColorModeSystem";
+import { useVisualizationControls } from "@/hooks/useVisualizationControls";
 
 export function ProducerModePanel() {
   const { isOpen, setOpen } = useProducerMode();
+  const colorPalette = useVisualizationControls((s) => s.colorPalette);
+  const setColorPalette = useVisualizationControls((s) => s.set);
 
   return (
     <div
@@ -37,6 +48,27 @@ export function ProducerModePanel() {
 
         {/* Parameter groups */}
         <div className="flex-1 overflow-y-auto px-3 py-2 scrollbar-thin">
+          {/* Color Palette Selector */}
+          <div className="flex items-center gap-2 px-1 py-2 mb-2 border-b border-white/5">
+            <Palette className="h-4 w-4 text-muted-foreground" />
+            <span className="text-xs text-muted-foreground flex-1">Color Palette</span>
+            <Select
+              value={colorPalette}
+              onValueChange={(value) => setColorPalette("colorPalette", value as ColorPaletteId)}
+            >
+              <SelectTrigger size="sm" className="w-28 h-7 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {PALETTE_IDS.map((id) => (
+                  <SelectItem key={id} value={id} className="text-xs">
+                    {PALETTES[id].name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           {PRODUCER_PARAMETERS.map((group) => (
             <ParameterGroup key={group.name} group={group} />
           ))}
