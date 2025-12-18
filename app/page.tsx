@@ -4,10 +4,13 @@ import { Canvas } from '@react-three/fiber';
 import { Leva } from 'leva';
 import { BlackHoleSimulation } from '@/components/BlackHoleSimulation';
 import { MicToggleFab } from '@/components/MicToggleFab';
+import { CameraModeUI } from '@/components/CameraModeUI';
+import { useCameraMode } from '@/components/CameraSystem';
 import { useMicrophone } from '@/hooks/useMicrophone';
 
 export default function Home() {
   const { connect, getFrequencyData, isConnected, setOnsetDecay } = useMicrophone();
+  const cameraMode = useCameraMode();
 
   const handleMicToggle = () => {
     if (!isConnected) {
@@ -30,9 +33,15 @@ export default function Home() {
           getFrequencyData={getFrequencyData}
           isAudioConnected={isConnected}
           setOnsetDecay={setOnsetDecay}
+          cameraMode={cameraMode}
         />
       </Canvas>
       <MicToggleFab isConnected={isConnected} onToggle={handleMicToggle} />
+      <CameraModeUI
+        currentMode={cameraMode.mode}
+        onModeChange={cameraMode.setMode}
+        isTransitioning={cameraMode.isTransitioning}
+      />
     </div>
   );
 }

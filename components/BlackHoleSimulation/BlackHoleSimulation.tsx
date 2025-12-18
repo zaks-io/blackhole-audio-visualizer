@@ -1,12 +1,14 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { OrbitControls, Environment } from '@react-three/drei';
+import { Environment } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { useControls } from 'leva';
 import { ParticleSystem } from './ParticleSystem';
 import { BlackHole } from './BlackHole';
+import { CameraSystem } from '@/components/CameraSystem';
 import type { AudioData } from '@/hooks/useMicrophone';
+import type { CameraMode } from '@/components/CameraSystem';
 
 const SKYBOX_OPTIONS = {
   'None': '',
@@ -16,13 +18,21 @@ const SKYBOX_OPTIONS = {
   'Multi Nebulae': '/HDR_rich_multi_nebulae_2_4k.exr',
 };
 
+interface CameraModeProps {
+  mode: CameraMode;
+  isTransitioning: boolean;
+  onTransitionComplete: () => void;
+  timelineRef: React.MutableRefObject<gsap.core.Timeline | null>;
+}
+
 interface BlackHoleSimulationProps {
   getFrequencyData: (bandCount: number) => AudioData;
   isAudioConnected: boolean;
   setOnsetDecay: (value: number) => void;
+  cameraMode: CameraModeProps;
 }
 
-export function BlackHoleSimulation({ getFrequencyData, isAudioConnected, setOnsetDecay }: BlackHoleSimulationProps) {
+export function BlackHoleSimulation({ getFrequencyData, isAudioConnected, setOnsetDecay, cameraMode }: BlackHoleSimulationProps) {
   const blackHoleControls = useControls('Black Hole', {
     eventHorizonRadius: { value: 3.0, min: 0.5, max: 20, step: 0.5 },
     beatPulse: { value: 0.5, min: 0, max: 2, step: 0.1 },
@@ -153,11 +163,11 @@ export function BlackHoleSimulation({ getFrequencyData, isAudioConnected, setOns
           </mesh>
         ))}
 
-      <OrbitControls
-        enableDamping
-        dampingFactor={0.05}
-        minDistance={5}
-        maxDistance={500}
+      <CameraSystem
+        mode={cameraMode.mode}
+        isTransitioning={cameraMode.isTransitioning}
+        onTransitionComplete={cameraMode.onTransitionComplete}
+        timelineRef={cameraMode.timelineRef}
       />
     </>
   );
