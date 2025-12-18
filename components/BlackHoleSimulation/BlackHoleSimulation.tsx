@@ -44,7 +44,7 @@ export function BlackHoleSimulation({ getFrequencyData, isAudioConnected, setOns
 
   const emitterControls = useControls('Emitters', {
     emitRadius: { value: 60, min: 5, max: 200, step: 1 },
-    emitterCount: { value: 8, min: 1, max: 36, step: 1 },
+    emitterCount: { value: 3, min: 1, max: 36, step: 1 },
     emitterAngle: { value: 0, min: 0, max: 6.28, step: 0.1 },
     emitterTilt: { value: 0, min: -30, max: 30, step: 1 },
     inwardAngle: { value: 0, min: -1, max: 1, step: 0.01 },
