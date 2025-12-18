@@ -18,13 +18,15 @@ interface CameraSystemProps {
 export function CameraSystem({ mode, onTransitionComplete, timelineRef }: CameraSystemProps) {
   const { camera } = useThree();
   const controlsRef = useRef<OrbitControlsImpl>(null);
-  const prevModeRef = useRef<CameraMode>(mode);
+  const prevModeRef = useRef<CameraMode | null>(null);
   const anglesRef = useRef({ horizontal: 0, vertical: Math.PI / 4 });
   const isSphericalModeRef = useRef(false);
   const sphericalParamsRef = useRef({ radius: 150, hSpeed: 0.5, vSpeed: 0.2 });
+  const pendingAutoRotateRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (mode === prevModeRef.current) return;
+    const isInitialMount = prevModeRef.current === null;
     prevModeRef.current = mode;
 
     if (timelineRef.current) {
@@ -33,10 +35,9 @@ export function CameraSystem({ mode, onTransitionComplete, timelineRef }: Camera
     }
 
     const controls = controlsRef.current;
-    if (!controls) return;
 
     if (mode === "free") {
-      controls.autoRotate = false;
+      if (controls) controls.autoRotate = false;
       isSphericalModeRef.current = false;
       onTransitionComplete();
       return;
@@ -44,20 +45,16 @@ export function CameraSystem({ mode, onTransitionComplete, timelineRef }: Camera
 
     const preset = PRESETS[mode];
     const targetPos = preset.position;
-    const currentPos = { x: camera.position.x, y: camera.position.y, z: camera.position.z };
 
     if (preset.rotateAxis === "spherical") {
-      // Don't enable spherical mode yet - wait until transition completes
-      isSphericalModeRef.current = false;
       const radius = preset.orbitRadius ?? 150;
       sphericalParamsRef.current = {
         radius,
         hSpeed: preset.rotateSpeed,
         vSpeed: preset.verticalSpeed ?? 0.2,
       };
-      controls.autoRotate = false;
+      if (controls) controls.autoRotate = false;
 
-      // Use startingAngles to compute target position (same formula as useFrame)
       const targetH = preset.startingAngles?.horizontal ?? 0;
       const targetV = preset.startingAngles?.vertical ?? Math.PI / 4;
       const phi = 0.3 + (Math.sin(targetV) + 1) * 1.25;
@@ -67,6 +64,19 @@ export function CameraSystem({ mode, onTransitionComplete, timelineRef }: Camera
         z: radius * Math.sin(phi) * Math.cos(targetH),
       };
 
+      if (isInitialMount) {
+        // Skip transition on initial mount - start orbiting immediately
+        camera.position.set(computedTarget.x, computedTarget.y, computedTarget.z);
+        camera.lookAt(0, 0, 0);
+        anglesRef.current.horizontal = targetH;
+        anglesRef.current.vertical = targetV;
+        isSphericalModeRef.current = true;
+        onTransitionComplete();
+        return;
+      }
+
+      isSphericalModeRef.current = false;
+      const currentPos = { x: camera.position.x, y: camera.position.y, z: camera.position.z };
       const currentAngles = { h: anglesRef.current.horizontal, v: anglesRef.current.vertical };
 
       const tl = gsap.timeline({
@@ -77,7 +87,6 @@ export function CameraSystem({ mode, onTransitionComplete, timelineRef }: Camera
           camera.lookAt(0, 0, 0);
         },
         onComplete: () => {
-          // Now enable spherical mode so useFrame takes over
           isSphericalModeRef.current = true;
           onTransitionComplete();
         },
@@ -109,6 +118,18 @@ export function CameraSystem({ mode, onTransitionComplete, timelineRef }: Camera
       timelineRef.current = tl;
     } else {
       isSphericalModeRef.current = false;
+
+      if (isInitialMount) {
+        // Skip transition on initial mount - set position and start rotating immediately
+        camera.position.set(targetPos[0], targetPos[1], targetPos[2]);
+        camera.lookAt(0, 0, 0);
+        pendingAutoRotateRef.current = preset.rotateSpeed;
+        onTransitionComplete();
+        return;
+      }
+
+      if (!controls) return;
+      const currentPos = { x: camera.position.x, y: camera.position.y, z: camera.position.z };
 
       const tl = gsap.timeline({
         onUpdate: () => {
@@ -142,6 +163,13 @@ export function CameraSystem({ mode, onTransitionComplete, timelineRef }: Camera
   }, [timelineRef]);
 
   useFrame((_, delta) => {
+    // Apply pending autoRotate when controls become available
+    if (pendingAutoRotateRef.current !== null && controlsRef.current) {
+      controlsRef.current.autoRotate = true;
+      controlsRef.current.autoRotateSpeed = pendingAutoRotateRef.current;
+      pendingAutoRotateRef.current = null;
+    }
+
     if (isSphericalModeRef.current && mode !== "free") {
       const { radius, hSpeed, vSpeed } = sphericalParamsRef.current;
 

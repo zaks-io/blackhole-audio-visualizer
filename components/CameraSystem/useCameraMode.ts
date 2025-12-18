@@ -2,7 +2,7 @@ import { useState, useCallback, useRef } from "react";
 import type { CameraMode } from "./types";
 
 export function useCameraMode() {
-  const [mode, setModeState] = useState<CameraMode>("free");
+  const [mode, setModeState] = useState<CameraMode>("circle");
   const [isTransitioning, setIsTransitioning] = useState(false);
   const timelineRef = useRef<gsap.core.Timeline | null>(null);
 
