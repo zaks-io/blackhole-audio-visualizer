@@ -12,6 +12,8 @@ interface MeydaFeatures {
   spectralRolloff?: number;
   zcr?: number;
   amplitudeSpectrum?: Float32Array;
+  loudness?: { specific: Float32Array; total: number };
+  perceptualSharpness?: number;
 }
 
 export interface SpectralFeatures {
@@ -22,6 +24,8 @@ export interface SpectralFeatures {
   spectralRolloff: number;
   zcr: number;
   subBassRatio: number;
+  bassEnergy: number;
+  perceptualSharpness: number;
 }
 
 export interface AudioData {
@@ -54,6 +58,8 @@ const DEFAULT_SPECTRAL: SpectralFeatures = {
   spectralRolloff: 0,
   zcr: 0,
   subBassRatio: 0,
+  bassEnergy: 0,
+  perceptualSharpness: 0,
 };
 
 export function useMicrophone() {
@@ -65,6 +71,7 @@ export function useMicrophone() {
   const meydaAnalyzerRef = useRef<MeydaAnalyzer | null>(null);
   const spectralFeaturesRef = useRef<SpectralFeatures>({ ...DEFAULT_SPECTRAL });
   const prevSpectrumRef = useRef<Float32Array | null>(null);
+  const rmsMaxRef = useRef(0.02);
 
   // Dynamic band arrays
   const prevBandEnergiesRef = useRef<Float32Array>(new Float32Array(MAX_BANDS));
@@ -126,16 +133,20 @@ export function useMicrophone() {
           "spectralRolloff",
           "zcr",
           "amplitudeSpectrum",
+          "loudness",
+          "perceptualSharpness",
         ],
         callback: (features: MeydaFeatures | null) => {
           if (!features) return;
 
           const spectral = spectralFeaturesRef.current;
           const numBins = 512 / 2; // bufferSize / 2 = number of frequency bins
-          const nyquist = audioContext.sampleRate / 2;
 
-          // RMS (already 0-1 range, but can exceed 1 for loud signals)
-          spectral.rms = Math.min(1, features.rms || 0);
+          // RMS with adaptive normalization
+          const rawRms = features.rms || 0;
+          rmsMaxRef.current = Math.max(rawRms, rmsMaxRef.current * 0.999);
+          const adaptiveMax = Math.max(rmsMaxRef.current, 0.01);
+          spectral.rms = Math.min(1, rawRms / adaptiveMax);
 
           // Spectral centroid: Meyda returns bin index, normalize to 0-1
           spectral.spectralCentroid = Math.min(1, (features.spectralCentroid || 0) / numBins);
@@ -149,13 +160,14 @@ export function useMicrophone() {
           // Zero crossing rate: normalize (typical range 0-0.5)
           spectral.zcr = Math.min(1, (features.zcr || 0) * 2);
 
-          // Calculate spectral flux from amplitude spectrum
+          // Spectral flux - calculated manually (Meyda's native throws on first frame)
+          // Range: 0 to ∞, empirical divisor of 10
           const spectrum = features.amplitudeSpectrum;
           if (spectrum && prevSpectrumRef.current) {
             let flux = 0;
             for (let i = 0; i < spectrum.length; i++) {
               const diff = spectrum[i] - prevSpectrumRef.current[i];
-              flux += diff > 0 ? diff * diff : 0; // Only positive changes (onset)
+              flux += diff > 0 ? diff * diff : 0;
             }
             spectral.spectralFlux = Math.min(1, Math.sqrt(flux) / 10);
           }
@@ -163,20 +175,17 @@ export function useMicrophone() {
             prevSpectrumRef.current = new Float32Array(spectrum);
           }
 
-          // Calculate sub-bass ratio (energy in 0-100Hz relative to total)
-          if (spectrum) {
-            const binSize = nyquist / spectrum.length;
-            const subBassBins = Math.ceil(100 / binSize);
-            let subBassEnergy = 0;
-            let totalEnergy = 0;
-            for (let i = 0; i < spectrum.length; i++) {
-              const energy = spectrum[i] * spectrum[i];
-              totalEnergy += energy;
-              if (i < subBassBins) {
-                subBassEnergy += energy;
-              }
-            }
-            spectral.subBassRatio = totalEnergy > 0 ? subBassEnergy / totalEnergy : 0;
+          // Perceptual sharpness: already 0-1
+          spectral.perceptualSharpness = features.perceptualSharpness || 0;
+
+          // Loudness bark bands for bass analysis
+          if (features.loudness?.specific) {
+            const barkBands = features.loudness.specific;
+            // First 4 bark bands (0-300Hz), each band is 0-1, so sum is 0-4
+            const bassSum = barkBands[0] + barkBands[1] + barkBands[2] + barkBands[3];
+            const totalLoudness = features.loudness.total || 1;
+            spectral.subBassRatio = Math.min(1, bassSum / Math.max(totalLoudness, 0.001));
+            spectral.bassEnergy = Math.min(1, bassSum / 4);
           }
         },
       });
@@ -273,6 +282,7 @@ export function useMicrophone() {
     analyserRef.current = null;
     dataArrayRef.current = null;
     prevSpectrumRef.current = null;
+    rmsMaxRef.current = 0.02;
     spectralFeaturesRef.current = { ...DEFAULT_SPECTRAL };
     setIsConnected(false);
   }, []);
