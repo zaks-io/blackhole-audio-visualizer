@@ -10,7 +10,7 @@ export function MicToggleFab({ isConnected, onToggle }: MicToggleFabProps) {
     <button
       onClick={onToggle}
       className={`
-        fixed bottom-6 right-6 z-50
+        fixed bottom-6 left-1/2 -translate-x-[calc(50%+2rem)] z-50
         w-14 h-14 rounded-full
         flex items-center justify-center
         transition-all duration-200

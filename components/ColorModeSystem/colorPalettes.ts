@@ -107,7 +107,7 @@ export const PALETTES: Record<ColorPaletteId, ColorPalette> = {
   },
 };
 
-export const PALETTE_IDS = Object.keys(PALETTES) as ColorPaletteId[];
+export const PALETTE_IDS = (Object.keys(PALETTES) as ColorPaletteId[]).filter((id) => id !== 'default');
 
 export const PALETTE_OFFSETS: Record<ColorPaletteId, number> = {
   default: 0,

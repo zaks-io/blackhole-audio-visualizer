@@ -1,11 +1,12 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { PROPERTY_REGISTRY, EASE_FUNCTIONS } from './propertyRegistry';
 import { useTweenControl } from './useTweenControl';
 import type { EaseFunction } from './propertyRegistry';
 
 export function TweenControlPanel() {
+  const [isVisible, setIsVisible] = useState(true);
   const { state, currentValue, setSelectedProperty, setTargetValue, setDuration, setEase, startTween, cancelTween } =
     useTweenControl();
 
@@ -22,9 +23,31 @@ export function TweenControlPanel() {
     );
   }, []);
 
+  if (!isVisible) {
+    return (
+      <button
+        onClick={() => setIsVisible(true)}
+        className="fixed bottom-6 left-24 z-50 rounded-lg border border-gray-700 bg-gray-900/90 px-3 py-2 text-sm text-white shadow-xl backdrop-blur-sm hover:bg-gray-800"
+      >
+        Tween
+      </button>
+    );
+  }
+
   return (
     <div className="fixed bottom-6 left-24 z-50 w-72 rounded-lg border border-gray-700 bg-gray-900/90 p-4 shadow-xl backdrop-blur-sm">
-      <h3 className="mb-3 text-sm font-semibold text-white">Property Tween</h3>
+      <div className="mb-3 flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-white">Property Tween</h3>
+        <button
+          onClick={() => setIsVisible(false)}
+          className="text-gray-400 hover:text-white"
+          title="Hide panel"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
+            <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
+          </svg>
+        </button>
+      </div>
 
       <div className="mb-3">
         <label className="mb-1 block text-xs text-gray-400">Property</label>

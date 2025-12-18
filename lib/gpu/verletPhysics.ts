@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 
-export const TEXTURE_SIZE = 512;
-export const PARTICLE_COUNT = TEXTURE_SIZE * TEXTURE_SIZE;
+export const DEFAULT_TEXTURE_SIZE = 512;
 export const EMISSION_RADIUS = 20.0;
 export const DEFAULT_GM = 100000.0;
 export const DEFAULT_SOFTENING = 0.5;
@@ -12,11 +11,13 @@ export const DEFAULT_SOFTENING = 0.5;
  * Format: (x, y, z, lifetime) - negative lifetime = waiting to spawn
  */
 export function createInitialPositionTexture(
+  textureSize: number,
   emissionRadius: number = EMISSION_RADIUS
 ): THREE.DataTexture {
-  const data = new Float32Array(PARTICLE_COUNT * 4);
+  const particleCount = textureSize * textureSize;
+  const data = new Float32Array(particleCount * 4);
 
-  for (let i = 0; i < PARTICLE_COUNT; i++) {
+  for (let i = 0; i < particleCount; i++) {
     const i4 = i * 4;
 
     // All start at origin (hidden), waiting to spawn
@@ -32,8 +33,8 @@ export function createInitialPositionTexture(
 
   const texture = new THREE.DataTexture(
     data,
-    TEXTURE_SIZE,
-    TEXTURE_SIZE,
+    textureSize,
+    textureSize,
     THREE.RGBAFormat,
     THREE.FloatType
   );
@@ -48,13 +49,15 @@ export function createInitialPositionTexture(
  * Format: (vx, vy, vz, mass)
  */
 export function createInitialVelocityTexture(
+  textureSize: number,
   positionTexture: THREE.DataTexture,
   gravitationalParameter: number = DEFAULT_GM
 ): THREE.DataTexture {
-  const data = new Float32Array(PARTICLE_COUNT * 4);
+  const particleCount = textureSize * textureSize;
+  const data = new Float32Array(particleCount * 4);
   const posData = positionTexture.image.data as Float32Array;
 
-  for (let i = 0; i < PARTICLE_COUNT; i++) {
+  for (let i = 0; i < particleCount; i++) {
     const i4 = i * 4;
 
     // Get position from position texture
@@ -79,8 +82,8 @@ export function createInitialVelocityTexture(
 
   const texture = new THREE.DataTexture(
     data,
-    TEXTURE_SIZE,
-    TEXTURE_SIZE,
+    textureSize,
+    textureSize,
     THREE.RGBAFormat,
     THREE.FloatType
   );

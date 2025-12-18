@@ -28,7 +28,7 @@ export function useColorMode(): UseColorModeReturn {
   }, []);
 
   const triggerRandomPalette = useCallback(() => {
-    const otherIds = PALETTE_IDS.filter((id) => id !== paletteId);
+    const otherIds = PALETTE_IDS.filter((id) => id !== paletteId && id !== 'default');
     const randomId = otherIds[Math.floor(Math.random() * otherIds.length)];
     setPaletteId(randomId);
   }, [paletteId]);

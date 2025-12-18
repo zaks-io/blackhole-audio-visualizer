@@ -6,7 +6,7 @@ import { GPUComputationRenderer } from 'three/examples/jsm/misc/GPUComputationRe
 import type { Variable } from 'three/examples/jsm/misc/GPUComputationRenderer.js';
 import * as THREE from 'three';
 import {
-  TEXTURE_SIZE,
+  DEFAULT_TEXTURE_SIZE,
   EMISSION_RADIUS,
   DEFAULT_GM,
   DEFAULT_SOFTENING,
@@ -18,7 +18,7 @@ import velocityFragmentShader from '@/shaders/simulation/velocityFragment.glsl';
 
 const MAX_BANDS = 36;
 
-export function useGPUCompute() {
+export function useGPUCompute(textureSize: number = DEFAULT_TEXTURE_SIZE) {
   const { gl } = useThree();
   const gpuComputeRef = useRef<GPUComputationRenderer | null>(null);
   const positionVariableRef = useRef<Variable | null>(null);
@@ -27,8 +27,8 @@ export function useGPUCompute() {
   const bandOnsetsTextureRef = useRef<THREE.DataTexture | null>(null);
 
   const textures = useMemo(() => {
-    const initialPosition = createInitialPositionTexture(EMISSION_RADIUS);
-    const initialVelocity = createInitialVelocityTexture(initialPosition, DEFAULT_GM);
+    const initialPosition = createInitialPositionTexture(textureSize, EMISSION_RADIUS);
+    const initialVelocity = createInitialVelocityTexture(textureSize, initialPosition, DEFAULT_GM);
 
     // Create band onsets texture (1 x MAX_BANDS, RGBA float, only R channel used)
     const bandOnsetsData = new Float32Array(MAX_BANDS * 4);
@@ -42,10 +42,10 @@ export function useGPUCompute() {
     bandOnsetsTexture.needsUpdate = true;
 
     return { initialPosition, initialVelocity, bandOnsetsTexture };
-  }, []);
+  }, [textureSize]);
 
   useEffect(() => {
-    const gpuCompute = new GPUComputationRenderer(TEXTURE_SIZE, TEXTURE_SIZE, gl);
+    const gpuCompute = new GPUComputationRenderer(textureSize, textureSize, gl);
 
     if (!gl.capabilities.isWebGL2) {
       const ext = gl.extensions.get('OES_texture_float');

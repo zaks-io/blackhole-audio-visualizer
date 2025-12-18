@@ -28,6 +28,7 @@ export function useMicrophone() {
   const analyserRef = useRef<AnalyserNode | null>(null);
   const dataArrayRef = useRef<Uint8Array<ArrayBuffer> | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
   // Dynamic band arrays
   const prevBandEnergiesRef = useRef<Float32Array>(new Float32Array(MAX_BANDS));
@@ -45,7 +46,16 @@ export function useMicrophone() {
   const connect = useCallback(async () => {
     if (isConnected) return;
 
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        sampleRate: 48000,
+        channelCount: 2,
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl: false,
+      },
+    });
+    streamRef.current = stream;
     const audioContext = new AudioContext();
     const source = audioContext.createMediaStreamSource(stream);
     const analyser = audioContext.createAnalyser();
@@ -124,6 +134,10 @@ export function useMicrophone() {
   }, []);
 
   const disconnect = useCallback(() => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
     if (audioContextRef.current) {
       audioContextRef.current.close();
       audioContextRef.current = null;
@@ -133,5 +147,7 @@ export function useMicrophone() {
     setIsConnected(false);
   }, []);
 
-  return { connect, disconnect, getFrequencyData, isConnected, setOnsetDecay };
+  const getStream = useCallback(() => streamRef.current, []);
+
+  return { connect, disconnect, getFrequencyData, isConnected, setOnsetDecay, getStream };
 }

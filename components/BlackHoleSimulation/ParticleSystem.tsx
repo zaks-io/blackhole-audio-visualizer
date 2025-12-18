@@ -4,7 +4,7 @@ import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useGPUCompute } from '@/hooks/useGPUCompute';
-import { TEXTURE_SIZE, PARTICLE_COUNT } from '@/lib/gpu/verletPhysics';
+import { DEFAULT_TEXTURE_SIZE } from '@/lib/gpu/verletPhysics';
 import type { AudioData } from '@/hooks/useMicrophone';
 import particleVertexShader from '@/shaders/particles/particleVertex.glsl';
 import particleFragmentShader from '@/shaders/particles/particleFragment.glsl';
@@ -13,6 +13,7 @@ import { getAllColors } from '@/components/ColorModeSystem';
 const DEFAULT_ALL_COLORS = getAllColors();
 
 interface ParticleSystemProps {
+  textureSize?: number;
   pointSize: number;
   brightness: number;
   alpha: number;
@@ -40,6 +41,7 @@ interface ParticleSystemProps {
 }
 
 export function ParticleSystem({
+  textureSize = DEFAULT_TEXTURE_SIZE,
   pointSize,
   brightness,
   alpha,
@@ -65,6 +67,8 @@ export function ParticleSystem({
   getAudioData,
   audioEnabled,
 }: ParticleSystemProps) {
+  const particleCount = textureSize * textureSize;
+
   const {
     getPositionTexture,
     getVelocityTexture,
@@ -87,26 +91,26 @@ export function ParticleSystem({
     setBandOnsets,
     setAudioAmplitude,
     setPaletteOffset,
-  } = useGPUCompute();
+  } = useGPUCompute(textureSize);
   const materialRef = useRef<THREE.ShaderMaterial>(null);
 
   const { positions, references } = useMemo(() => {
-    const pos = new Float32Array(PARTICLE_COUNT * 3);
-    const refs = new Float32Array(PARTICLE_COUNT * 2);
+    const pos = new Float32Array(particleCount * 3);
+    const refs = new Float32Array(particleCount * 2);
 
-    for (let i = 0; i < PARTICLE_COUNT; i++) {
+    for (let i = 0; i < particleCount; i++) {
       pos[i * 3] = 0;
       pos[i * 3 + 1] = 0;
       pos[i * 3 + 2] = 0;
 
-      const x = (i % TEXTURE_SIZE + 0.5) / TEXTURE_SIZE;
-      const y = (Math.floor(i / TEXTURE_SIZE) + 0.5) / TEXTURE_SIZE;
+      const x = ((i % textureSize) + 0.5) / textureSize;
+      const y = (Math.floor(i / textureSize) + 0.5) / textureSize;
       refs[i * 2] = x;
       refs[i * 2 + 1] = y;
     }
 
     return { positions: pos, references: refs };
-  }, []);
+  }, [particleCount, textureSize]);
 
   // Create color array for shader (56 colors - all palettes)
   const colorArray = useMemo(() => {

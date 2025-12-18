@@ -50,6 +50,7 @@ export function BlackHoleSimulation({ getFrequencyData, isAudioConnected, setOns
   });
 
   const particleControls = useControls('Particles', {
+    textureSize: { value: 512, min: 128, max: 1024, step: 128 },
     pointSize: { value: 1.0, min: 0.1, max: 20, step: 0.1 },
     brightness: { value: 1.5, min: 0.1, max: 5, step: 0.1 },
     alpha: { value: 0.8, min: 0.01, max: 1.0, step: 0.01 },
@@ -87,14 +88,14 @@ export function BlackHoleSimulation({ getFrequencyData, isAudioConnected, setOns
   const audioControls = useControls('Audio', {
     amplitude: { value: 5, min: 0, max: 20, step: 0.5 },
     onsetDecay: {
-      value: 1,
+      value: 0.92,
       min: 0.8,
       max: 1,
       step: 0.01,
       onChange: (v: number) => setOnsetDecay(v),
     },
     audioGain: { value: 2, min: 0, max: 3, step: 0.1 },
-    beatRepulsion: { value: 100, min: 0, max: 100, step: 1 },
+    beatRepulsion: { value: 20, min: 0, max: 100, step: 1 },
     autoColorChange: { value: true },
   });
 
@@ -148,6 +149,8 @@ export function BlackHoleSimulation({ getFrequencyData, isAudioConnected, setOns
       {skyboxPath && <Environment files={skyboxPath} background />}
 
       <ParticleSystem
+        key={particleControls.textureSize}
+        textureSize={particleControls.textureSize}
         pointSize={particleControls.pointSize}
         brightness={particleControls.brightness}
         alpha={particleControls.alpha}
