@@ -1,5 +1,5 @@
 {
   "buildCommand": "bun run build",
   "outputDirectory": "out",
-  "installCommand": "bun install --production"
+  "installCommand": "bun install --production --ignore-scripts"
 }
