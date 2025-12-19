@@ -67,31 +67,22 @@ export function AudioSourceButton({
 
   if (canUseSystemAudio && !isConnected) {
     return (
-      <TooltipProvider delayDuration={300}>
-        <DropdownMenu>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <DropdownMenuTrigger asChild>{buttonContent}</DropdownMenuTrigger>
-            </TooltipTrigger>
-            <TooltipContent side="top" className="text-xs">
-              {getTooltip()}
-            </TooltipContent>
-          </Tooltip>
-          <DropdownMenuContent align="center" className="min-w-[160px]">
-            <DropdownMenuItem
-              onClick={() => onConnect("microphone")}
-              className="gap-2 cursor-pointer"
-            >
-              <Mic className="h-4 w-4 text-emerald-400" />
-              <span>Microphone</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onConnect("system")} className="gap-2 cursor-pointer">
-              <Volume2 className="h-4 w-4 text-audio" />
-              <span>System Audio</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </TooltipProvider>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>{buttonContent}</DropdownMenuTrigger>
+        <DropdownMenuContent align="center" className="min-w-[160px]">
+          <DropdownMenuItem
+            onClick={() => onConnect("microphone")}
+            className="gap-2 cursor-pointer"
+          >
+            <Mic className="h-4 w-4 text-emerald-400" />
+            <span>Microphone</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => onConnect("system")} className="gap-2 cursor-pointer">
+            <Volume2 className="h-4 w-4 text-audio" />
+            <span>System Audio</span>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     );
   }
 

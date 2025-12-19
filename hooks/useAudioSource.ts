@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useSyncExternalStore } from "react";
 import { useMicrophone, type AudioData } from "./useMicrophone";
 import {
   isElectron,
@@ -25,12 +25,14 @@ export interface UseAudioSourceReturn {
   openScreenRecordingSettings: () => void;
 }
 
+const emptySubscribe = () => () => {};
+
 export function useAudioSource(): UseAudioSourceReturn {
   const [sourceType, setSourceType] = useState<AudioSourceType | null>(null);
   const [showPermissionDialog, setShowPermissionDialog] = useState(false);
   const microphone = useMicrophone();
 
-  const canUseSystemAudio = isElectron();
+  const canUseSystemAudio = useSyncExternalStore(emptySubscribe, isElectron, () => false);
 
   const openScreenRecordingSettings = useCallback(() => {
     if (window.electronAPI?.openScreenRecordingPreferences) {
