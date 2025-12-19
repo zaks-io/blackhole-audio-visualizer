@@ -8,7 +8,7 @@ import { FPSMeter } from "@/components/debug/FPSMeter";
 import { FPSTracker } from "@/hooks/useFPSMonitor";
 import { UIOverlay, ControlSidebar } from "@/components/layout";
 import { ProducerModePanel } from "@/components/ProducerMode";
-import { AudioDebugPanel } from "@/components/AudioDebugPanel";
+import { AudioAnalysisDebug } from "@/components/AudioAnalysisDebug";
 import { PermissionDialog } from "@/components/PermissionDialog";
 import { MicPermissionDialog } from "@/components/MicPermissionDialog";
 import { AudioConnectOverlay } from "@/components/audio/AudioConnectOverlay";
@@ -16,14 +16,13 @@ import { useCameraMode } from "@/components/CameraSystem";
 import { useColorMode } from "@/components/ColorModeSystem";
 import { useAudioSource } from "@/hooks/useAudioSource";
 import { useRecording } from "@/hooks/useRecording";
-import { useAudioAnalysis, type AudioAnalysis } from "@/hooks/useAudioTriggers";
 import { useUIState } from "@/hooks/useUIState";
 
 export default function Home() {
   const {
     connect,
     disconnect,
-    getFrequencyData,
+    getAnalysis,
     isConnected,
     setOnsetDecay,
     getStream,
@@ -34,28 +33,21 @@ export default function Home() {
     openScreenRecordingSettings,
     showMicPermissionDialog,
     closeMicPermissionDialog,
+    analysisRef,
   } = useAudioSource();
   const { isRecording, duration, error, startRecording, stopRecording } = useRecording();
-  const { processAudio, reset: resetAnalysis } = useAudioAnalysis();
   const cameraMode = useCameraMode();
   const colorMode = useColorMode();
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   const { debugPanelsVisible, fpsVisible, devControlsVisible } = useUIState();
-
-  const analysisRef = useRef<AudioAnalysis | null>(null);
   const animationFrameRef = useRef<number>(0);
 
-  // Process audio analysis in animation frame loop
+  // Run analysis continuously when connected to keep analysisRef updated
   useEffect(() => {
-    if (!isConnected) {
-      analysisRef.current = null;
-      return;
-    }
+    if (!isConnected) return;
 
     const processFrame = () => {
-      const audioData = getFrequencyData(36);
-      const newAnalysis = processAudio(audioData);
-      analysisRef.current = newAnalysis;
+      getAnalysis();
       animationFrameRef.current = requestAnimationFrame(processFrame);
     };
 
@@ -64,14 +56,7 @@ export default function Home() {
     return () => {
       cancelAnimationFrame(animationFrameRef.current);
     };
-  }, [isConnected, getFrequencyData, processAudio]);
-
-  // Reset analysis when disconnecting
-  useEffect(() => {
-    if (!isConnected) {
-      resetAnalysis();
-    }
-  }, [isConnected, resetAnalysis]);
+  }, [isConnected, getAnalysis]);
 
   const handleRecordToggle = useCallback(() => {
     if (isRecording) {
@@ -107,7 +92,7 @@ export default function Home() {
             }}
           >
             <BlackHoleSimulation
-              getFrequencyData={getFrequencyData}
+              getAnalysis={getAnalysis}
               isAudioConnected={isConnected}
               setOnsetDecay={setOnsetDecay}
               cameraMode={cameraMode}
@@ -137,11 +122,7 @@ export default function Home() {
         <AudioConnectOverlay isConnected={isConnected} onConnect={connect} />
 
         {/* Debug panels - conditionally rendered */}
-        {debugPanelsVisible && (
-          <div className="fixed left-6 top-6 z-40">
-            <AudioDebugPanel analysisRef={analysisRef} />
-          </div>
-        )}
+        {debugPanelsVisible && <AudioAnalysisDebug analysisRef={analysisRef} />}
 
         <PermissionDialog
           isOpen={showPermissionDialog}

@@ -5,12 +5,17 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { useGPUCompute } from "@/hooks/useGPUCompute";
 import { DEFAULT_TEXTURE_SIZE } from "@/lib/gpu/verletPhysics";
-import type { AudioData } from "@/hooks/useMicrophone";
 import particleVertexShader from "@/shaders/particles/particleVertex.glsl";
 import particleFragmentShader from "@/shaders/particles/particleFragment.glsl";
 import { getAllColors } from "@/components/ColorModeSystem";
 
 const DEFAULT_ALL_COLORS = getAllColors();
+
+interface ParticleAudioData {
+  bandEnergies: Float32Array;
+  bandOnsets: Float32Array;
+  bandCount: number;
+}
 
 interface ParticleSystemProps {
   textureSize?: number;
@@ -37,7 +42,7 @@ interface ParticleSystemProps {
   emitterSpread: number;
   audioAmplitude: number;
   beatRepulsion: number;
-  getAudioData: (bandCount: number) => AudioData;
+  getAudioData: (bandCount: number) => ParticleAudioData;
   audioEnabled: boolean;
 }
 

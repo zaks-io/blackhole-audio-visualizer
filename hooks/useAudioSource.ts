@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useSyncExternalStore } from "react";
-import { useMicrophone, type AudioData } from "./useMicrophone";
+import { useAudioAnalyzer, type AnalyzedAudio } from "./useAudioAnalyzer";
 import {
   isElectron,
   getSystemAudioStream,
@@ -14,7 +14,7 @@ export type AudioSourceType = "microphone" | "system";
 export interface UseAudioSourceReturn {
   connect: (sourceType?: AudioSourceType) => Promise<void>;
   disconnect: () => void;
-  getFrequencyData: (bandCount: number) => AudioData;
+  getAnalysis: (bandCount?: number) => AnalyzedAudio;
   isConnected: boolean;
   sourceType: AudioSourceType | null;
   setOnsetDecay: (value: number) => void;
@@ -25,6 +25,7 @@ export interface UseAudioSourceReturn {
   openScreenRecordingSettings: () => void;
   showMicPermissionDialog: boolean;
   closeMicPermissionDialog: () => void;
+  analysisRef: React.MutableRefObject<AnalyzedAudio | null>;
 }
 
 const emptySubscribe = () => () => {};
@@ -33,7 +34,8 @@ export function useAudioSource(): UseAudioSourceReturn {
   const [sourceType, setSourceType] = useState<AudioSourceType | null>(null);
   const [showPermissionDialog, setShowPermissionDialog] = useState(false);
   const [showMicPermissionDialog, setShowMicPermissionDialog] = useState(false);
-  const microphone = useMicrophone();
+  const [isConnectedState, setIsConnectedState] = useState(false);
+  const analyzer = useAudioAnalyzer();
 
   const canUseSystemAudio = useSyncExternalStore(emptySubscribe, isElectron, () => false);
 
@@ -54,8 +56,9 @@ export function useAudioSource(): UseAudioSourceReturn {
 
   const connect = useCallback(
     async (type: AudioSourceType = "microphone") => {
-      if (microphone.isConnected) {
-        microphone.disconnect();
+      if (analyzer.isConnected()) {
+        analyzer.disconnect();
+        setIsConnectedState(false);
       }
 
       if (type === "system") {
@@ -81,16 +84,18 @@ export function useAudioSource(): UseAudioSourceReturn {
 
         const stream = await getSystemAudioStream();
         if (stream) {
-          await microphone.connect(stream);
+          await analyzer.connect(stream);
           setSourceType("system");
+          setIsConnectedState(true);
         } else {
           // Stream failed, show permission dialog
           setShowPermissionDialog(true);
         }
       } else {
         try {
-          await microphone.connect();
+          await analyzer.connect();
           setSourceType("microphone");
+          setIsConnectedState(true);
         } catch (err) {
           if (err instanceof Error && err.name === "NotAllowedError") {
             setShowMicPermissionDialog(true);
@@ -98,30 +103,32 @@ export function useAudioSource(): UseAudioSourceReturn {
         }
       }
     },
-    [microphone, canUseSystemAudio]
+    [analyzer, canUseSystemAudio]
   );
 
   const disconnect = useCallback(() => {
     if (sourceType === "system" && window.electronAPI?.disableLoopbackAudio) {
       window.electronAPI.disableLoopbackAudio();
     }
-    microphone.disconnect();
+    analyzer.disconnect();
     setSourceType(null);
-  }, [microphone, sourceType]);
+    setIsConnectedState(false);
+  }, [analyzer, sourceType]);
 
   return {
     connect,
     disconnect,
-    getFrequencyData: microphone.getFrequencyData,
-    isConnected: microphone.isConnected,
+    getAnalysis: analyzer.getAnalysis,
+    isConnected: isConnectedState,
     sourceType,
-    setOnsetDecay: microphone.setOnsetDecay,
-    getStream: microphone.getStream,
+    setOnsetDecay: analyzer.setOnsetDecay,
+    getStream: analyzer.getStream,
     canUseSystemAudio,
     showPermissionDialog,
     closePermissionDialog,
     openScreenRecordingSettings,
     showMicPermissionDialog,
     closeMicPermissionDialog,
+    analysisRef: analyzer.analysisRef,
   };
 }
