@@ -198,3 +198,32 @@ body {
 .animate-pulse-recording {
   animation: pulse-recording 1.5s ease-in-out infinite;
 }
+
+/* Landing page orbital animations */
+@keyframes orbit {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes orbit-reverse {
+  from {
+    transform: rotate(360deg);
+  }
+  to {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes pulse-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 30px oklch(0.78 0.15 195 / 40%);
+  }
+  50% {
+    box-shadow: 0 0 50px oklch(0.78 0.15 195 / 60%);
+  }
+}
