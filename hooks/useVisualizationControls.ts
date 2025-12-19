@@ -34,6 +34,8 @@ export interface VisualizationControlsState {
 
   // Skybox
   skybox: string;
+  starDensity: number;
+  starBrightness: number;
 
   // Audio
   amplitude: number;
@@ -81,6 +83,8 @@ export const pathToKey: Record<string, keyof VisualizationControlsState> = {
   "Emitters.emitterSpread": "emitterSpread",
   "Emitters.showEmitters": "showEmitters",
   "Skybox.skybox": "skybox",
+  "Skybox.starDensity": "starDensity",
+  "Skybox.starBrightness": "starBrightness",
   "Audio.amplitude": "amplitude",
   "Audio.onsetDecay": "onsetDecay",
   "Audio.audioGain": "audioGain",
@@ -120,7 +124,9 @@ const DEFAULT_STATE: VisualizationControlsState = {
   showEmitters: false,
 
   // Skybox defaults
-  skybox: "Hazy Nebulae",
+  skybox: "Procedural Stars",
+  starDensity: 20000,
+  starBrightness: 0.5,
 
   // Audio defaults
   amplitude: 5,

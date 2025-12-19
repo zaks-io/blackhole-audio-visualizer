@@ -6,6 +6,7 @@ import { useFrame } from "@react-three/fiber";
 import { ParticleSystem } from "./ParticleSystem";
 import { BlackHole } from "./BlackHole";
 import { CameraSystem } from "@/components/CameraSystem";
+import { StarField } from "@/components/StarField";
 import { useVisualizationControls } from "@/hooks/useVisualizationControls";
 import type { ColorPaletteId } from "@/components/ColorModeSystem";
 import type { AudioData } from "@/hooks/useMicrophone";
@@ -13,6 +14,7 @@ import type { CameraMode } from "@/components/CameraSystem";
 
 const SKYBOX_OPTIONS: Record<string, string> = {
   None: "",
+  "Procedural Stars": "__procedural__",
   Starmap: "./starmap_2020_4k.exr",
   "Hazy Nebulae": "./HDR_hazy_nebulae_4k.exr",
   "Blue Nebulae": "./HDR_rich_blue_nebulae_1_4k.exr",
@@ -107,10 +109,21 @@ export function BlackHoleSimulation({
 
   const skyboxPath = SKYBOX_OPTIONS[controls.skybox] || "";
 
+  const isProceduralStars = controls.skybox === "Procedural Stars";
+
   return (
     <>
       <color attach="background" args={["#000000"]} />
-      {skyboxPath && <Environment files={skyboxPath} background />}
+      {isProceduralStars ? (
+        <StarField
+          key={controls.starDensity}
+          beatIntensityRef={beatIntensityRef}
+          starCount={controls.starDensity}
+          brightnessBoost={controls.starBrightness}
+        />
+      ) : (
+        skyboxPath && <Environment files={skyboxPath} background />
+      )}
 
       <ParticleSystem
         key={controls.textureSize}
