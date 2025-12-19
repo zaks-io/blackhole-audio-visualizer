@@ -13,6 +13,7 @@ const MODES: { id: CameraMode; label: string; icon: string }[] = [
   { id: "circle", label: "Circle", icon: "○" },
   { id: "closeup", label: "Close Up", icon: "↗" },
   { id: "orbit", label: "Orbit", icon: "⬇" },
+  { id: "edge", label: "Edge", icon: "—" },
 ];
 
 export function CameraModeUI({ currentMode, onModeChange, isTransitioning }: CameraModeUIProps) {

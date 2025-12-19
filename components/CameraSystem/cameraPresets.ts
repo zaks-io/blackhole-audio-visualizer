@@ -28,8 +28,17 @@ export const orbitPreset: CameraPreset = {
   },
 };
 
+export const edgePreset: CameraPreset = {
+  id: "edge",
+  name: "Edge",
+  radius: 400,
+  phi: 1.5708,
+  horizontalSpeed: 0.1,
+};
+
 export const PRESETS: Record<Exclude<CameraMode, "free">, CameraPreset> = {
   circle: circlePreset,
   closeup: closeupPreset,
   orbit: orbitPreset,
+  edge: edgePreset,
 };

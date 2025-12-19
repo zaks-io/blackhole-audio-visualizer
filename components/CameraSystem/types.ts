@@ -1,4 +1,4 @@
-export type CameraMode = "free" | "circle" | "closeup" | "orbit";
+export type CameraMode = "free" | "circle" | "closeup" | "orbit" | "edge";
 
 export interface CameraPreset {
   id: Exclude<CameraMode, "free">;

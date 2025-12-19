@@ -22,6 +22,7 @@ const CAMERA_MODES: { id: CameraMode; label: string }[] = [
   { id: "circle", label: "Circle" },
   { id: "closeup", label: "Close Up" },
   { id: "orbit", label: "Orbit" },
+  { id: "edge", label: "Edge" },
 ];
 
 export function CameraControls({
@@ -46,7 +47,7 @@ export function CameraControls({
         <Video className="h-4 w-4" />
         <SelectValue />
       </SelectTrigger>
-      <SelectContent>
+      <SelectContent position="popper" className="!overflow-y-visible !max-h-none">
         {CAMERA_MODES.map((mode) => (
           <SelectItem key={mode.id} value={mode.id}>
             {mode.label}
