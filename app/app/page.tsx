@@ -85,7 +85,7 @@ export default function Home() {
   }, [isRecording, startRecording, stopRecording, getStream]);
 
   return (
-    <div className="w-screen h-screen grid grid-cols-[auto_1fr_auto]">
+    <div className="w-screen h-dvh grid grid-cols-[auto_1fr_auto]">
       {/* Producer Mode Panel - pushes content from left */}
       <ProducerModePanel />
 
