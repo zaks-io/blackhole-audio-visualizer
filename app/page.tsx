@@ -10,6 +10,7 @@ import { UIOverlay, ControlSidebar } from "@/components/layout";
 import { ProducerModePanel } from "@/components/ProducerMode";
 import { AudioDebugPanel } from "@/components/AudioDebugPanel";
 import { PermissionDialog } from "@/components/PermissionDialog";
+import { AudioConnectOverlay } from "@/components/audio/AudioConnectOverlay";
 import { useCameraMode } from "@/components/CameraSystem";
 import { useColorMode } from "@/components/ColorModeSystem";
 import { useAudioSource } from "@/hooks/useAudioSource";
@@ -128,6 +129,9 @@ export default function Home() {
           recordingError={error}
           onRecordToggle={handleRecordToggle}
         />
+
+        {/* Audio connect overlay - shown when not connected */}
+        <AudioConnectOverlay isConnected={isConnected} onConnect={connect} />
 
         {/* Debug panels - conditionally rendered */}
         {debugPanelsVisible && (
