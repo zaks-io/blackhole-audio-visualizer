@@ -4,7 +4,7 @@ export interface CameraPreset {
   id: Exclude<CameraMode, "free">;
   name: string;
   radius: number;
-  height: number;
+  phi: number;
   horizontalSpeed: number;
   verticalOscillation?: {
     amplitude: number;

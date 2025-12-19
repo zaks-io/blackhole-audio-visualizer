@@ -4,7 +4,7 @@ export const circlePreset: CameraPreset = {
   id: "circle",
   name: "Circle",
   radius: 220,
-  height: 80,
+  phi: 1.2,
   horizontalSpeed: 0.15,
 };
 
@@ -12,7 +12,7 @@ export const closeupPreset: CameraPreset = {
   id: "closeup",
   name: "Close Up",
   radius: 71,
-  height: 15,
+  phi: 1.36,
   horizontalSpeed: -0.45,
 };
 
@@ -20,10 +20,10 @@ export const orbitPreset: CameraPreset = {
   id: "orbit",
   name: "Orbit",
   radius: 150,
-  height: 75,
+  phi: 1.55,
   horizontalSpeed: 0.5,
   verticalOscillation: {
-    amplitude: 70,
+    amplitude: 1.25,
     speed: 0.2,
   },
 };

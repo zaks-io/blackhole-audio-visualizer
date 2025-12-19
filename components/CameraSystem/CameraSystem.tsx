@@ -11,7 +11,7 @@ import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 interface OrbitState {
   theta: number;
   radius: number;
-  height: number;
+  phi: number;
   horizontalSpeed: number;
   oscillationPhase: number;
   oscillationAmplitude: number;
@@ -34,7 +34,7 @@ export function CameraSystem({ mode, onTransitionComplete, timelineRef }: Camera
   const orbitStateRef = useRef<OrbitState>({
     theta: 0,
     radius: 220,
-    height: 80,
+    phi: 1.2,
     horizontalSpeed: 0.15,
     oscillationPhase: 0,
     oscillationAmplitude: 0,
@@ -69,16 +69,17 @@ export function CameraSystem({ mode, onTransitionComplete, timelineRef }: Camera
     }
 
     const setCameraFromState = () => {
-      const y = state.height + Math.sin(state.oscillationPhase) * state.oscillationAmplitude;
-      const x = state.radius * Math.sin(state.theta);
-      const z = state.radius * Math.cos(state.theta);
+      const phi = state.phi + Math.sin(state.oscillationPhase) * state.oscillationAmplitude;
+      const x = state.radius * Math.sin(phi) * Math.sin(state.theta);
+      const y = state.radius * Math.cos(phi);
+      const z = state.radius * Math.sin(phi) * Math.cos(state.theta);
       camera.position.set(x, y, z);
       camera.lookAt(0, 0, 0);
     };
 
     if (isInitialMount) {
       state.radius = preset.radius;
-      state.height = preset.height;
+      state.phi = preset.phi;
       state.horizontalSpeed = preset.horizontalSpeed;
       state.oscillationAmplitude = preset.verticalOscillation?.amplitude ?? 0;
       state.oscillationSpeed = preset.verticalOscillation?.speed ?? 0;
@@ -101,7 +102,7 @@ export function CameraSystem({ mode, onTransitionComplete, timelineRef }: Camera
 
     tl.to(state, {
       radius: preset.radius,
-      height: preset.height,
+      phi: preset.phi,
       horizontalSpeed: preset.horizontalSpeed,
       oscillationAmplitude: preset.verticalOscillation?.amplitude ?? 0,
       oscillationSpeed: preset.verticalOscillation?.speed ?? 0,
@@ -132,9 +133,10 @@ export function CameraSystem({ mode, onTransitionComplete, timelineRef }: Camera
       state.oscillationPhase += delta * state.oscillationSpeed;
     }
 
-    const y = state.height + Math.sin(state.oscillationPhase) * state.oscillationAmplitude;
-    const x = state.radius * Math.sin(state.theta);
-    const z = state.radius * Math.cos(state.theta);
+    const phi = state.phi + Math.sin(state.oscillationPhase) * state.oscillationAmplitude;
+    const x = state.radius * Math.sin(phi) * Math.sin(state.theta);
+    const y = state.radius * Math.cos(phi);
+    const z = state.radius * Math.sin(phi) * Math.cos(state.theta);
     camera.position.set(x, y, z);
     camera.lookAt(0, 0, 0);
   });
