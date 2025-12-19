@@ -19,8 +19,6 @@ function createWindow() {
       nodeIntegration: false,
     },
     backgroundColor: "#000000",
-    titleBarStyle: "hiddenInset",
-    trafficLightPosition: { x: 16, y: 16 },
   });
 
   if (isDev) {
