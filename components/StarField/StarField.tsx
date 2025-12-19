@@ -14,6 +14,7 @@ uniform float uBeatIntensity;
 uniform float uSizeBoost;
 
 varying float vTemp;
+varying float vPointSize;
 
 void main() {
   vTemp = aTemperature;
@@ -22,37 +23,43 @@ void main() {
   gl_Position = projectionMatrix * mvPosition;
 
   float beatSize = 1.0 + uBeatIntensity * uSizeBoost;
-  gl_PointSize = aSize * beatSize * (600.0 / -mvPosition.z);
-  gl_PointSize = clamp(gl_PointSize, 3.0, 40.0);
+  float size = aSize * beatSize * (400.0 / -mvPosition.z);
+  gl_PointSize = clamp(size, 6.0, 80.0);
+  vPointSize = gl_PointSize;
 }
 `;
 
 const fragmentShader = `
 varying float vTemp;
+varying float vPointSize;
 
 uniform float uBrightnessBoost;
 
 void main() {
-  // Soft circular falloff
   float dist = length(gl_PointCoord - 0.5) * 2.0;
-  float alpha = 1.0 - dist;
-  alpha = alpha * alpha * alpha; // Sharper falloff for star-like appearance
+
+  // Soft Gaussian that fills the point - key to avoiding aliasing
+  float alpha = exp(-dist * dist * 3.0);
+
+  // Brighter core for point-like appearance
+  float core = exp(-dist * dist * 12.0);
+  alpha = alpha * 0.4 + core * 0.6;
+
+  // Very soft edge fade
+  alpha *= smoothstep(1.0, 0.5, dist);
+
   if (alpha < 0.01) discard;
 
-  // Temperature to color (warm orange -> white -> cool blue)
-  float t = (vTemp - 3000.0) / 9000.0;
-  t = clamp(t, 0.0, 1.0);
+  // Temperature to color
+  float t = clamp((vTemp - 3000.0) / 9000.0, 0.0, 1.0);
 
   vec3 warmColor = vec3(1.0, 0.7, 0.4);
   vec3 midColor = vec3(1.0, 1.0, 1.0);
   vec3 coolColor = vec3(0.6, 0.85, 1.0);
 
-  vec3 color;
-  if (t < 0.5) {
-    color = mix(warmColor, midColor, t * 2.0);
-  } else {
-    color = mix(midColor, coolColor, (t - 0.5) * 2.0);
-  }
+  vec3 color = t < 0.5
+    ? mix(warmColor, midColor, t * 2.0)
+    : mix(midColor, coolColor, (t - 0.5) * 2.0);
 
   float brightness = uBrightnessBoost * 2.0 * alpha;
   gl_FragColor = vec4(color * brightness, 1.0);
@@ -74,10 +81,11 @@ interface StarFieldProps {
 export function StarField({
   beatIntensityRef,
   starCount = 30000,
-  brightnessBoost = 1.0,
+  brightnessBoost = 0.2,
   sizeBoost = 0.3,
 }: StarFieldProps) {
   const pointsRef = useRef<THREE.Points>(null);
+  const materialRef = useRef<THREE.ShaderMaterial>(null);
 
   const geometry = useMemo(() => {
     const geo = new THREE.BufferGeometry();
@@ -99,9 +107,9 @@ export function StarField({
       // Temperature: 3000K (orange) to 12000K (blue-white)
       temps[i] = 3000 + seededRandom(i * 1.7) * 9000;
 
-      // Much more size variation - power distribution for rare big stars
+      // Dramatic size variation - most small, some medium, few large
       const sizeRand = seededRandom(i * 2.3 + 1000);
-      szs[i] = 1.5 + Math.pow(sizeRand, 1.5) * 6.0;
+      szs[i] = 2.0 + Math.pow(sizeRand, 3.0) * 25.0;
     }
 
     geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
@@ -110,30 +118,30 @@ export function StarField({
     return geo;
   }, [starCount]);
 
-  const material = useMemo(() => {
-    return new THREE.ShaderMaterial({
-      vertexShader,
-      fragmentShader,
-      uniforms: {
-        uBeatIntensity: { value: 0 },
-        uBrightnessBoost: { value: brightnessBoost },
-        uSizeBoost: { value: sizeBoost },
-      },
-      transparent: true,
-      depthTest: true,
-      depthWrite: false,
-      blending: THREE.AdditiveBlending,
-    });
-  }, [brightnessBoost, sizeBoost]);
-
   useFrame(() => {
-    if (!material) return;
-    material.uniforms.uBeatIntensity.value = beatIntensityRef.current;
-    material.uniforms.uBrightnessBoost.value = brightnessBoost;
-    material.uniforms.uSizeBoost.value = sizeBoost;
+    const mat = materialRef.current;
+    if (!mat) return;
+    mat.uniforms.uBeatIntensity.value = beatIntensityRef.current;
+    mat.uniforms.uBrightnessBoost.value = brightnessBoost;
+    mat.uniforms.uSizeBoost.value = sizeBoost;
   });
 
   return (
-    <points ref={pointsRef} frustumCulled={false} geometry={geometry} material={material} />
+    <points ref={pointsRef} frustumCulled={false} geometry={geometry}>
+      <shaderMaterial
+        ref={materialRef}
+        vertexShader={vertexShader}
+        fragmentShader={fragmentShader}
+        uniforms={{
+          uBeatIntensity: { value: 0 },
+          uBrightnessBoost: { value: brightnessBoost },
+          uSizeBoost: { value: sizeBoost },
+        }}
+        transparent
+        depthTest
+        depthWrite={false}
+        blending={THREE.AdditiveBlending}
+      />
+    </points>
   );
 }

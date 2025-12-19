@@ -126,7 +126,7 @@ const DEFAULT_STATE: VisualizationControlsState = {
   // Skybox defaults
   skybox: "Procedural Stars",
   starDensity: 20000,
-  starBrightness: 0.5,
+  starBrightness: 0.2,
 
   // Audio defaults
   amplitude: 5,
