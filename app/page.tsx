@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { track } from "@vercel/analytics";
 
 export default function LandingPage() {
   return (
@@ -32,6 +35,7 @@ export default function LandingPage() {
           href="/app"
           className="mt-10 px-8 py-3 rounded-full bg-cyan text-cyan-foreground font-medium transition-all duration-300 hover:scale-105"
           style={{ animation: "pulse-glow 3s ease-in-out infinite" }}
+          onClick={() => track("launch_visualizer")}
         >
           Launch Visualizer
         </Link>
