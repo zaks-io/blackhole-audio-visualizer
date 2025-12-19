@@ -142,12 +142,7 @@ export function useBPMTracker() {
             validEstimates.sort((a, b) => a - b);
             const medianBPM = validEstimates[Math.floor(validEstimates.length / 2)];
 
-            // Smooth BPM estimate (slower adaptation for stability)
-            if (estimatedBPMRef.current === 0) {
-              estimatedBPMRef.current = medianBPM;
-            } else {
-              estimatedBPMRef.current = estimatedBPMRef.current * 0.85 + medianBPM * 0.15;
-            }
+            estimatedBPMRef.current = medianBPM;
 
             // Calculate confidence based on interval consistency
             const avgInterval = intervals.reduce((a, b) => a + b, 0) / intervals.length;
