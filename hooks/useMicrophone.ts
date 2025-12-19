@@ -64,6 +64,7 @@ const DEFAULT_SPECTRAL: SpectralFeatures = {
 
 export function useMicrophone() {
   const [isConnected, setIsConnected] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const dataArrayRef = useRef<Uint8Array<ArrayBuffer> | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -86,21 +87,31 @@ export function useMicrophone() {
     onsetDecayRef.current = value;
   }, []);
 
+  const clearError = useCallback(() => setError(null), []);
+
   const connect = useCallback(
     async (externalStream?: MediaStream) => {
       if (isConnected) return;
+      setError(null);
 
-      const stream =
-        externalStream ??
-        (await navigator.mediaDevices.getUserMedia({
-          audio: {
-            sampleRate: 48000,
-            channelCount: 2,
-            echoCancellation: false,
-            noiseSuppression: false,
-            autoGainControl: false,
-          },
-        }));
+      let stream: MediaStream;
+      try {
+        stream =
+          externalStream ??
+          (await navigator.mediaDevices.getUserMedia({
+            audio: {
+              sampleRate: 48000,
+              channelCount: 2,
+              echoCancellation: false,
+              noiseSuppression: false,
+              autoGainControl: false,
+            },
+          }));
+      } catch (err) {
+        const errorName = err instanceof Error ? err.name : "Unknown error";
+        setError(errorName);
+        throw err;
+      }
 
       streamRef.current = stream;
       const audioContext = new AudioContext();
@@ -289,5 +300,14 @@ export function useMicrophone() {
 
   const getStream = useCallback(() => streamRef.current, []);
 
-  return { connect, disconnect, getFrequencyData, isConnected, setOnsetDecay, getStream };
+  return {
+    connect,
+    disconnect,
+    getFrequencyData,
+    isConnected,
+    setOnsetDecay,
+    getStream,
+    error,
+    clearError,
+  };
 }

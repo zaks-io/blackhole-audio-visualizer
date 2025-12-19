@@ -10,6 +10,7 @@ import { UIOverlay, ControlSidebar } from "@/components/layout";
 import { ProducerModePanel } from "@/components/ProducerMode";
 import { AudioDebugPanel } from "@/components/AudioDebugPanel";
 import { PermissionDialog } from "@/components/PermissionDialog";
+import { MicPermissionDialog } from "@/components/MicPermissionDialog";
 import { AudioConnectOverlay } from "@/components/audio/AudioConnectOverlay";
 import { useCameraMode } from "@/components/CameraSystem";
 import { useColorMode } from "@/components/ColorModeSystem";
@@ -31,6 +32,8 @@ export default function Home() {
     showPermissionDialog,
     closePermissionDialog,
     openScreenRecordingSettings,
+    showMicPermissionDialog,
+    closeMicPermissionDialog,
   } = useAudioSource();
   const { isRecording, duration, error, startRecording, stopRecording } = useRecording();
   const { processAudio, reset: resetAnalysis } = useAudioAnalysis();
@@ -145,6 +148,7 @@ export default function Home() {
           onClose={closePermissionDialog}
           onOpenSettings={openScreenRecordingSettings}
         />
+        <MicPermissionDialog isOpen={showMicPermissionDialog} onClose={closeMicPermissionDialog} />
 
         {fpsVisible && <FPSMeter />}
       </div>

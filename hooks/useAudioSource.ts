@@ -23,6 +23,8 @@ export interface UseAudioSourceReturn {
   showPermissionDialog: boolean;
   closePermissionDialog: () => void;
   openScreenRecordingSettings: () => void;
+  showMicPermissionDialog: boolean;
+  closeMicPermissionDialog: () => void;
 }
 
 const emptySubscribe = () => () => {};
@@ -30,6 +32,7 @@ const emptySubscribe = () => () => {};
 export function useAudioSource(): UseAudioSourceReturn {
   const [sourceType, setSourceType] = useState<AudioSourceType | null>(null);
   const [showPermissionDialog, setShowPermissionDialog] = useState(false);
+  const [showMicPermissionDialog, setShowMicPermissionDialog] = useState(false);
   const microphone = useMicrophone();
 
   const canUseSystemAudio = useSyncExternalStore(emptySubscribe, isElectron, () => false);
@@ -43,6 +46,10 @@ export function useAudioSource(): UseAudioSourceReturn {
 
   const closePermissionDialog = useCallback(() => {
     setShowPermissionDialog(false);
+  }, []);
+
+  const closeMicPermissionDialog = useCallback(() => {
+    setShowMicPermissionDialog(false);
   }, []);
 
   const connect = useCallback(
@@ -81,8 +88,14 @@ export function useAudioSource(): UseAudioSourceReturn {
           setShowPermissionDialog(true);
         }
       } else {
-        await microphone.connect();
-        setSourceType("microphone");
+        try {
+          await microphone.connect();
+          setSourceType("microphone");
+        } catch (err) {
+          if (err instanceof Error && err.name === "NotAllowedError") {
+            setShowMicPermissionDialog(true);
+          }
+        }
       }
     },
     [microphone, canUseSystemAudio]
@@ -108,5 +121,7 @@ export function useAudioSource(): UseAudioSourceReturn {
     showPermissionDialog,
     closePermissionDialog,
     openScreenRecordingSettings,
+    showMicPermissionDialog,
+    closeMicPermissionDialog,
   };
 }
