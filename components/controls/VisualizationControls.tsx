@@ -8,6 +8,7 @@ import { PALETTE_IDS } from "@/components/ColorModeSystem";
 
 const SKYBOX_OPTIONS = [
   "None",
+  "Procedural Stars",
   "Starmap",
   "Hazy Nebulae",
   "Blue Nebulae",
@@ -71,6 +72,14 @@ export function VisualizationControls() {
 
       <ControlSection title="Skybox" id="skybox">
         <SelectControl controlKey="skybox" label="Environment" options={SKYBOX_OPTIONS} />
+        <SliderControl
+          controlKey="starDensity"
+          label="Star Density"
+          min={5000}
+          max={50000}
+          step={5000}
+        />
+        <SliderControl controlKey="starBrightness" label="Star Brightness" min={0.1} max={3.0} step={0.1} />
       </ControlSection>
 
       <ControlSection title="Audio" id="audio">
