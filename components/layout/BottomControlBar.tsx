@@ -8,6 +8,7 @@ import { CameraControls } from "@/components/camera";
 import { AudioSourceButton } from "@/components/audio";
 import { RecordButton } from "@/components/recording";
 import { SettingsMenu } from "@/components/dialogs";
+import { UserMenu } from "@/components/auth/UserMenu";
 import { useProducerMode } from "@/components/ProducerMode";
 import { cn } from "@/lib/utils";
 import type { CameraMode } from "@/components/CameraSystem";
@@ -102,6 +103,11 @@ export function BottomControlBar({
 
         {/* Settings */}
         <SettingsMenu />
+
+        <Separator orientation="vertical" className="h-6 mx-2" />
+
+        {/* User Menu */}
+        <UserMenu />
       </div>
     </div>
   );
