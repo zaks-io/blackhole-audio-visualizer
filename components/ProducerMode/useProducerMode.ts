@@ -8,9 +8,13 @@ export const useProducerMode = create<ProducerModeState>()(
     (set, get) => ({
       isOpen: false,
       tweenStates: {},
+      globalDuration: DEFAULT_DURATION,
+      globalEase: DEFAULT_EASE,
 
       setOpen: (open) => set({ isOpen: open }),
       toggleOpen: () => set((state) => ({ isOpen: !state.isOpen })),
+      setGlobalDuration: (duration) => set({ globalDuration: duration }),
+      setGlobalEase: (ease) => set({ globalEase: ease }),
 
       initParameter: (path, currentValue) => {
         const existing = get().tweenStates[path];
@@ -112,6 +116,8 @@ export const useProducerMode = create<ProducerModeState>()(
       name: "producer-mode",
       partialize: (state) => ({
         isOpen: state.isOpen,
+        globalDuration: state.globalDuration,
+        globalEase: state.globalEase,
       }),
     }
   )

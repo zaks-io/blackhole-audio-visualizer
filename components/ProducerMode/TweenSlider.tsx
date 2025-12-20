@@ -1,10 +1,9 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { HelpCircle } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { TweenSliderTrack } from "./TweenSliderTrack";
-import { EasingPicker } from "./EasingPicker";
-import { DurationPicker } from "./DurationPicker";
 import { useProducerTween } from "./useProducerTween";
 import type { ParameterConfig } from "./types";
 
@@ -16,12 +15,8 @@ export function TweenSlider({ config }: TweenSliderProps) {
   const {
     currentValue,
     targetValue: storeTargetValue,
-    duration,
-    ease,
     isTweening,
     progress,
-    setDuration,
-    setEase,
     startTween,
     killTween,
   } = useProducerTween(config);
@@ -47,66 +42,51 @@ export function TweenSlider({ config }: TweenSliderProps) {
   const hasChange = Math.abs(localTarget - currentValue) > config.step;
 
   return (
-    <div className="space-y-2">
-      {/* Header with label and values */}
-      <div className="flex items-center justify-between">
-        <span className="text-xs text-muted-foreground">{config.label}</span>
-        <div className="flex items-center gap-1.5 text-xs font-mono">
-          {isTweening ? (
-            <span className="text-primary">{formatValue(currentValue)}</span>
-          ) : (
-            <>
-              <span className="text-muted-foreground/80">{formatValue(currentValue)}</span>
-              {hasChange && (
-                <>
-                  <span className="text-muted-foreground/40">→</span>
-                  <span className="text-primary">{formatValue(localTarget)}</span>
-                </>
-              )}
-            </>
-          )}
+    <TooltipProvider delayDuration={300}>
+      <div className="space-y-1">
+        {/* Header with label and values */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1">
+            <span className="text-xs text-muted-foreground">{config.label}</span>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <HelpCircle className="h-3 w-3 text-muted-foreground/50 hover:text-muted-foreground cursor-help" />
+              </TooltipTrigger>
+              <TooltipContent side="top" className="text-xs max-w-48">
+                {config.description}
+              </TooltipContent>
+            </Tooltip>
+          </div>
+          <div className="flex items-center gap-1.5 text-xs font-mono">
+            {isTweening ? (
+              <span className="text-primary">{formatValue(currentValue)}</span>
+            ) : (
+              <>
+                <span className="text-muted-foreground/80">{formatValue(currentValue)}</span>
+                {hasChange && (
+                  <>
+                    <span className="text-muted-foreground/40">→</span>
+                    <span className="text-primary">{formatValue(localTarget)}</span>
+                  </>
+                )}
+              </>
+            )}
+          </div>
         </div>
+
+        {/* Slider track */}
+        <TweenSliderTrack
+          min={config.min}
+          max={config.max}
+          step={config.step}
+          currentValue={currentValue}
+          targetValue={localTarget}
+          progress={progress}
+          isTweening={isTweening}
+          onTargetChange={setLocalTarget}
+          onCommit={handleCommit}
+        />
       </div>
-
-      {/* Slider track */}
-      <TweenSliderTrack
-        min={config.min}
-        max={config.max}
-        step={config.step}
-        currentValue={currentValue}
-        targetValue={localTarget}
-        progress={progress}
-        isTweening={isTweening}
-        onTargetChange={setLocalTarget}
-        onCommit={handleCommit}
-      />
-
-      {/* Controls row */}
-      <TooltipProvider delayDuration={300}>
-        <div className="flex items-center justify-end gap-1">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div>
-                <EasingPicker value={ease} onChange={setEase} />
-              </div>
-            </TooltipTrigger>
-            <TooltipContent side="top" className="text-xs">
-              Easing
-            </TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div>
-                <DurationPicker value={duration} onChange={setDuration} />
-              </div>
-            </TooltipTrigger>
-            <TooltipContent side="top" className="text-xs">
-              Duration ({duration}s)
-            </TooltipContent>
-          </Tooltip>
-        </div>
-      </TooltipProvider>
-    </div>
+    </TooltipProvider>
   );
 }

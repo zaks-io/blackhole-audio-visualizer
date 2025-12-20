@@ -1,6 +1,6 @@
 "use client";
 
-import { X, SlidersHorizontal, Palette } from "lucide-react";
+import { X, SlidersHorizontal, Palette, Timer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -12,7 +12,9 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { useProducerMode } from "./useProducerMode";
-import { ParameterGroup } from "./ParameterGroup";
+import { TweenSlider } from "./TweenSlider";
+import { DurationPicker } from "./DurationPicker";
+import { EasingPicker } from "./EasingPicker";
 import { PresetControls } from "./PresetControls";
 import { PlaylistTab } from "./PlaylistTab";
 import { PRODUCER_PARAMETERS } from "./producerConfig";
@@ -20,9 +22,13 @@ import { PALETTE_IDS, PALETTES, type ColorPaletteId } from "@/components/ColorMo
 import { useVisualizationControls } from "@/hooks/useVisualizationControls";
 
 export function ProducerModePanel() {
-  const { isOpen, setOpen } = useProducerMode();
+  const { isOpen, setOpen, globalDuration, globalEase, setGlobalDuration, setGlobalEase } =
+    useProducerMode();
   const colorPalette = useVisualizationControls((s) => s.colorPalette);
   const setColorPalette = useVisualizationControls((s) => s.set);
+
+  // Flatten all parameters from all groups
+  const allParameters = PRODUCER_PARAMETERS.flatMap((group) => group.parameters);
 
   return (
     <div
@@ -60,19 +66,19 @@ export function ProducerModePanel() {
             {/* Preset Controls */}
             <PresetControls />
 
-            {/* Parameter groups */}
-            <div className="flex-1 overflow-y-auto px-3 py-2 scrollbar-thin">
-              {/* Color Palette Selector */}
-              <div className="flex items-center gap-2 px-1 py-2 mb-2 border-b border-white/5">
-                <Palette className="h-4 w-4 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground flex-1">Color Palette</span>
+            {/* Global settings */}
+            <div className="px-3 py-2 border-b border-white/5 space-y-2">
+              {/* Color Palette */}
+              <div className="flex items-center gap-2">
+                <Palette className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground flex-1">Palette</span>
                 <Select
                   value={colorPalette}
                   onValueChange={(value) =>
                     setColorPalette("colorPalette", value as ColorPaletteId)
                   }
                 >
-                  <SelectTrigger size="sm" className="w-28 h-7 text-xs">
+                  <SelectTrigger size="sm" className="w-24 h-6 text-xs">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -85,16 +91,31 @@ export function ProducerModePanel() {
                 </Select>
               </div>
 
-              {PRODUCER_PARAMETERS.map((group) => (
-                <ParameterGroup key={group.name} group={group} />
-              ))}
+              {/* Duration & Easing */}
+              <div className="flex items-center gap-2">
+                <Timer className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground flex-1">Timing</span>
+                <div className="flex items-center gap-1">
+                  <DurationPicker value={globalDuration} onChange={setGlobalDuration} />
+                  <span className="text-xs text-muted-foreground/60 w-8">{globalDuration}s</span>
+                  <EasingPicker value={globalEase} onChange={setGlobalEase} />
+                </div>
+              </div>
+            </div>
+
+            {/* Parameter list (flat) */}
+            <div className="flex-1 overflow-y-auto px-3 py-2 scrollbar-thin">
+              <div className="space-y-3">
+                {allParameters.map((param) => (
+                  <TweenSlider key={param.path} config={param} />
+                ))}
+              </div>
             </div>
 
             {/* Footer hint */}
-            <div className="px-4 py-3 border-t border-white/5 shrink-0">
+            <div className="px-3 py-2 border-t border-white/5 shrink-0">
               <p className="text-[10px] text-muted-foreground/60 leading-relaxed">
-                Drag sliders to set target values, then press play to animate. Multiple parameters
-                can tween simultaneously.
+                Drag sliders to set targets, then press play to animate.
               </p>
             </div>
           </TabsContent>

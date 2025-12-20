@@ -1,6 +1,7 @@
 export interface ParameterConfig {
   path: string;
   label: string;
+  description: string;
   min: number;
   max: number;
   step: number;
@@ -43,6 +44,8 @@ export interface TweenParameterState {
 export interface ProducerModeState {
   isOpen: boolean;
   tweenStates: Record<string, TweenParameterState>;
+  globalDuration: number;
+  globalEase: EaseFunction;
 
   setOpen: (open: boolean) => void;
   toggleOpen: () => void;
@@ -51,6 +54,8 @@ export interface ProducerModeState {
   setTargetValue: (path: string, value: number) => void;
   setDuration: (path: string, duration: number) => void;
   setEase: (path: string, ease: EaseFunction) => void;
+  setGlobalDuration: (duration: number) => void;
+  setGlobalEase: (ease: EaseFunction) => void;
 
   setIsTweening: (path: string, isTweening: boolean) => void;
   setProgress: (path: string, progress: number) => void;

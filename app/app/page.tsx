@@ -9,7 +9,6 @@ import { FPSMeter } from "@/components/debug/FPSMeter";
 import { FPSTracker } from "@/hooks/useFPSMonitor";
 import { UIOverlay, ControlSidebar } from "@/components/layout";
 import { ProducerModePanel } from "@/components/ProducerMode";
-import { AudioAnalysisDebug } from "@/components/AudioAnalysisDebug";
 import { PermissionDialog } from "@/components/PermissionDialog";
 import { MicPermissionDialog } from "@/components/MicPermissionDialog";
 import { AudioConnectOverlay } from "@/components/audio/AudioConnectOverlay";
@@ -40,7 +39,7 @@ export default function Home() {
   const cameraMode = useCameraMode();
   const colorMode = useColorMode();
   const canvasContainerRef = useRef<HTMLDivElement>(null);
-  const { debugPanelsVisible, fpsVisible, devControlsVisible } = useUIState();
+  const { fpsVisible, devControlsVisible } = useUIState();
 
   const handleRecordToggle = useCallback(() => {
     if (isRecording) {
@@ -106,9 +105,6 @@ export default function Home() {
         {/* Audio connect overlay - shown when not connected */}
         <AudioConnectOverlay isConnected={isConnected} onConnect={connect} />
 
-        {/* Debug panels - conditionally rendered */}
-        {debugPanelsVisible && <AudioAnalysisDebug analysisRef={analysisRef} />}
-
         <PermissionDialog
           isOpen={showPermissionDialog}
           onClose={closePermissionDialog}
@@ -120,7 +116,7 @@ export default function Home() {
       </div>
 
       {/* Control Sidebar - pushes content from right */}
-      {devControlsVisible && <ControlSidebar />}
+      {devControlsVisible && <ControlSidebar analysisRef={analysisRef} />}
     </div>
   );
 }

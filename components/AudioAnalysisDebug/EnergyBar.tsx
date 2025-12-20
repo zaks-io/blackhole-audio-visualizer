@@ -36,15 +36,15 @@ export const EnergyBar = memo(function EnergyBar({
   return (
     <div className="mb-1.5">
       <div className="mb-0.5 flex items-center justify-between text-xs">
-        <span className="text-gray-400">{label}</span>
+        <span className="text-muted-foreground">{label}</span>
         <div className="flex items-center gap-1.5">
-          <span className="font-mono text-white min-w-[2.5rem] text-right">
+          <span className="font-mono text-foreground/80 min-w-[2.5rem] text-right">
             {(safeValue * 100).toFixed(0)}%
           </span>
           {isPeak && <span className={`w-2 h-2 rounded-full ${colors.peak} animate-pulse`} />}
         </div>
       </div>
-      <div className="relative h-2 w-full overflow-hidden rounded-full bg-gray-700/50">
+      <div className="relative h-2 w-full overflow-hidden rounded-full bg-white/5">
         <div
           className={`h-full transition-all duration-75 ${colors.bar}`}
           style={{ width: `${percentage}%` }}

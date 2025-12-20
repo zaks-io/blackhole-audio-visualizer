@@ -1,6 +1,6 @@
 "use client";
 
-import { Settings, Activity, Gauge, Code, Zap } from "lucide-react";
+import { Settings, Gauge, Code, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
@@ -11,8 +11,6 @@ import { useIsAdmin } from "@/hooks/useIsAdmin";
 
 export function SettingsMenu() {
   const {
-    debugPanelsVisible,
-    toggleDebugPanels,
     fpsVisible,
     toggleFPS,
     devControlsVisible,
@@ -35,19 +33,6 @@ export function SettingsMenu() {
           <Separator />
           {isAdmin && (
             <>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Activity className="h-4 w-4 text-muted-foreground" />
-                  <Label htmlFor="audio-debug" className="text-sm">
-                    Audio Debug
-                  </Label>
-                </div>
-                <Switch
-                  id="audio-debug"
-                  checked={debugPanelsVisible}
-                  onCheckedChange={toggleDebugPanels}
-                />
-              </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Code className="h-4 w-4 text-muted-foreground" />

@@ -2,6 +2,8 @@
 
 import { useRef, useEffect } from "react";
 import { useFPSStore } from "@/hooks/useFPSMonitor";
+import { useProducerMode } from "@/components/ProducerMode/useProducerMode";
+import { cn } from "@/lib/utils";
 
 const CHART_WIDTH = 60;
 const CHART_HEIGHT = 20;
@@ -12,6 +14,7 @@ export function FPSMeter() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fps = useFPSStore((s) => s.fps);
   const history = useFPSStore((s) => s.history);
+  const producerPanelOpen = useProducerMode((s) => s.isOpen);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -46,7 +49,13 @@ export function FPSMeter() {
   }, [fps, history]);
 
   return (
-    <div className="fixed bottom-3 left-3 z-50 glass-panel rounded px-2 py-1 flex items-center gap-2">
+    <div
+      className={cn(
+        "fixed bottom-3 z-50 glass-panel rounded px-2 py-1 flex items-center gap-2",
+        "transition-[left] duration-300 ease-out",
+        producerPanelOpen ? "left-[332px]" : "left-3"
+      )}
+    >
       <canvas ref={canvasRef} width={CHART_WIDTH} height={CHART_HEIGHT} className="opacity-80" />
       <span className="font-mono text-xs tabular-nums text-white/80" style={{ minWidth: "28px" }}>
         {fps}

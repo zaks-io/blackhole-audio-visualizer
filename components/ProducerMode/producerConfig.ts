@@ -7,6 +7,7 @@ export const PRODUCER_PARAMETERS: ParameterGroup[] = [
       {
         path: "Black Hole.eventHorizonRadius",
         label: "Event Horizon",
+        description: "Radius of the black hole's event horizon",
         min: 0.5,
         max: 20,
         step: 0.5,
@@ -19,6 +20,7 @@ export const PRODUCER_PARAMETERS: ParameterGroup[] = [
       {
         path: "Particles.pointSize",
         label: "Point Size",
+        description: "Size of individual particles in pixels",
         min: 0.1,
         max: 20,
         step: 0.1,
@@ -31,6 +33,7 @@ export const PRODUCER_PARAMETERS: ParameterGroup[] = [
       {
         path: "Physics.gravity",
         label: "Black Hole Gravity",
+        description: "Gravitational force pulling particles inward",
         min: 1000,
         max: 1000000,
         step: 10000,
@@ -39,6 +42,7 @@ export const PRODUCER_PARAMETERS: ParameterGroup[] = [
       {
         path: "Physics.orbitDecay",
         label: "Orbital Decay",
+        description: "Rate at which orbits decay toward the center",
         min: 0,
         max: 20,
         step: 0.5,
@@ -46,6 +50,7 @@ export const PRODUCER_PARAMETERS: ParameterGroup[] = [
       {
         path: "Physics.softening",
         label: "Softening",
+        description: "Prevents extreme forces at very close distances",
         min: 0.01,
         max: 10,
         step: 0.1,
@@ -58,6 +63,7 @@ export const PRODUCER_PARAMETERS: ParameterGroup[] = [
       {
         path: "Emitters.emitterCount",
         label: "Emitter Count",
+        description: "Number of particle emitter points",
         min: 1,
         max: 36,
         step: 1,
@@ -65,6 +71,7 @@ export const PRODUCER_PARAMETERS: ParameterGroup[] = [
       {
         path: "Emitters.emitterSpread",
         label: "Emitter Spread",
+        description: "Angular spread of particles from each emitter",
         min: 0,
         max: 1,
         step: 0.01,
@@ -72,6 +79,7 @@ export const PRODUCER_PARAMETERS: ParameterGroup[] = [
       {
         path: "Emitters.emitRadius",
         label: "Emitter Radius",
+        description: "Distance of emitters from the black hole center",
         min: 5,
         max: 200,
         step: 1,
@@ -84,6 +92,7 @@ export const PRODUCER_PARAMETERS: ParameterGroup[] = [
       {
         path: "Audio.amplitude",
         label: "Audio Amplitude",
+        description: "How much audio affects particle movement",
         min: 0,
         max: 20,
         step: 0.5,
@@ -91,6 +100,7 @@ export const PRODUCER_PARAMETERS: ParameterGroup[] = [
       {
         path: "Audio.audioGain",
         label: "Audio Gain",
+        description: "Multiplier for incoming audio signal",
         min: 0,
         max: 3,
         step: 0.1,
@@ -98,6 +108,7 @@ export const PRODUCER_PARAMETERS: ParameterGroup[] = [
       {
         path: "Audio.beatRepulsion",
         label: "Beat Repulsion",
+        description: "Outward force applied on detected beats",
         min: 0,
         max: 100,
         step: 1,

@@ -3,23 +3,15 @@ import gsap from "gsap";
 import { useVisualizationControls, pathToKey } from "@/hooks/useVisualizationControls";
 import { useProducerMode } from "./useProducerMode";
 import { DEFAULT_DURATION, DEFAULT_EASE } from "./producerConfig";
-import type { ParameterConfig, EaseFunction } from "./types";
+import type { ParameterConfig } from "./types";
 
 export function useProducerTween(config: ParameterConfig) {
   const vizStore = useVisualizationControls;
   const producerStore = useProducerMode;
   const stateKey = pathToKey[config.path];
   const currentValue = useVisualizationControls((s) => s[stateKey]) as number;
-  const {
-    tweenStates,
-    initParameter,
-    setTargetValue,
-    setDuration,
-    setEase,
-    setIsTweening,
-    setProgress,
-    resetTween,
-  } = useProducerMode();
+  const { tweenStates, initParameter, setTargetValue, setIsTweening, setProgress, resetTween } =
+    useProducerMode();
 
   const tweenRef = useRef<gsap.core.Tween | null>(null);
   const tweenState = useRef({ value: 0, progress: 0 });
@@ -37,20 +29,6 @@ export function useProducerTween(config: ParameterConfig) {
     [config.path, setTargetValue]
   );
 
-  const handleDurationChange = useCallback(
-    (duration: number) => {
-      setDuration(config.path, duration);
-    },
-    [config.path, setDuration]
-  );
-
-  const handleEaseChange = useCallback(
-    (ease: EaseFunction) => {
-      setEase(config.path, ease);
-    },
-    [config.path, setEase]
-  );
-
   const startTween = useCallback(
     (overrideTarget?: number) => {
       // Always kill any existing tween first - user intent takes precedence
@@ -64,9 +42,10 @@ export function useProducerTween(config: ParameterConfig) {
 
       // Read fresh state directly from stores to avoid stale closures
       const freshParamState = producerStore.getState().tweenStates[config.path];
+      const freshProducerState = producerStore.getState();
       const startValue = vizStore.getState().getByPath(config.path) as number;
-      const duration = freshParamState?.duration ?? DEFAULT_DURATION;
-      const ease = freshParamState?.ease ?? DEFAULT_EASE;
+      const duration = freshProducerState.globalDuration ?? DEFAULT_DURATION;
+      const ease = freshProducerState.globalEase ?? DEFAULT_EASE;
       const targetValue = overrideTarget ?? freshParamState?.targetValue ?? startValue;
 
       // Don't start tween if no meaningful change
@@ -136,13 +115,9 @@ export function useProducerTween(config: ParameterConfig) {
   return {
     currentValue,
     targetValue: paramState?.targetValue ?? currentValue,
-    duration: paramState?.duration ?? 5,
-    ease: paramState?.ease ?? "power2.inOut",
     isTweening: paramState?.isTweening ?? false,
     progress: paramState?.progress ?? 0,
     setTargetValue: handleTargetChange,
-    setDuration: handleDurationChange,
-    setEase: handleEaseChange,
     startTween,
     killTween,
     cancelTween,
