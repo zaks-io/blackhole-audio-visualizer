@@ -114,8 +114,8 @@ export function BlackHoleSimulation({
     }
   });
 
-  const getAudioData = (bandCount: number) => {
-    const analysis = getAnalysis(bandCount);
+  const getAudioData = () => {
+    const analysis = getAnalysis();
     // Apply gain to all band onsets (reuse buffer to avoid GC)
     const scaledOnsets = scaledOnsetsRef.current;
     for (let i = 0; i < analysis.bandOnsets.length; i++) {

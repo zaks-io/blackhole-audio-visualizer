@@ -303,13 +303,16 @@ export function useGPUCompute(textureSize: number = DEFAULT_TEXTURE_SIZE) {
   const setBandOnsets = useCallback((onsets: Float32Array, count: number) => {
     if (!bandOnsetsTextureRef.current) return;
     const data = bandOnsetsTextureRef.current.image.data as Float32Array;
+    // Floor count to handle fractional values from GSAP tweens
+    // Fractional indices corrupt texture by writing to wrong channel offsets
+    const intCount = Math.floor(count);
     // Update active bands with onset values, sanitizing to prevent NaN/Infinity
-    for (let i = 0; i < count && i < MAX_BANDS; i++) {
+    for (let i = 0; i < intCount && i < MAX_BANDS; i++) {
       const val = onsets[i];
       data[i * 4] = Number.isFinite(val) ? Math.min(val, 10) : 0;
     }
     // Zero out unused bands to prevent stale values from persisting
-    for (let i = count; i < MAX_BANDS; i++) {
+    for (let i = intCount; i < MAX_BANDS; i++) {
       data[i * 4] = 0;
     }
     bandOnsetsTextureRef.current.needsUpdate = true;

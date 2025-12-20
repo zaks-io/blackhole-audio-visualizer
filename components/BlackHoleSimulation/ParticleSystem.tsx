@@ -45,7 +45,7 @@ interface ParticleSystemProps {
   emitterSpread: number;
   audioAmplitude: number;
   beatRepulsion: number;
-  getAudioData: (bandCount: number) => ParticleAudioData;
+  getAudioData: () => ParticleAudioData;
   audioEnabled: boolean;
 }
 
@@ -196,7 +196,7 @@ export function ParticleSystem({
     setBeatRepulsion(beatRepulsion);
 
     if (audioEnabled) {
-      const audioData = getAudioData(emitterCount);
+      const audioData = getAudioData();
       setBandOnsets(audioData.bandOnsets, audioData.bandCount);
       const beat = Math.max(audioData.bandOnsets[0] ?? 0, audioData.bandOnsets[1] ?? 0);
       setBeatIntensity(beat);
