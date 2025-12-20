@@ -1,6 +1,6 @@
 "use client";
 
-import { Settings, Activity, Gauge, Code } from "lucide-react";
+import { Settings, Activity, Gauge, Code, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
@@ -16,6 +16,8 @@ export function SettingsMenu() {
     toggleFPS,
     devControlsVisible,
     toggleDevControls,
+    bassStrobeEnabled,
+    toggleBassStrobe,
   } = useUIState();
 
   return (
@@ -62,6 +64,20 @@ export function SettingsMenu() {
               id="dev-controls"
               checked={devControlsVisible}
               onCheckedChange={toggleDevControls}
+            />
+          </div>
+          <Separator />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Zap className="h-4 w-4 text-muted-foreground" />
+              <Label htmlFor="bass-strobe" className="text-sm">
+                Bass Strobe
+              </Label>
+            </div>
+            <Switch
+              id="bass-strobe"
+              checked={bassStrobeEnabled}
+              onCheckedChange={toggleBassStrobe}
             />
           </div>
         </div>
