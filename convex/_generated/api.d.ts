@@ -8,7 +8,6 @@
  * @module
  */
 
-import type * as model_playlists_migrations from "../model/playlists/migrations.js";
 import type * as model_playlists_public from "../model/playlists/public.js";
 import type * as model_presets_public from "../model/presets/public.js";
 import type * as model_users_public from "../model/users/public.js";
@@ -16,7 +15,6 @@ import type * as model_users_public from "../model/users/public.js";
 import type { ApiFromModules, FilterApi, FunctionReference } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
-  "model/playlists/migrations": typeof model_playlists_migrations;
   "model/playlists/public": typeof model_playlists_public;
   "model/presets/public": typeof model_presets_public;
   "model/users/public": typeof model_users_public;
