@@ -55,4 +55,16 @@ export default defineSchema({
   })
     .index("by_user", ["userId"])
     .index("by_public", ["isPublic"]),
+
+  recordings: defineTable({
+    storageId: v.id("_storage"),
+    name: v.string(),
+    description: v.optional(v.string()),
+    mimeType: v.string(),
+    fileSize: v.number(),
+    duration: v.optional(v.number()),
+    uploadedBy: v.id("users"),
+    createdAt: v.number(),
+    downloadCount: v.number(),
+  }).index("by_created", ["createdAt"]),
 });

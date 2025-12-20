@@ -1,6 +1,6 @@
 "use client";
 
-import { Settings, Gauge, Code, Zap } from "lucide-react";
+import { Settings, Gauge, Code, Zap, Video, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useUIState } from "@/hooks/useUIState";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { RecordingsManagerDialog } from "./RecordingsManagerDialog";
 
 export function SettingsMenu() {
   const {
@@ -46,6 +47,15 @@ export function SettingsMenu() {
                   onCheckedChange={toggleDevControls}
                 />
               </div>
+              <RecordingsManagerDialog>
+                <button className="flex items-center justify-between w-full text-left">
+                  <div className="flex items-center gap-2">
+                    <Video className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm">Recordings</span>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </button>
+              </RecordingsManagerDialog>
               <Separator />
             </>
           )}

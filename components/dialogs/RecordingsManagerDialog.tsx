@@ -1,0 +1,306 @@
+"use client";
+
+import { useState, useRef, type ReactNode } from "react";
+import {
+  Upload,
+  Copy,
+  Check,
+  Trash2,
+  Video,
+  ExternalLink,
+  X,
+  Loader2,
+  Download,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
+import { useConvexRecordings } from "@/hooks/useConvexRecordings";
+import { cn } from "@/lib/utils";
+
+interface RecordingsManagerDialogProps {
+  children: ReactNode;
+}
+
+export function RecordingsManagerDialog({ children }: RecordingsManagerDialogProps) {
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [file, setFile] = useState<File | null>(null);
+  const [name, setName] = useState("");
+  const [duration, setDuration] = useState<number | undefined>();
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const { recordings, isLoading, uploadRecording, deleteRecording } = useConvexRecordings();
+
+  const handleCopyUrl = async (id: string, url: string) => {
+    await navigator.clipboard.writeText(url);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (confirm("Delete this recording? This cannot be undone.")) {
+      await deleteRecording(id);
+    }
+  };
+
+  const extractVideoDuration = (videoFile: File): Promise<number | undefined> => {
+    return new Promise((resolve) => {
+      const video = document.createElement("video");
+      video.preload = "metadata";
+      video.onloadedmetadata = () => {
+        URL.revokeObjectURL(video.src);
+        resolve(isFinite(video.duration) ? video.duration : undefined);
+      };
+      video.onerror = () => {
+        URL.revokeObjectURL(video.src);
+        resolve(undefined);
+      };
+      video.src = URL.createObjectURL(videoFile);
+    });
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0];
+    if (!selectedFile) return;
+
+    setFile(selectedFile);
+    if (!name) {
+      setName(selectedFile.name.replace(/\.[^/.]+$/, ""));
+    }
+    const videoDuration = await extractVideoDuration(selectedFile);
+    setDuration(videoDuration);
+  };
+
+  const handleUpload = async () => {
+    if (!file || !name.trim()) return;
+
+    setIsUploading(true);
+    setUploadProgress(30);
+
+    try {
+      await uploadRecording(file, name.trim(), undefined, duration);
+      setUploadProgress(100);
+      setFile(null);
+      setName("");
+      setDuration(undefined);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    } catch (error) {
+      console.error("Upload failed:", error);
+    } finally {
+      setIsUploading(false);
+      setUploadProgress(0);
+    }
+  };
+
+  const clearFile = () => {
+    setFile(null);
+    setName("");
+    setDuration(undefined);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const formatFileSize = (bytes: number): string => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+  };
+
+  const formatDuration = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  const formatDate = (timestamp: number): string => {
+    return new Date(timestamp).toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  };
+
+  const getShareableUrl = (recordingId: string): string => {
+    const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL ?? "";
+    const siteUrl = convexUrl.replace(".cloud", ".site");
+    return `${siteUrl}/recording/${recordingId}`;
+  };
+
+  return (
+    <Dialog>
+      <DialogTrigger asChild>{children}</DialogTrigger>
+      <DialogContent className="sm:max-w-lg max-h-[80vh] overflow-hidden flex flex-col">
+        <DialogHeader>
+          <DialogTitle>Recordings</DialogTitle>
+        </DialogHeader>
+        <Separator />
+
+        {/* Upload Section */}
+        <div className="space-y-3">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="video/mp4,video/webm,video/quicktime"
+            onChange={handleFileChange}
+            className="hidden"
+          />
+
+          {file ? (
+            <div className="border rounded-lg p-3 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Video className="h-4 w-4 text-primary shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate">{file.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatFileSize(file.size)}
+                      {duration !== undefined && ` · ${formatDuration(duration)}`}
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 shrink-0"
+                  onClick={clearFile}
+                  disabled={isUploading}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="recording-name" className="text-xs">
+                  Name
+                </Label>
+                <Input
+                  id="recording-name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Recording name"
+                  className="h-8 text-sm"
+                  disabled={isUploading}
+                />
+              </div>
+
+              {isUploading && <Progress value={uploadProgress} className="h-1" />}
+
+              <Button
+                size="sm"
+                className="w-full"
+                onClick={handleUpload}
+                disabled={!name.trim() || isUploading}
+              >
+                {isUploading ? (
+                  <>
+                    <Loader2 className="h-3 w-3 animate-spin mr-1.5" />
+                    Uploading...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="h-3 w-3 mr-1.5" />
+                    Upload
+                  </>
+                )}
+              </Button>
+            </div>
+          ) : (
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className={cn(
+                "w-full border-2 border-dashed rounded-lg p-4 text-center transition-colors",
+                "hover:border-primary/50 hover:bg-muted/50 text-muted-foreground"
+              )}
+            >
+              <Upload className="h-5 w-5 mx-auto mb-1" />
+              <p className="text-sm">Click to upload a video</p>
+            </button>
+          )}
+        </div>
+
+        <Separator />
+
+        {/* Recordings List */}
+        <div className="flex-1 overflow-y-auto -mx-6 px-6 min-h-0">
+          {isLoading ? (
+            <div className="py-8 text-center text-muted-foreground">Loading...</div>
+          ) : recordings.length === 0 ? (
+            <div className="py-8 text-center text-muted-foreground">No recordings yet.</div>
+          ) : (
+            <div className="space-y-3 py-2">
+              {recordings.map((recording) => (
+                <div key={recording._id} className="border rounded-lg p-3 space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Video className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <div className="min-w-0">
+                        <p className="font-medium text-sm truncate">{recording.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatFileSize(recording.fileSize)}
+                          {recording.duration !== undefined &&
+                            ` · ${formatDuration(recording.duration)}`}
+                          {` · ${formatDate(recording.createdAt)}`}
+                          {` · ${recording.downloadCount ?? 0} downloads`}
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-destructive hover:text-destructive shrink-0"
+                      onClick={() => handleDelete(recording._id)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+
+                  <div className="flex gap-2 pl-6">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-xs gap-1.5"
+                      onClick={() => handleCopyUrl(recording._id, getShareableUrl(recording._id))}
+                    >
+                      {copiedId === recording._id ? (
+                        <>
+                          <Check className="h-3 w-3" />
+                          Copied!
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="h-3 w-3" />
+                          Copy Link
+                        </>
+                      )}
+                    </Button>
+                    <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5" asChild>
+                      <a
+                        href={getShareableUrl(recording._id)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                        Open
+                      </a>
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
