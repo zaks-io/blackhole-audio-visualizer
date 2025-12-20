@@ -7,6 +7,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useUIState } from "@/hooks/useUIState";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 
 export function SettingsMenu() {
   const {
@@ -19,6 +20,7 @@ export function SettingsMenu() {
     bassStrobeEnabled,
     toggleBassStrobe,
   } = useUIState();
+  const isAdmin = useIsAdmin();
 
   return (
     <Popover>
@@ -29,21 +31,39 @@ export function SettingsMenu() {
       </PopoverTrigger>
       <PopoverContent align="end" className="w-56">
         <div className="space-y-4">
-          <h4 className="font-medium text-sm">Debug Panels</h4>
+          <h4 className="font-medium text-sm">Settings</h4>
           <Separator />
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Activity className="h-4 w-4 text-muted-foreground" />
-              <Label htmlFor="audio-debug" className="text-sm">
-                Audio Debug
-              </Label>
-            </div>
-            <Switch
-              id="audio-debug"
-              checked={debugPanelsVisible}
-              onCheckedChange={toggleDebugPanels}
-            />
-          </div>
+          {isAdmin && (
+            <>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Activity className="h-4 w-4 text-muted-foreground" />
+                  <Label htmlFor="audio-debug" className="text-sm">
+                    Audio Debug
+                  </Label>
+                </div>
+                <Switch
+                  id="audio-debug"
+                  checked={debugPanelsVisible}
+                  onCheckedChange={toggleDebugPanels}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Code className="h-4 w-4 text-muted-foreground" />
+                  <Label htmlFor="dev-controls" className="text-sm">
+                    Developer Controls
+                  </Label>
+                </div>
+                <Switch
+                  id="dev-controls"
+                  checked={devControlsVisible}
+                  onCheckedChange={toggleDevControls}
+                />
+              </div>
+              <Separator />
+            </>
+          )}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Gauge className="h-4 w-4 text-muted-foreground" />
@@ -53,20 +73,6 @@ export function SettingsMenu() {
             </div>
             <Switch id="fps-meter" checked={fpsVisible} onCheckedChange={toggleFPS} />
           </div>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Code className="h-4 w-4 text-muted-foreground" />
-              <Label htmlFor="dev-controls" className="text-sm">
-                Developer Controls
-              </Label>
-            </div>
-            <Switch
-              id="dev-controls"
-              checked={devControlsVisible}
-              onCheckedChange={toggleDevControls}
-            />
-          </div>
-          <Separator />
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Zap className="h-4 w-4 text-muted-foreground" />
