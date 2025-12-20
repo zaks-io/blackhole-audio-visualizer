@@ -10,6 +10,7 @@ import { RecordButton } from "@/components/recording";
 import { SettingsMenu } from "@/components/dialogs";
 import { UserMenu } from "@/components/auth/UserMenu";
 import { useProducerMode } from "@/components/ProducerMode";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { cn } from "@/lib/utils";
 import type { CameraMode } from "@/components/CameraSystem";
 import type { AudioSourceType } from "@/hooks/useAudioSource";
@@ -45,6 +46,7 @@ export function BottomControlBar({
   onRecordToggle,
 }: BottomControlBarProps) {
   const { isOpen: isProducerModeOpen, toggleOpen: toggleProducerMode } = useProducerMode();
+  const isAdmin = useIsAdmin();
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pb-6 pointer-events-none">
@@ -91,12 +93,14 @@ export function BottomControlBar({
             onConnect={onAudioConnect}
             onDisconnect={onAudioDisconnect}
           />
-          <RecordButton
-            isRecording={isRecording}
-            duration={recordingDuration}
-            disabled={!isAudioConnected}
-            onToggle={onRecordToggle}
-          />
+          {isAdmin && (
+            <RecordButton
+              isRecording={isRecording}
+              duration={recordingDuration}
+              disabled={!isAudioConnected}
+              onToggle={onRecordToggle}
+            />
+          )}
         </div>
 
         <Separator orientation="vertical" className="h-6 mx-2" />
