@@ -22,10 +22,10 @@ function createWindow() {
   });
 
   if (isDev) {
-    mainWindow.loadURL("http://localhost:3000");
+    mainWindow.loadURL("http://localhost:3000/app");
     mainWindow.webContents.openDevTools();
   } else {
-    mainWindow.loadFile(path.join(__dirname, "../out/index.html"));
+    mainWindow.loadFile(path.join(__dirname, "../out/app.html"));
   }
 
   mainWindow.on("closed", () => {
