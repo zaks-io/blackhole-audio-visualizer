@@ -1,6 +1,7 @@
 import { useRef, useState, useCallback, useEffect } from "react";
 import gsap from "gsap";
 import { usePlayPreset } from "@/components/ProducerMode/usePlayPreset";
+import { usePlaylistControls } from "@/components/playlist/usePlaylistControls";
 import type {
   PlaylistWithPresets,
   ConvexPreset,
@@ -184,6 +185,17 @@ export function usePlaylistPlayer(playlist: PlaylistWithPresets | null) {
       cleanup();
     };
   }, [cleanup]);
+
+  const shouldStop = usePlaylistControls((s) => s.shouldStop);
+  const clearTriggerStop = usePlaylistControls((s) => s.clearTriggerStop);
+
+  useEffect(() => {
+    if (!shouldStop) return;
+    clearTriggerStop();
+    if (state.isPlaying) {
+      queueMicrotask(() => stop());
+    }
+  }, [shouldStop, state.isPlaying, stop, clearTriggerStop]);
 
   const currentPreset = state.currentIndex >= 0 ? getPresetAtIndex(state.currentIndex) : null;
 

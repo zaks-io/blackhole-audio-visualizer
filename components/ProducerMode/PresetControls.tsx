@@ -47,6 +47,7 @@ import { usePlayPreset } from "./usePlayPreset";
 import { useProducerMode } from "./useProducerMode";
 import { useVisualizationControls } from "@/hooks/useVisualizationControls";
 import { useConvexPresets } from "@/hooks/useConvexPresets";
+import { usePlaylistControls } from "@/components/playlist/usePlaylistControls";
 import { PRODUCER_PARAMETERS, DEFAULT_DURATION, DEFAULT_EASE } from "./producerConfig";
 import type { PresetParameter } from "./types";
 
@@ -318,6 +319,8 @@ export function PresetControls() {
     }
   };
 
+  const triggerStop = usePlaylistControls((s) => s.triggerStop);
+
   const handleSelectPreset = (id: string | null) => {
     setActivePresetId(id);
     if (id) {
@@ -326,6 +329,7 @@ export function PresetControls() {
         if (preset.source === "local") {
           localPresets.setActivePreset(id);
         }
+        triggerStop();
         playPreset({
           id: preset.id,
           name: preset.name,
@@ -406,6 +410,7 @@ export function PresetControls() {
             className="h-8 w-8 shrink-0"
             onClick={() => {
               if (selectedPreset) {
+                triggerStop();
                 playPreset({
                   id: selectedPreset.id,
                   name: selectedPreset.name,

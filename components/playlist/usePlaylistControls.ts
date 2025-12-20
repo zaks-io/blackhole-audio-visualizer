@@ -7,6 +7,9 @@ interface PlaylistControlsState {
   shouldPlay: boolean;
   triggerPlay: () => void;
   clearTriggerPlay: () => void;
+  shouldStop: boolean;
+  triggerStop: () => void;
+  clearTriggerStop: () => void;
 }
 
 export const usePlaylistControls = create<PlaylistControlsState>()(
@@ -17,6 +20,9 @@ export const usePlaylistControls = create<PlaylistControlsState>()(
       shouldPlay: false,
       triggerPlay: () => set({ shouldPlay: true }),
       clearTriggerPlay: () => set({ shouldPlay: false }),
+      shouldStop: false,
+      triggerStop: () => set({ shouldStop: true }),
+      clearTriggerStop: () => set({ shouldStop: false }),
     }),
     {
       name: "playlist-controls",
