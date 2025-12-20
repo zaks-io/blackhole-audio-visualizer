@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { CameraControls } from "@/components/camera";
+import { PlaylistControls } from "@/components/playlist";
 import { AudioSourceButton } from "@/components/audio";
 import { RecordButton } from "@/components/recording";
 import { HelpModal, SettingsMenu } from "@/components/dialogs";
@@ -81,6 +82,9 @@ export function BottomControlBar({
           onModeChange={onCameraModeChange}
           isTransitioning={isCameraTransitioning}
         />
+
+        {/* Playlist Controls */}
+        <PlaylistControls />
 
         <Separator orientation="vertical" className="h-6 mx-2" />
 

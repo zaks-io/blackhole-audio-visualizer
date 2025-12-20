@@ -14,30 +14,30 @@ interface TweenRef {
 
 export function usePlayPreset() {
   const vizStore = useVisualizationControls;
-  const { setTargetValue, setDuration, setEase, setIsTweening, setProgress, resetTween } =
-    useProducerMode();
+  const { setTargetValue, setDuration, setEase, setIsTweening, setProgress } = useProducerMode();
   const activePresetId = usePresets((s) => s.activePresetId);
   const presets = usePresets((s) => s.presets);
 
   const tweensRef = useRef<TweenRef[]>([]);
   const isPlayingRef = useRef(false);
+  const onCompleteRef = useRef<(() => void) | null>(null);
 
   const activePreset = presets.find((p) => p.id === activePresetId) ?? null;
 
   const stopAll = useCallback(() => {
     for (const ref of tweensRef.current) {
       ref.tween.kill();
-      const currentVal = vizStore.getState().getByPath(ref.path) as number;
-      resetTween(ref.path, currentVal);
     }
     tweensRef.current = [];
     isPlayingRef.current = false;
-  }, [vizStore, resetTween]);
+    onCompleteRef.current = null;
+  }, [vizStore]);
 
   const playPreset = useCallback(
-    (preset: Preset) => {
+    (preset: Preset, onComplete?: () => void) => {
       stopAll();
       isPlayingRef.current = true;
+      onCompleteRef.current = onComplete ?? null;
 
       vizStore.getState().set("colorPalette", preset.colorPalette as ColorPaletteId);
 
@@ -66,10 +66,13 @@ export function usePlayPreset() {
           onComplete: () => {
             setIsTweening(param.path, false);
             setProgress(param.path, 0);
-            resetTween(param.path, param.value);
             tweensRef.current = tweensRef.current.filter((t) => t.path !== param.path);
             if (tweensRef.current.length === 0) {
               isPlayingRef.current = false;
+              if (onCompleteRef.current) {
+                onCompleteRef.current();
+                onCompleteRef.current = null;
+              }
             }
           },
         });
@@ -77,16 +80,7 @@ export function usePlayPreset() {
         tweensRef.current.push({ path: param.path, tween, state });
       }
     },
-    [
-      vizStore,
-      stopAll,
-      setTargetValue,
-      setDuration,
-      setEase,
-      setIsTweening,
-      setProgress,
-      resetTween,
-    ]
+    [vizStore, stopAll, setTargetValue, setDuration, setEase, setIsTweening, setProgress]
   );
 
   const playActive = useCallback(() => {

@@ -115,7 +115,7 @@ const DEFAULT_STATE: VisualizationControlsState = {
   beatPulse: 2,
 
   // Particles defaults
-  textureSize: 1024,
+  textureSize: 512,
   pointSize: 1.0,
   brightness: 1.5,
   alpha: 0.8,
@@ -135,7 +135,7 @@ const DEFAULT_STATE: VisualizationControlsState = {
   emitterAngle: 0,
   emitterTilt: 0,
   inwardAngle: 0,
-  spawnRate: 0.7,
+  spawnRate: 0.3,
   emitterSpread: 0,
   showEmitters: false,
 

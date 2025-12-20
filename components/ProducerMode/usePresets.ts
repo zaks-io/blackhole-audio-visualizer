@@ -11,8 +11,10 @@ interface PresetsState {
 
   setActivePreset: (id: string | null) => void;
   savePreset: (name: string) => string;
+  updatePreset: (id: string) => void;
   deletePreset: (id: string) => void;
   renamePreset: (id: string, name: string) => void;
+  clearPresets: () => void;
   exportPresets: () => string;
   importPresets: (json: string) => { success: boolean; count: number };
 }
@@ -64,6 +66,31 @@ export const usePresets = create<PresetsState>()(
         return id;
       },
 
+      updatePreset: (id) => {
+        const vizState = useVisualizationControls.getState();
+        const producerState = useProducerMode.getState();
+
+        const parameters: PresetParameter[] = [];
+        for (const group of PRODUCER_PARAMETERS) {
+          for (const param of group.parameters) {
+            const value = vizState.getByPath(param.path) as number;
+            const tweenState = producerState.tweenStates[param.path];
+            parameters.push({
+              path: param.path,
+              value,
+              duration: tweenState?.duration ?? DEFAULT_DURATION,
+              ease: tweenState?.ease ?? DEFAULT_EASE,
+            });
+          }
+        }
+
+        set((state) => ({
+          presets: state.presets.map((p) =>
+            p.id === id ? { ...p, colorPalette: vizState.colorPalette, parameters } : p
+          ),
+        }));
+      },
+
       deletePreset: (id) => {
         set((state) => ({
           presets: state.presets.filter((p) => p.id !== id),
@@ -75,6 +102,10 @@ export const usePresets = create<PresetsState>()(
         set((state) => ({
           presets: state.presets.map((p) => (p.id === id ? { ...p, name } : p)),
         }));
+      },
+
+      clearPresets: () => {
+        set({ presets: [], activePresetId: null });
       },
 
       exportPresets: () => {

@@ -139,6 +139,7 @@ export function useAudioAnalyzer(options: UseAudioAnalyzerOptions = {}) {
 
   // Frame-based cache to avoid recomputing multiple times per frame
   const lastComputeTimeRef = useRef<number>(0);
+  const lastBandCountRef = useRef<number>(MAX_BANDS);
 
   // Meyda features storage
   const meydaFeaturesRef = useRef<MeydaFeatures | null>(null);
@@ -291,6 +292,7 @@ export function useAudioAnalyzer(options: UseAudioAnalyzerOptions = {}) {
     isConnectedRef.current = false;
     peakHistoryRef.current = [];
     lastComputeTimeRef.current = 0;
+    lastBandCountRef.current = MAX_BANDS;
 
     // Reset all utilities
     Object.values(utils.thresholds).forEach((t) => t.reset());

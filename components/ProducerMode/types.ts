@@ -72,3 +72,46 @@ export interface Preset {
   parameters: PresetParameter[];
   createdAt: number;
 }
+
+// Convex types (using string for IDs to match Convex's Id type at runtime)
+export interface ConvexPreset {
+  _id: string;
+  userId: string;
+  name: string;
+  colorPalette: string;
+  parameters: PresetParameter[];
+  isPublic: boolean;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface PlaylistItem {
+  presetId: string;
+  waitDuration?: number;
+}
+
+export interface Playlist {
+  _id: string;
+  userId: string;
+  name: string;
+  items: PlaylistItem[];
+  shuffle: boolean;
+  defaultWaitDuration: number;
+  isPublic: boolean;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface PlaylistWithPresets extends Playlist {
+  presets: ConvexPreset[];
+}
+
+export type PlaybackStatus = "idle" | "tweening" | "waiting";
+
+export interface PlaylistPlayerState {
+  isPlaying: boolean;
+  isPaused: boolean;
+  currentIndex: number;
+  status: PlaybackStatus;
+  waitProgress: number;
+}

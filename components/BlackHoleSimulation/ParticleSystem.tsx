@@ -10,7 +10,6 @@ import particleFragmentShader from "@/shaders/particles/particleFragment.glsl";
 import { getAllColors } from "@/components/ColorModeSystem";
 
 const DEFAULT_ALL_COLORS = getAllColors();
-const EMPTY_ONSETS = new Float32Array(36);
 
 interface ParticleAudioData {
   bandEnergies: Float32Array;
@@ -204,7 +203,8 @@ export function ParticleSystem({
       setHFCBoost(audioData.hfcBoost);
       setSpawnBurst(audioData.spawnBurst);
     } else {
-      setBandOnsets(EMPTY_ONSETS, emitterCount);
+      const emptyOnsets = new Float32Array(36);
+      setBandOnsets(emptyOnsets, emitterCount);
       setBeatIntensity(0);
       setISCORadius(iscoRadius);
       setHFCBoost(0);

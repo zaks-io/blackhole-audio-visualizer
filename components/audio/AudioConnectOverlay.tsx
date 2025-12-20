@@ -3,6 +3,7 @@
 import { useSyncExternalStore } from "react";
 import { Play, Mic } from "lucide-react";
 import { isElectron } from "@/lib/platform";
+import { usePlaylistControls } from "@/components/playlist";
 import type { AudioSourceType } from "@/hooks/useAudioSource";
 
 const subscribe = () => () => {};
@@ -17,6 +18,7 @@ interface AudioConnectOverlayProps {
 export function AudioConnectOverlay({ isConnected, onConnect }: AudioConnectOverlayProps) {
   // useSyncExternalStore handles hydration mismatch by using getServerSnapshot on server
   const isElectronApp = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  const { selectedPlaylistId, triggerPlay } = usePlaylistControls();
 
   if (isConnected) return null;
 
@@ -25,6 +27,9 @@ export function AudioConnectOverlay({ isConnected, onConnect }: AudioConnectOver
 
   const handleClick = () => {
     onConnect(sourceType);
+    if (selectedPlaylistId) {
+      triggerPlay();
+    }
   };
 
   return (
