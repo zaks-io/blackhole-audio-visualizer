@@ -13,12 +13,12 @@ bun lint                   # Run ESLint
 
 ## Architecture
 
-**Stack:** Next.js 16 (App Router) + React Three Fiber + Electron + Meyda.js
+**Stack:** Next.js 16 (App Router) + React Three Fiber + Electron
 
 ### Key Data Flow
 
 1. **Audio Input** → `useAudioSource` (web: mic only, Electron: mic + system audio via `electron-audio-loopback`)
-2. **Audio Analysis** → `useMicrophone` wraps Web Audio API + Meyda for FFT, band energies, onset detection, spectral features
+2. **Audio Analysis** → `useAudioAnalyzer` sends FFT data to Web Worker (`lib/workers/audioAnalysis.worker.ts`) for off-main-thread processing (spectral flux, HFC, band energies, onset detection)
 3. **GPU Compute** → `useGPUCompute` runs kick-drift-kick Verlet integration via `GPUComputationRenderer` (position + velocity shaders)
 4. **Rendering** → `ParticleSystem` reads GPU textures, renders points with additive blending
 
@@ -27,7 +27,8 @@ bun lint                   # Run ESLint
 - `components/BlackHoleSimulation/` - Main viz: `ParticleSystem.tsx` (GPU particles), `BlackHole.tsx` (center sphere)
 - `components/CameraSystem/` - Camera presets + GSAP transitions
 - `components/ColorModeSystem/` - 7 palettes (56 total colors), beat-reactive palette switching
-- `hooks/` - Audio (`useMicrophone`, `useAudioSource`), GPU compute, recording
+- `hooks/` - Audio (`useAudioAnalyzer`, `useAudioSource`), GPU compute, recording
+- `lib/workers/` - Web Worker for audio analysis (runs off main thread)
 - `shaders/simulation/` - Position/velocity compute shaders (GLSL)
 - `shaders/particles/` - Point rendering shaders
 - `lib/gpu/verletPhysics.ts` - Initial particle textures, physics constants
