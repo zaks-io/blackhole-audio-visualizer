@@ -6,12 +6,12 @@
 /**
  * Compute spectral flux between two consecutive spectra.
  * Uses half-wave rectification (only positive differences count).
- * Optionally applies logarithmic compression for better sensitivity.
+ * Log compression disabled by default for performance (512 Math.log calls per frame).
  */
 export function computeSpectralFlux(
   currentSpectrum: Float32Array,
   previousSpectrum: Float32Array,
-  useLogCompression: boolean = true
+  useLogCompression: boolean = false
 ): number {
   if (currentSpectrum.length !== previousSpectrum.length) {
     return 0;
@@ -126,17 +126,28 @@ export function extractBandEnergies(
 }
 
 /**
+ * Cache for band boundaries to avoid recalculating every frame.
+ */
+const boundariesCache = new Map<string, number[]>();
+
+/**
  * Get logarithmically-spaced band boundaries for FFT visualization.
  * Returns bin indices for each band boundary.
+ * Results are cached to avoid expensive Math.log/exp calculations every frame.
  */
 export function getLogBandBoundaries(binCount: number, bandCount: number): number[] {
-  const boundaries: number[] = [0];
-  const logMin = Math.log(1);
-  const logMax = Math.log(binCount);
+  const key = `${binCount}-${bandCount}`;
+  let boundaries = boundariesCache.get(key);
+  if (!boundaries) {
+    boundaries = [0];
+    const logMin = Math.log(1);
+    const logMax = Math.log(binCount);
 
-  for (let i = 1; i <= bandCount; i++) {
-    const logVal = logMin + ((logMax - logMin) * i) / bandCount;
-    boundaries.push(Math.round(Math.exp(logVal)));
+    for (let i = 1; i <= bandCount; i++) {
+      const logVal = logMin + ((logMax - logMin) * i) / bandCount;
+      boundaries.push(Math.round(Math.exp(logVal)));
+    }
+    boundariesCache.set(key, boundaries);
   }
   return boundaries;
 }
