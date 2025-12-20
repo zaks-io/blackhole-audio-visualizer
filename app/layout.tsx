@@ -1,19 +1,10 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/react";
 import { Toaster } from "sonner";
 import { ConvexClientProvider } from "@/components/providers/ConvexClientProvider";
+import "@fontsource-variable/geist";
+import "@fontsource-variable/geist-mono";
 import "./globals.css";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 export const metadata: Metadata = {
   title: "Blackhole Audio Visualizer",
@@ -27,7 +18,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <body
+        className="font-sans antialiased"
+        style={{ fontFamily: "'Geist Variable', sans-serif" }}
+      >
         <ConvexClientProvider>{children}</ConvexClientProvider>
         <Toaster theme="dark" position="bottom-right" />
         <Analytics />
