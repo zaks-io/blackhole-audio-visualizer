@@ -3,7 +3,7 @@
  */
 module.exports = {
   appId: "io.zaks.blackhole-visualizer",
-  productName: "Black Hole Visualizer",
+  productName: "Blackhole Audio Visualizer",
   directories: {
     output: "release",
     buildResources: "build-resources",
