@@ -9,10 +9,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { useProducerMode } from "./useProducerMode";
 import { ParameterGroup } from "./ParameterGroup";
 import { PresetControls } from "./PresetControls";
+import { PlaylistTab } from "./PlaylistTab";
 import { PRODUCER_PARAMETERS } from "./producerConfig";
 import { PALETTE_IDS, PALETTES, type ColorPaletteId } from "@/components/ColorModeSystem";
 import { useVisualizationControls } from "@/hooks/useVisualizationControls";
@@ -47,44 +49,60 @@ export function ProducerModePanel() {
           </Button>
         </div>
 
-        {/* Preset Controls */}
-        <PresetControls />
+        {/* Tabs */}
+        <Tabs defaultValue="presets" className="flex-1 flex flex-col overflow-hidden">
+          <TabsList className="px-3 shrink-0">
+            <TabsTrigger value="presets">Presets</TabsTrigger>
+            <TabsTrigger value="playlists">Playlists</TabsTrigger>
+          </TabsList>
 
-        {/* Parameter groups */}
-        <div className="flex-1 overflow-y-auto px-3 py-2 scrollbar-thin">
-          {/* Color Palette Selector */}
-          <div className="flex items-center gap-2 px-1 py-2 mb-2 border-b border-white/5">
-            <Palette className="h-4 w-4 text-muted-foreground" />
-            <span className="text-xs text-muted-foreground flex-1">Color Palette</span>
-            <Select
-              value={colorPalette}
-              onValueChange={(value) => setColorPalette("colorPalette", value as ColorPaletteId)}
-            >
-              <SelectTrigger size="sm" className="w-28 h-7 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {PALETTE_IDS.map((id) => (
-                  <SelectItem key={id} value={id} className="text-xs">
-                    {PALETTES[id].name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <TabsContent value="presets" className="flex flex-col">
+            {/* Preset Controls */}
+            <PresetControls />
 
-          {PRODUCER_PARAMETERS.map((group) => (
-            <ParameterGroup key={group.name} group={group} />
-          ))}
-        </div>
+            {/* Parameter groups */}
+            <div className="flex-1 overflow-y-auto px-3 py-2 scrollbar-thin">
+              {/* Color Palette Selector */}
+              <div className="flex items-center gap-2 px-1 py-2 mb-2 border-b border-white/5">
+                <Palette className="h-4 w-4 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground flex-1">Color Palette</span>
+                <Select
+                  value={colorPalette}
+                  onValueChange={(value) =>
+                    setColorPalette("colorPalette", value as ColorPaletteId)
+                  }
+                >
+                  <SelectTrigger size="sm" className="w-28 h-7 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PALETTE_IDS.map((id) => (
+                      <SelectItem key={id} value={id} className="text-xs">
+                        {PALETTES[id].name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-        {/* Footer hint */}
-        <div className="px-4 py-3 border-t border-white/5">
-          <p className="text-[10px] text-muted-foreground/60 leading-relaxed">
-            Drag sliders to set target values, then press play to animate. Multiple parameters can
-            tween simultaneously.
-          </p>
-        </div>
+              {PRODUCER_PARAMETERS.map((group) => (
+                <ParameterGroup key={group.name} group={group} />
+              ))}
+            </div>
+
+            {/* Footer hint */}
+            <div className="px-4 py-3 border-t border-white/5 shrink-0">
+              <p className="text-[10px] text-muted-foreground/60 leading-relaxed">
+                Drag sliders to set target values, then press play to animate. Multiple parameters
+                can tween simultaneously.
+              </p>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="playlists" className="flex flex-col">
+            <PlaylistTab />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

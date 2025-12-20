@@ -66,9 +66,6 @@ export function BlackHoleSimulation({
 
   const beatIntensityRef = useRef(0);
 
-  // Reusable buffer for scaled onsets to avoid GC pressure
-  const scaledOnsetsRef = useRef(new Float32Array(36));
-
   // Envelope followers for particle system audio signals
   // HFC boost: 50ms attack, 150ms decay (for velocity boost)
   // Spawn burst: instant attack, 100ms decay (for bass-triggered spawn bursts)
@@ -114,8 +111,10 @@ export function BlackHoleSimulation({
     }
   });
 
-  const getAudioData = (bandCount: number) => {
-    const analysis = getAnalysis(bandCount);
+  const scaledOnsetsRef = useRef(new Float32Array(36));
+
+  const getAudioData = () => {
+    const analysis = getAnalysis();
     // Apply gain to all band onsets (reuse buffer to avoid GC)
     const scaledOnsets = scaledOnsetsRef.current;
     for (let i = 0; i < analysis.bandOnsets.length; i++) {

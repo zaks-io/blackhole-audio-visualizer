@@ -13,6 +13,7 @@ import {
   extractBandEnergies,
   extractLogBandEnergies,
 } from "@/lib/audio";
+import { useVisualizationControls } from "@/hooks/useVisualizationControls";
 
 type MeydaAnalyzer = ReturnType<typeof Meyda.createMeydaAnalyzer>;
 
@@ -138,6 +139,7 @@ export function useAudioAnalyzer(options: UseAudioAnalyzerOptions = {}) {
 
   // Frame-based cache to avoid recomputing multiple times per frame
   const lastComputeTimeRef = useRef<number>(0);
+  const lastBandCountRef = useRef<number>(MAX_BANDS);
 
   // Meyda features storage
   const meydaFeaturesRef = useRef<MeydaFeatures | null>(null);
@@ -290,6 +292,7 @@ export function useAudioAnalyzer(options: UseAudioAnalyzerOptions = {}) {
     isConnectedRef.current = false;
     peakHistoryRef.current = [];
     lastComputeTimeRef.current = 0;
+    lastBandCountRef.current = MAX_BANDS;
 
     // Reset all utilities
     Object.values(utils.thresholds).forEach((t) => t.reset());
@@ -304,185 +307,182 @@ export function useAudioAnalyzer(options: UseAudioAnalyzerOptions = {}) {
   }, [utils]);
 
   // Get current analysis (called each frame)
-  const getAnalysis = useCallback(
-    (bandCount: number = MAX_BANDS): AnalyzedAudio => {
-      const analyser = analyserRef.current;
-      const frequencyData = frequencyDataRef.current;
-      const meydaFeatures = meydaFeaturesRef.current;
+  // Reads emitterCount directly from store to ensure all callers use same value
+  const getAnalysis = useCallback((): AnalyzedAudio => {
+    const analyser = analyserRef.current;
+    const frequencyData = frequencyDataRef.current;
+    const meydaFeatures = meydaFeaturesRef.current;
 
-      if (!analyser || !frequencyData || !isConnectedRef.current) {
-        return analysisRef.current;
+    if (!analyser || !frequencyData || !isConnectedRef.current) {
+      return analysisRef.current;
+    }
+
+    const currentTime = performance.now();
+
+    // Frame-based cache: skip computation if already done this frame (4ms = 240Hz max)
+    if (currentTime - lastComputeTimeRef.current < 4) {
+      return analysisRef.current;
+    }
+    lastComputeTimeRef.current = currentTime;
+
+    // Read emitterCount directly from store - ensures all callers get same value
+    // Floor to handle fractional values from GSAP tweens
+    const bandCount = Math.floor(useVisualizationControls.getState().emitterCount);
+    const clampedBandCount = Math.min(Math.max(1, bandCount), MAX_BANDS);
+    const analysis = analysisRef.current;
+    const numBins = analyser.frequencyBinCount;
+    const sampleRate = audioContextRef.current?.sampleRate ?? 48000;
+
+    // Get FFT data
+    analyser.getByteFrequencyData(frequencyData);
+
+    // Convert to Float32Array for spectrum (normalized 0-1)
+    if (analysis.spectrum.length !== numBins) {
+      analysis.spectrum = new Float32Array(numBins);
+    }
+    for (let i = 0; i < numBins; i++) {
+      analysis.spectrum[i] = frequencyData[i] / 255;
+    }
+
+    // Compute spectral flux
+    let spectralFluxRaw = 0;
+    if (prevSpectrumRef.current) {
+      spectralFluxRaw = computeSpectralFlux(analysis.spectrum, prevSpectrumRef.current, true);
+    }
+    // Reuse buffer to avoid GC pressure
+    if (!prevSpectrumRef.current || prevSpectrumRef.current.length !== analysis.spectrum.length) {
+      prevSpectrumRef.current = new Float32Array(analysis.spectrum.length);
+    }
+    prevSpectrumRef.current.set(analysis.spectrum);
+
+    // Compute HFC
+    const hfcRaw = computeHFC(analysis.spectrum);
+
+    // Normalize detection values
+    const spectralFluxNorm = utils.normalizers.spectralFlux.normalize(spectralFluxRaw);
+    const hfcNorm = utils.normalizers.hfc.normalize(hfcRaw);
+
+    // Update adaptive thresholds
+    utils.thresholds.spectralFlux.update(spectralFluxNorm);
+    utils.thresholds.hfc.update(hfcNorm);
+
+    // Check for peaks
+    const fluxPeak = utils.thresholds.spectralFlux.isPeak(spectralFluxNorm, currentTime);
+    const hfcPeak = utils.thresholds.hfc.isPeak(hfcNorm, currentTime);
+
+    // Extract band energies (for 6-band display)
+    const bandEnergies = extractBandEnergies(analysis.spectrum, sampleRate, analyser.fftSize);
+
+    // Smooth band energies
+    analysis.energy.overall = utils.smoothers.energy.overall.process(meydaFeatures?.rms ?? 0);
+    analysis.energy.subBass = utils.smoothers.energy.subBass.process(bandEnergies.subBass);
+    analysis.energy.bass = utils.smoothers.energy.bass.process(bandEnergies.bass);
+    analysis.energy.lowMid = utils.smoothers.energy.lowMid.process(bandEnergies.lowMid);
+    analysis.energy.mid = utils.smoothers.energy.mid.process(bandEnergies.mid);
+    analysis.energy.highMid = utils.smoothers.energy.highMid.process(bandEnergies.highMid);
+    analysis.energy.high = utils.smoothers.energy.high.process(bandEnergies.high);
+
+    // Update bass/high thresholds and check peaks
+    const bassEnergy = (bandEnergies.subBass + bandEnergies.bass) / 2;
+    const highEnergy = (bandEnergies.highMid + bandEnergies.high) / 2;
+    utils.thresholds.bass.update(bassEnergy);
+    utils.thresholds.high.update(highEnergy);
+    const bassPeak = utils.thresholds.bass.isPeak(bassEnergy, currentTime);
+    const highPeak = utils.thresholds.high.isPeak(highEnergy, currentTime);
+
+    // Update peaks
+    analysis.peaks.spectralFlux = fluxPeak;
+    analysis.peaks.hfc = hfcPeak;
+    analysis.peaks.bass = bassPeak;
+    analysis.peaks.high = highPeak;
+
+    // Track peak history for timeline visualization
+    if (fluxPeak) peakHistoryRef.current.push({ time: currentTime, type: "flux" });
+    if (hfcPeak) peakHistoryRef.current.push({ time: currentTime, type: "hfc" });
+    if (bassPeak) peakHistoryRef.current.push({ time: currentTime, type: "bass" });
+    if (highPeak) peakHistoryRef.current.push({ time: currentTime, type: "high" });
+
+    // Prune old peaks (in-place to avoid GC pressure)
+    const cutoffTime = currentTime - PEAK_HISTORY_DURATION_MS;
+    let writeIndex = 0;
+    for (let i = 0; i < peakHistoryRef.current.length; i++) {
+      if (peakHistoryRef.current[i].time > cutoffTime) {
+        peakHistoryRef.current[writeIndex++] = peakHistoryRef.current[i];
       }
+    }
+    peakHistoryRef.current.length = writeIndex;
+    analysis.peakHistory = peakHistoryRef.current;
 
-      const currentTime = performance.now();
+    // Store raw values (smoothed for visualization, but after normalization)
+    // Guard against NaN values when audio is silent
+    const smoothedFlux = utils.smoothers.spectralFlux.process(spectralFluxNorm);
+    const smoothedHfc = utils.smoothers.hfc.process(hfcNorm);
+    const rawRms = meydaFeatures?.rms ?? 0;
+    const normalizedRms = utils.normalizers.rms.normalize(Number.isNaN(rawRms) ? 0 : rawRms);
+    analysis.raw.spectralFlux = Number.isNaN(smoothedFlux) ? 0 : smoothedFlux;
+    analysis.raw.hfc = Number.isNaN(smoothedHfc) ? 0 : smoothedHfc;
+    analysis.raw.rms = Number.isNaN(normalizedRms) ? 0 : normalizedRms;
+    const rawCentroid = meydaFeatures?.spectralCentroid ?? 0;
+    const rawFlatness = meydaFeatures?.spectralFlatness ?? 0;
+    analysis.raw.spectralCentroid = Number.isNaN(rawCentroid)
+      ? 0
+      : Math.min(1, rawCentroid / numBins);
+    analysis.raw.spectralFlatness = Number.isNaN(rawFlatness) ? 0 : rawFlatness;
+    const rawRolloff = meydaFeatures?.spectralRolloff ?? 0;
+    const rawZcr = meydaFeatures?.zcr ?? 0;
+    const rawSharpness = meydaFeatures?.perceptualSharpness ?? 0;
+    analysis.raw.spectralRolloff = Number.isNaN(rawRolloff) ? 0 : Math.min(1, rawRolloff / numBins);
+    analysis.raw.zcr = Number.isNaN(rawZcr) ? 0 : Math.min(1, rawZcr * 2);
+    analysis.raw.perceptualSharpness = Number.isNaN(rawSharpness) ? 0 : rawSharpness;
 
-      // Frame-based cache: skip computation if already done this frame (4ms = 240Hz max)
-      if (currentTime - lastComputeTimeRef.current < 4) {
-        analysisRef.current.bandCount = Math.min(Math.max(1, bandCount), MAX_BANDS);
-        return analysisRef.current;
-      }
-      lastComputeTimeRef.current = currentTime;
-      const clampedBandCount = Math.min(Math.max(1, bandCount), MAX_BANDS);
-      const analysis = analysisRef.current;
-      const numBins = analyser.frequencyBinCount;
-      const sampleRate = audioContextRef.current?.sampleRate ?? 48000;
+    // Store threshold info for debug visualization (with slow smoothing for readability)
+    analysis.thresholds.spectralFlux = {
+      mean: utils.thresholds.spectralFlux.getMean(),
+      threshold: utils.smoothers.thresholdDisplay.spectralFlux.process(
+        utils.thresholds.spectralFlux.getThreshold()
+      ),
+    };
+    analysis.thresholds.hfc = {
+      mean: utils.thresholds.hfc.getMean(),
+      threshold: utils.smoothers.thresholdDisplay.hfc.process(utils.thresholds.hfc.getThreshold()),
+    };
+    analysis.thresholds.bass = {
+      mean: utils.thresholds.bass.getMean(),
+      threshold: utils.smoothers.thresholdDisplay.bass.process(
+        utils.thresholds.bass.getThreshold()
+      ),
+    };
+    analysis.thresholds.high = {
+      mean: utils.thresholds.high.getMean(),
+      threshold: utils.smoothers.thresholdDisplay.high.process(
+        utils.thresholds.high.getThreshold()
+      ),
+    };
 
-      // Get FFT data
-      analyser.getByteFrequencyData(frequencyData);
+    // Extract log-band energies for GPU (same as before for compatibility)
+    extractLogBandEnergies(frequencyData, clampedBandCount, bandEnergiesRef.current, 255);
 
-      // Convert to Float32Array for spectrum (normalized 0-1)
-      if (analysis.spectrum.length !== numBins) {
-        analysis.spectrum = new Float32Array(numBins);
-      }
-      for (let i = 0; i < numBins; i++) {
-        analysis.spectrum[i] = frequencyData[i] / 255;
-      }
+    // Apply envelope follower for onset detection on each band
+    for (let band = 0; band < clampedBandCount; band++) {
+      const energy = bandEnergiesRef.current[band];
+      const prevEnergy = analysis.bandEnergies[band];
+      const onsetRaw = Math.max(0, energy - prevEnergy);
+      bandOnsetsRef.current[band] = utils.bandEnvelopes[band].process(onsetRaw);
+    }
 
-      // Compute spectral flux
-      let spectralFluxRaw = 0;
-      if (prevSpectrumRef.current) {
-        spectralFluxRaw = computeSpectralFlux(analysis.spectrum, prevSpectrumRef.current, true);
-      }
-      // Reuse buffer to avoid GC pressure
-      if (!prevSpectrumRef.current || prevSpectrumRef.current.length !== analysis.spectrum.length) {
-        prevSpectrumRef.current = new Float32Array(analysis.spectrum.length);
-      }
-      prevSpectrumRef.current.set(analysis.spectrum);
+    // Zero out unused bands
+    for (let band = clampedBandCount; band < MAX_BANDS; band++) {
+      bandEnergiesRef.current[band] = 0;
+      bandOnsetsRef.current[band] = 0;
+    }
 
-      // Compute HFC
-      const hfcRaw = computeHFC(analysis.spectrum);
+    // Copy to analysis object
+    analysis.bandEnergies.set(bandEnergiesRef.current);
+    analysis.bandOnsets.set(bandOnsetsRef.current);
+    analysis.bandCount = clampedBandCount;
 
-      // Normalize detection values
-      const spectralFluxNorm = utils.normalizers.spectralFlux.normalize(spectralFluxRaw);
-      const hfcNorm = utils.normalizers.hfc.normalize(hfcRaw);
-
-      // Update adaptive thresholds
-      utils.thresholds.spectralFlux.update(spectralFluxNorm);
-      utils.thresholds.hfc.update(hfcNorm);
-
-      // Check for peaks
-      const fluxPeak = utils.thresholds.spectralFlux.isPeak(spectralFluxNorm, currentTime);
-      const hfcPeak = utils.thresholds.hfc.isPeak(hfcNorm, currentTime);
-
-      // Extract band energies (for 6-band display)
-      const bandEnergies = extractBandEnergies(analysis.spectrum, sampleRate, analyser.fftSize);
-
-      // Smooth band energies
-      analysis.energy.overall = utils.smoothers.energy.overall.process(meydaFeatures?.rms ?? 0);
-      analysis.energy.subBass = utils.smoothers.energy.subBass.process(bandEnergies.subBass);
-      analysis.energy.bass = utils.smoothers.energy.bass.process(bandEnergies.bass);
-      analysis.energy.lowMid = utils.smoothers.energy.lowMid.process(bandEnergies.lowMid);
-      analysis.energy.mid = utils.smoothers.energy.mid.process(bandEnergies.mid);
-      analysis.energy.highMid = utils.smoothers.energy.highMid.process(bandEnergies.highMid);
-      analysis.energy.high = utils.smoothers.energy.high.process(bandEnergies.high);
-
-      // Update bass/high thresholds and check peaks
-      const bassEnergy = (bandEnergies.subBass + bandEnergies.bass) / 2;
-      const highEnergy = (bandEnergies.highMid + bandEnergies.high) / 2;
-      utils.thresholds.bass.update(bassEnergy);
-      utils.thresholds.high.update(highEnergy);
-      const bassPeak = utils.thresholds.bass.isPeak(bassEnergy, currentTime);
-      const highPeak = utils.thresholds.high.isPeak(highEnergy, currentTime);
-
-      // Update peaks
-      analysis.peaks.spectralFlux = fluxPeak;
-      analysis.peaks.hfc = hfcPeak;
-      analysis.peaks.bass = bassPeak;
-      analysis.peaks.high = highPeak;
-
-      // Track peak history for timeline visualization
-      if (fluxPeak) peakHistoryRef.current.push({ time: currentTime, type: "flux" });
-      if (hfcPeak) peakHistoryRef.current.push({ time: currentTime, type: "hfc" });
-      if (bassPeak) peakHistoryRef.current.push({ time: currentTime, type: "bass" });
-      if (highPeak) peakHistoryRef.current.push({ time: currentTime, type: "high" });
-
-      // Prune old peaks (in-place to avoid GC pressure)
-      const cutoffTime = currentTime - PEAK_HISTORY_DURATION_MS;
-      let writeIndex = 0;
-      for (let i = 0; i < peakHistoryRef.current.length; i++) {
-        if (peakHistoryRef.current[i].time > cutoffTime) {
-          peakHistoryRef.current[writeIndex++] = peakHistoryRef.current[i];
-        }
-      }
-      peakHistoryRef.current.length = writeIndex;
-      analysis.peakHistory = peakHistoryRef.current;
-
-      // Store raw values (smoothed for visualization, but after normalization)
-      // Guard against NaN values when audio is silent
-      const smoothedFlux = utils.smoothers.spectralFlux.process(spectralFluxNorm);
-      const smoothedHfc = utils.smoothers.hfc.process(hfcNorm);
-      const rawRms = meydaFeatures?.rms ?? 0;
-      const normalizedRms = utils.normalizers.rms.normalize(Number.isNaN(rawRms) ? 0 : rawRms);
-      analysis.raw.spectralFlux = Number.isNaN(smoothedFlux) ? 0 : smoothedFlux;
-      analysis.raw.hfc = Number.isNaN(smoothedHfc) ? 0 : smoothedHfc;
-      analysis.raw.rms = Number.isNaN(normalizedRms) ? 0 : normalizedRms;
-      const rawCentroid = meydaFeatures?.spectralCentroid ?? 0;
-      const rawFlatness = meydaFeatures?.spectralFlatness ?? 0;
-      analysis.raw.spectralCentroid = Number.isNaN(rawCentroid)
-        ? 0
-        : Math.min(1, rawCentroid / numBins);
-      analysis.raw.spectralFlatness = Number.isNaN(rawFlatness) ? 0 : rawFlatness;
-      const rawRolloff = meydaFeatures?.spectralRolloff ?? 0;
-      const rawZcr = meydaFeatures?.zcr ?? 0;
-      const rawSharpness = meydaFeatures?.perceptualSharpness ?? 0;
-      analysis.raw.spectralRolloff = Number.isNaN(rawRolloff)
-        ? 0
-        : Math.min(1, rawRolloff / numBins);
-      analysis.raw.zcr = Number.isNaN(rawZcr) ? 0 : Math.min(1, rawZcr * 2);
-      analysis.raw.perceptualSharpness = Number.isNaN(rawSharpness) ? 0 : rawSharpness;
-
-      // Store threshold info for debug visualization (with slow smoothing for readability)
-      analysis.thresholds.spectralFlux = {
-        mean: utils.thresholds.spectralFlux.getMean(),
-        threshold: utils.smoothers.thresholdDisplay.spectralFlux.process(
-          utils.thresholds.spectralFlux.getThreshold()
-        ),
-      };
-      analysis.thresholds.hfc = {
-        mean: utils.thresholds.hfc.getMean(),
-        threshold: utils.smoothers.thresholdDisplay.hfc.process(
-          utils.thresholds.hfc.getThreshold()
-        ),
-      };
-      analysis.thresholds.bass = {
-        mean: utils.thresholds.bass.getMean(),
-        threshold: utils.smoothers.thresholdDisplay.bass.process(
-          utils.thresholds.bass.getThreshold()
-        ),
-      };
-      analysis.thresholds.high = {
-        mean: utils.thresholds.high.getMean(),
-        threshold: utils.smoothers.thresholdDisplay.high.process(
-          utils.thresholds.high.getThreshold()
-        ),
-      };
-
-      // Extract log-band energies for GPU (same as before for compatibility)
-      extractLogBandEnergies(frequencyData, clampedBandCount, bandEnergiesRef.current, 255);
-
-      // Apply envelope follower for onset detection on each band
-      for (let band = 0; band < clampedBandCount; band++) {
-        const energy = bandEnergiesRef.current[band];
-        const prevEnergy = analysis.bandEnergies[band];
-        const onsetRaw = Math.max(0, energy - prevEnergy);
-        bandOnsetsRef.current[band] = utils.bandEnvelopes[band].process(onsetRaw);
-      }
-
-      // Zero out unused bands
-      for (let band = clampedBandCount; band < MAX_BANDS; band++) {
-        bandEnergiesRef.current[band] = 0;
-        bandOnsetsRef.current[band] = 0;
-      }
-
-      // Copy to analysis object
-      analysis.bandEnergies.set(bandEnergiesRef.current);
-      analysis.bandOnsets.set(bandOnsetsRef.current);
-      analysis.bandCount = clampedBandCount;
-
-      return analysis;
-    },
-    [utils]
-  );
+    return analysis;
+  }, [utils]);
 
   const getStream = useCallback(() => streamRef.current, []);
 

@@ -53,10 +53,17 @@ export function useProducerTween(config: ParameterConfig) {
 
   const startTween = useCallback(
     (overrideTarget?: number) => {
+      // Always kill any existing tween first - user intent takes precedence
+      if (tweenRef.current) {
+        tweenRef.current.kill();
+        tweenRef.current = null;
+      }
+      // Clear tweening state to ensure we can start fresh
+      setIsTweening(config.path, false);
+      setProgress(config.path, 0);
+
       // Read fresh state directly from stores to avoid stale closures
       const freshParamState = producerStore.getState().tweenStates[config.path];
-      if (freshParamState?.isTweening) return;
-
       const startValue = vizStore.getState().getByPath(config.path) as number;
       const duration = freshParamState?.duration ?? DEFAULT_DURATION;
       const ease = freshParamState?.ease ?? DEFAULT_EASE;
@@ -67,10 +74,6 @@ export function useProducerTween(config: ParameterConfig) {
 
       // Sync target value to store
       setTargetValue(config.path, targetValue);
-
-      if (tweenRef.current) {
-        tweenRef.current.kill();
-      }
 
       tweenState.current = { value: startValue, progress: 0 };
       setIsTweening(config.path, true);

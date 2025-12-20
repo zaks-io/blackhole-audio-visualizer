@@ -39,10 +39,11 @@ void main() {
 
     float r = length(pos);
 
+    // Compute emitter index consistently with position shader (same hash seed)
+    float emitterIndex = floor(hash2(uv, 100.0) * uEmitterCount);
+
     if (lifetime < 0.0) {
         // WAITING: compute color index based on current palette
-        // Only compute emitterIndex when needed (waiting particles)
-        float emitterIndex = floor(hash2(uv, 100.0) * uEmitterCount);
         colorIndex = mod(emitterIndex, 8.0) + uPaletteOffset;
         gl_FragColor = vec4(0.0, 0.0, 0.0, colorIndex);
         return;
