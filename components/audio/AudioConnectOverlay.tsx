@@ -37,7 +37,7 @@ export function AudioConnectOverlay({ isConnected, onConnect }: AudioConnectOver
           <Icon className="w-10 h-10 text-white/80 group-hover:text-white transition-colors" />
         </div>
         <span className="text-white/60 text-sm group-hover:text-white/80 transition-colors">
-          Click to start
+          Start listening
         </span>
       </button>
     </div>
