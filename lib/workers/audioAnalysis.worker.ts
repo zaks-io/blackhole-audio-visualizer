@@ -2,19 +2,83 @@
  * Audio Analysis Web Worker
  * Runs all audio analysis off the main thread to prevent FPS drops.
  *
- * NOTE: All audio utility classes/functions are inlined here because web workers
- * need to be self-contained. The Next.js bundler copies workers to a different
- * location, breaking relative imports.
+ * NOTE: All audio utility classes/functions AND TYPES are inlined here because
+ * web workers need to be self-contained. The Next.js bundler copies workers to
+ * a different location, breaking relative imports.
  */
 
-import type {
-  WorkerInput,
-  WorkerResultMessage,
-  AudioEnergy,
-  AudioPeaks,
-  AudioRaw,
-  AudioThresholds,
-} from "./audioAnalysisTypes";
+// ============================================================================
+// Inlined Types (from ./audioAnalysisTypes.ts)
+// ============================================================================
+
+interface AudioEnergy {
+  overall: number;
+  subBass: number;
+  bass: number;
+  lowMid: number;
+  mid: number;
+  highMid: number;
+  high: number;
+}
+
+interface AudioPeaks {
+  spectralFlux: boolean;
+  hfc: boolean;
+  bass: boolean;
+  high: boolean;
+}
+
+interface AudioRaw {
+  spectralFlux: number;
+  hfc: number;
+  rms: number;
+  spectralCentroid: number;
+  spectralFlatness: number;
+  spectralRolloff: number;
+  zcr: number;
+  perceptualSharpness: number;
+}
+
+interface AudioThresholds {
+  spectralFlux: { mean: number; threshold: number };
+  hfc: { mean: number; threshold: number };
+  bass: { mean: number; threshold: number };
+  high: { mean: number; threshold: number };
+}
+
+interface WorkerAnalyzeMessage {
+  type: "analyze";
+  frequencyData: Uint8Array;
+  sampleRate: number;
+  fftSize: number;
+  bandCount: number;
+  onsetDecay: number;
+  timestamp: number;
+}
+
+interface WorkerResetMessage {
+  type: "reset";
+}
+
+interface WorkerSetDecayMessage {
+  type: "setDecay";
+  decay: number;
+}
+
+type WorkerInput = WorkerAnalyzeMessage | WorkerResetMessage | WorkerSetDecayMessage;
+
+interface WorkerResultMessage {
+  type: "result";
+  energy: AudioEnergy;
+  peaks: AudioPeaks;
+  raw: AudioRaw;
+  thresholds: AudioThresholds;
+  spectrum: Float32Array;
+  bandOnsets: Float32Array;
+  bandEnergies: Float32Array;
+  bandCount: number;
+  peakHistory: Array<{ time: number; type: "flux" | "hfc" | "bass" | "high" }>;
+}
 
 // ============================================================================
 // Inlined Audio Utilities (from lib/audio/*)
