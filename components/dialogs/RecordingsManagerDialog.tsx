@@ -1,17 +1,7 @@
 "use client";
 
 import { useState, useRef, type ReactNode } from "react";
-import {
-  Upload,
-  Copy,
-  Check,
-  Trash2,
-  Video,
-  ExternalLink,
-  X,
-  Loader2,
-  Download,
-} from "lucide-react";
+import { Upload, Copy, Check, Trash2, Video, ExternalLink, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -86,11 +76,10 @@ export function RecordingsManagerDialog({ children }: RecordingsManagerDialogPro
     if (!file || !name.trim()) return;
 
     setIsUploading(true);
-    setUploadProgress(30);
+    setUploadProgress(0);
 
     try {
-      await uploadRecording(file, name.trim(), undefined, duration);
-      setUploadProgress(100);
+      await uploadRecording(file, name.trim(), undefined, duration, setUploadProgress);
       setFile(null);
       setName("");
       setDuration(undefined);

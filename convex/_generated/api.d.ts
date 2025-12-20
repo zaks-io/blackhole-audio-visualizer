@@ -12,6 +12,7 @@ import type * as http from "../http.js";
 import type * as model_playlists_public from "../model/playlists/public.js";
 import type * as model_presets_public from "../model/presets/public.js";
 import type * as model_recordings_public from "../model/recordings/public.js";
+import type * as model_releases_public from "../model/releases/public.js";
 import type * as model_users_public from "../model/users/public.js";
 
 import type { ApiFromModules, FilterApi, FunctionReference } from "convex/server";
@@ -21,6 +22,7 @@ declare const fullApi: ApiFromModules<{
   "model/playlists/public": typeof model_playlists_public;
   "model/presets/public": typeof model_presets_public;
   "model/recordings/public": typeof model_recordings_public;
+  "model/releases/public": typeof model_releases_public;
   "model/users/public": typeof model_users_public;
 }>;
 

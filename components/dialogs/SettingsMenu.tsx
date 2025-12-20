@@ -1,6 +1,6 @@
 "use client";
 
-import { Settings, Gauge, Code, Zap, Video, ChevronRight } from "lucide-react";
+import { Settings, Gauge, Code, Zap, Video, Package, Download, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
@@ -9,6 +9,8 @@ import { Separator } from "@/components/ui/separator";
 import { useUIState } from "@/hooks/useUIState";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { RecordingsManagerDialog } from "./RecordingsManagerDialog";
+import { ReleasesManagerDialog } from "./ReleasesManagerDialog";
+import { DownloadDialog } from "./DownloadDialog";
 
 export function SettingsMenu() {
   const {
@@ -56,9 +58,28 @@ export function SettingsMenu() {
                   <ChevronRight className="h-4 w-4 text-muted-foreground" />
                 </button>
               </RecordingsManagerDialog>
+              <ReleasesManagerDialog>
+                <button className="flex items-center justify-between w-full text-left">
+                  <div className="flex items-center gap-2">
+                    <Package className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm">Releases</span>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </button>
+              </ReleasesManagerDialog>
               <Separator />
             </>
           )}
+          <DownloadDialog>
+            <button className="flex items-center justify-between w-full text-left">
+              <div className="flex items-center gap-2">
+                <Download className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm">Download App</span>
+              </div>
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            </button>
+          </DownloadDialog>
+          <Separator />
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Gauge className="h-4 w-4 text-muted-foreground" />

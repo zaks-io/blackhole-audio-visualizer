@@ -5,23 +5,22 @@ import { useConvexAuth } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 
-export function useConvexRecordings() {
+export function useConvexReleases() {
   const { isAuthenticated, isLoading: authLoading } = useConvexAuth();
 
-  const recordings = useQuery(
-    api.model.recordings.public.getRecordings,
-    isAuthenticated ? {} : "skip"
-  );
+  const releases = useQuery(api.model.releases.public.getReleases, isAuthenticated ? {} : "skip");
 
-  const generateUploadUrlMutation = useMutation(api.model.recordings.public.generateUploadUrl);
-  const createRecordingMutation = useMutation(api.model.recordings.public.createRecording);
-  const deleteRecordingMutation = useMutation(api.model.recordings.public.deleteRecording);
+  const generateUploadUrlMutation = useMutation(api.model.releases.public.generateUploadUrl);
+  const createReleaseMutation = useMutation(api.model.releases.public.createRelease);
+  const deleteReleaseMutation = useMutation(api.model.releases.public.deleteRelease);
+  const setLatestMutation = useMutation(api.model.releases.public.setLatest);
 
-  const uploadRecording = async (
+  const uploadRelease = async (
     file: File,
-    name: string,
-    description?: string,
-    duration?: number,
+    fileName: string,
+    platform: "windows" | "macos",
+    version: string,
+    isLatest: boolean,
     onProgress?: (percent: number) => void
   ) => {
     const uploadUrl = await generateUploadUrlMutation();
@@ -51,29 +50,35 @@ export function useConvexRecordings() {
       xhr.send(file);
     });
 
-    const result = await createRecordingMutation({
+    const result = await createReleaseMutation({
       storageId: storageId as Id<"_storage">,
-      name,
-      description,
-      mimeType: file.type,
-      fileSize: file.size,
-      duration,
+      fileName,
+      platform,
+      version,
+      isLatest,
     });
 
     return result;
   };
 
-  const deleteRecording = async (recordingId: string) => {
-    return deleteRecordingMutation({
-      recordingId: recordingId as Id<"recordings">,
+  const deleteRelease = async (releaseId: string) => {
+    return deleteReleaseMutation({
+      releaseId: releaseId as Id<"releases">,
+    });
+  };
+
+  const setLatest = async (releaseId: string) => {
+    return setLatestMutation({
+      releaseId: releaseId as Id<"releases">,
     });
   };
 
   return {
-    recordings: recordings ?? [],
-    isLoading: authLoading || (isAuthenticated && recordings === undefined),
+    releases: releases ?? [],
+    isLoading: authLoading || (isAuthenticated && releases === undefined),
     isAuthenticated,
-    uploadRecording,
-    deleteRecording,
+    uploadRelease,
+    deleteRelease,
+    setLatest,
   };
 }
