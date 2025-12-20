@@ -59,7 +59,7 @@ export default function Home() {
       <ProducerModePanel />
 
       {/* Main content area */}
-      <div className="relative w-full h-full min-w-0">
+      <div className="relative w-full h-full min-w-0 min-h-0 overflow-hidden">
         <div ref={canvasContainerRef} className="w-full h-full">
           <Canvas
             camera={{ position: [0, 90, 150], fov: 60 }}
