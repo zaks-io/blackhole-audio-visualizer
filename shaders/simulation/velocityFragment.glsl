@@ -13,6 +13,7 @@ uniform float uBeatIntensity;
 uniform float uBeatRepulsion;
 uniform float uPaletteOffset;
 uniform bool uDoKick;
+uniform float uHFCBoost;
 
 // 1D hash that explicitly breaks grid correlation by combining x and y
 float hash(vec2 p) {
@@ -38,19 +39,16 @@ void main() {
 
     float r = length(pos);
 
-    // Compute emitter index consistently with position shader (same hash seed)
-    float emitterIndex = floor(hash2(uv, 100.0) * uEmitterCount);
-
     if (lifetime < 0.0) {
         // WAITING: compute color index based on current palette
-        // This updates each frame so particle gets the active palette when it spawns
+        // Only compute emitterIndex when needed (waiting particles)
+        float emitterIndex = floor(hash2(uv, 100.0) * uEmitterCount);
         colorIndex = mod(emitterIndex, 8.0) + uPaletteOffset;
         gl_FragColor = vec4(0.0, 0.0, 0.0, colorIndex);
         return;
     } else if (length(vel) < 0.1) {
         // JUST SPAWNED: set orbital velocity with inward angle
-        float r_len = length(pos);
-        float r_soft = r_len + uSoftening;
+        float r_soft = r + uSoftening;
         float orbitalSpeed = sqrt(uGM / r_soft);
 
         vec3 up = vec3(0.0, 1.0, 0.0);
@@ -88,13 +86,15 @@ void main() {
         // Radial velocity jitter - scales with spread
         float radialJitter = (rand4 - 0.5) * orbitalSpeed * uEmitterSpread * 0.4;
         vel += r_hat * radialJitter;
+
+        // HFC boost - punch on percussive hits (snare, hi-hat)
+        vel *= (1.0 + uHFCBoost * 0.3);
     } else if (uDoKick) {
         // KICK: Apply gravitational acceleration (half-step)
-        float r_len = length(pos);
+        vec3 r_hat = pos / r;
 
-        if (r_len > 0.1) {
-            vec3 r_hat = pos / r_len;
-            float r_soft = r_len + uSoftening;
+        if (r > 0.1) {
+            float r_soft = r + uSoftening;
 
             // Newtonian gravity: a = -GM/r²
             float accel = uGM / (r_soft * r_soft);
@@ -119,16 +119,15 @@ void main() {
         }
 
         // ISCO Region: Force spiral inward
-        if (r_len < uISCORadius && r_len > uEventHorizon && uISCOStrength > 0.0) {
-            float iscoDepth = 1.0 - (r_len - uEventHorizon) / (uISCORadius - uEventHorizon);
+        if (r < uISCORadius && r > uEventHorizon && uISCOStrength > 0.0) {
+            float iscoDepth = 1.0 - (r - uEventHorizon) / (uISCORadius - uEventHorizon);
             iscoDepth = clamp(iscoDepth, 0.0, 1.0);
 
-            vec3 r_hat_isco = pos / r_len;
-            float orbitalSpeed = sqrt(uGM / (r_len + uSoftening));
+            float orbitalSpeed = sqrt(uGM / (r + uSoftening));
 
             // Decompose into radial and tangential
-            float radialVel = dot(vel, r_hat_isco);
-            vec3 tangentialVel = vel - r_hat_isco * radialVel;
+            float radialVel = dot(vel, r_hat);
+            vec3 tangentialVel = vel - r_hat * radialVel;
 
             // Kill tangential velocity progressively
             tangentialVel *= (1.0 - iscoDepth * uISCOStrength);
@@ -136,7 +135,7 @@ void main() {
             // Force inward
             radialVel = min(radialVel, -orbitalSpeed * iscoDepth * uISCOStrength);
 
-            vel = r_hat_isco * radialVel + tangentialVel;
+            vel = r_hat * radialVel + tangentialVel;
         }
     }
 

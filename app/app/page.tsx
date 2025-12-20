@@ -1,8 +1,9 @@
 "use client";
 
-import { useRef, useCallback, useEffect } from "react";
+import { useRef, useCallback } from "react";
 import { Canvas } from "@react-three/fiber";
 import { NoToneMapping, SRGBColorSpace } from "three";
+import { PostProcessing } from "@/components/PostProcessing";
 import { BlackHoleSimulation } from "@/components/BlackHoleSimulation";
 import { FPSMeter } from "@/components/debug/FPSMeter";
 import { FPSTracker } from "@/hooks/useFPSMonitor";
@@ -40,23 +41,6 @@ export default function Home() {
   const colorMode = useColorMode();
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   const { debugPanelsVisible, fpsVisible, devControlsVisible } = useUIState();
-  const animationFrameRef = useRef<number>(0);
-
-  // Run analysis continuously when connected to keep analysisRef updated
-  useEffect(() => {
-    if (!isConnected) return;
-
-    const processFrame = () => {
-      getAnalysis();
-      animationFrameRef.current = requestAnimationFrame(processFrame);
-    };
-
-    animationFrameRef.current = requestAnimationFrame(processFrame);
-
-    return () => {
-      cancelAnimationFrame(animationFrameRef.current);
-    };
-  }, [isConnected, getAnalysis]);
 
   const handleRecordToggle = useCallback(() => {
     if (isRecording) {
@@ -98,6 +82,7 @@ export default function Home() {
               cameraMode={cameraMode}
               colorMode={colorMode}
             />
+            <PostProcessing getAnalysis={getAnalysis} isAudioConnected={isConnected} />
             <FPSTracker />
           </Canvas>
         </div>

@@ -10,11 +10,14 @@ import particleFragmentShader from "@/shaders/particles/particleFragment.glsl";
 import { getAllColors } from "@/components/ColorModeSystem";
 
 const DEFAULT_ALL_COLORS = getAllColors();
+const EMPTY_ONSETS = new Float32Array(36);
 
 interface ParticleAudioData {
   bandEnergies: Float32Array;
   bandOnsets: Float32Array;
   bandCount: number;
+  hfcBoost: number;
+  spawnBurst: number;
 }
 
 interface ParticleSystemProps {
@@ -98,8 +101,11 @@ export function ParticleSystem({
     setBandOnsets,
     setAudioAmplitude,
     setPaletteOffset,
+    setHFCBoost,
+    setSpawnBurst,
   } = useGPUCompute(textureSize);
   const materialRef = useRef<THREE.ShaderMaterial>(null);
+  const prevFirstColorRef = useRef<string>(allColors[0]);
 
   const { positions, references } = useMemo(() => {
     const pos = new Float32Array(particleCount * 3);
@@ -162,10 +168,14 @@ export function ParticleSystem({
       materialRef.current.uniforms.uEventHorizon.value = eventHorizonRadius;
       materialRef.current.uniforms.uISCORadius.value = iscoRadius;
 
-      // Update colors if they changed
-      for (let i = 0; i < 56; i++) {
-        const colorHex = allColors[i % allColors.length];
-        materialRef.current.uniforms.uEmitterColors.value[i].set(colorHex);
+      // Only update colors if palette actually changed (check first color)
+      const firstColor = allColors[0];
+      if (prevFirstColorRef.current !== firstColor) {
+        prevFirstColorRef.current = firstColor;
+        for (let i = 0; i < 56; i++) {
+          const colorHex = allColors[i % allColors.length];
+          materialRef.current.uniforms.uEmitterColors.value[i].set(colorHex);
+        }
       }
     }
     setPaletteOffset(paletteOffset);
@@ -191,11 +201,14 @@ export function ParticleSystem({
       const beat = Math.max(audioData.bandOnsets[0] ?? 0, audioData.bandOnsets[1] ?? 0);
       setBeatIntensity(beat);
       setISCORadius(iscoRadius * (1 + beat * beatPulse));
+      setHFCBoost(audioData.hfcBoost);
+      setSpawnBurst(audioData.spawnBurst);
     } else {
-      const emptyOnsets = new Float32Array(36);
-      setBandOnsets(emptyOnsets, emitterCount);
+      setBandOnsets(EMPTY_ONSETS, emitterCount);
       setBeatIntensity(0);
       setISCORadius(iscoRadius);
+      setHFCBoost(0);
+      setSpawnBurst(1);
     }
   });
 

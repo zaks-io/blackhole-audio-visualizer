@@ -13,6 +13,7 @@ uniform bool uDoDrift;
 uniform sampler2D uBandOnsetsTexture;
 uniform float uBandCount;
 uniform float uAudioAmplitude;
+uniform float uSpawnBurst;
 
 // 1D hash that explicitly breaks grid correlation by combining x and y
 float hash(vec2 p) {
@@ -38,8 +39,8 @@ void main() {
     float r = length(pos);
 
     if (lifetime < 0.0) {
-        // WAITING: count up toward 0 based on spawn rate
-        lifetime += uDeltaTime * uSpawnRate;
+        // WAITING: count up toward 0 based on spawn rate (multiplied by burst on bass peaks)
+        lifetime += uDeltaTime * uSpawnRate * uSpawnBurst;
 
         if (lifetime >= 0.0) {
             // Pick which emitter this particle spawns from

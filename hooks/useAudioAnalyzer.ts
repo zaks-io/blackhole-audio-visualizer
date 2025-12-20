@@ -136,6 +136,9 @@ export function useAudioAnalyzer(options: UseAudioAnalyzerOptions = {}) {
   const bandEnergiesRef = useRef<Float32Array>(new Float32Array(MAX_BANDS));
   const bandOnsetsRef = useRef<Float32Array>(new Float32Array(MAX_BANDS));
 
+  // Frame-based cache to avoid recomputing multiple times per frame
+  const lastComputeTimeRef = useRef<number>(0);
+
   // Meyda features storage
   const meydaFeaturesRef = useRef<MeydaFeatures | null>(null);
 
@@ -286,6 +289,7 @@ export function useAudioAnalyzer(options: UseAudioAnalyzerOptions = {}) {
     meydaFeaturesRef.current = null;
     isConnectedRef.current = false;
     peakHistoryRef.current = [];
+    lastComputeTimeRef.current = 0;
 
     // Reset all utilities
     Object.values(utils.thresholds).forEach((t) => t.reset());
@@ -311,6 +315,13 @@ export function useAudioAnalyzer(options: UseAudioAnalyzerOptions = {}) {
       }
 
       const currentTime = performance.now();
+
+      // Frame-based cache: skip computation if already done this frame (4ms = 240Hz max)
+      if (currentTime - lastComputeTimeRef.current < 4) {
+        analysisRef.current.bandCount = Math.min(Math.max(1, bandCount), MAX_BANDS);
+        return analysisRef.current;
+      }
+      lastComputeTimeRef.current = currentTime;
       const clampedBandCount = Math.min(Math.max(1, bandCount), MAX_BANDS);
       const analysis = analysisRef.current;
       const numBins = analyser.frequencyBinCount;
@@ -332,7 +343,11 @@ export function useAudioAnalyzer(options: UseAudioAnalyzerOptions = {}) {
       if (prevSpectrumRef.current) {
         spectralFluxRaw = computeSpectralFlux(analysis.spectrum, prevSpectrumRef.current, true);
       }
-      prevSpectrumRef.current = new Float32Array(analysis.spectrum);
+      // Reuse buffer to avoid GC pressure
+      if (!prevSpectrumRef.current || prevSpectrumRef.current.length !== analysis.spectrum.length) {
+        prevSpectrumRef.current = new Float32Array(analysis.spectrum.length);
+      }
+      prevSpectrumRef.current.set(analysis.spectrum);
 
       // Compute HFC
       const hfcRaw = computeHFC(analysis.spectrum);
@@ -381,9 +396,15 @@ export function useAudioAnalyzer(options: UseAudioAnalyzerOptions = {}) {
       if (bassPeak) peakHistoryRef.current.push({ time: currentTime, type: "bass" });
       if (highPeak) peakHistoryRef.current.push({ time: currentTime, type: "high" });
 
-      // Prune old peaks
+      // Prune old peaks (in-place to avoid GC pressure)
       const cutoffTime = currentTime - PEAK_HISTORY_DURATION_MS;
-      peakHistoryRef.current = peakHistoryRef.current.filter((p) => p.time > cutoffTime);
+      let writeIndex = 0;
+      for (let i = 0; i < peakHistoryRef.current.length; i++) {
+        if (peakHistoryRef.current[i].time > cutoffTime) {
+          peakHistoryRef.current[writeIndex++] = peakHistoryRef.current[i];
+        }
+      }
+      peakHistoryRef.current.length = writeIndex;
       analysis.peakHistory = peakHistoryRef.current;
 
       // Store raw values (smoothed for visualization, but after normalization)

@@ -66,6 +66,17 @@ export function BlackHoleSimulation({
 
   const beatIntensityRef = useRef(0);
 
+  // Reusable buffer for scaled onsets to avoid GC pressure
+  const scaledOnsetsRef = useRef(new Float32Array(36));
+
+  // Envelope followers for particle system audio signals
+  // HFC boost: 50ms attack, 150ms decay (for velocity boost)
+  // Spawn burst: instant attack, 100ms decay (for bass-triggered spawn bursts)
+  const hfcBoostRef = useRef(0);
+  const spawnBurstRef = useRef(1);
+  const hfcDecayCoef = useRef(Math.exp(-1 / (0.15 * 60))); // 150ms decay at 60fps
+  const spawnDecayCoef = useRef(Math.exp(-1 / (0.1 * 60))); // 100ms decay at 60fps
+
   useFrame((state) => {
     if (isAudioConnected) {
       const analysis = getAnalysis();
@@ -74,18 +85,39 @@ export function BlackHoleSimulation({
       const onsetBeat = Math.max(analysis.bandOnsets[0] ?? 0, analysis.bandOnsets[1] ?? 0);
       const beat = Math.max(bassBeat * 0.8, onsetBeat) * controls.audioGain;
       beatIntensityRef.current = beat;
+
+      // HFC boost - envelope follow the raw HFC with attack/decay
+      const hfcTarget = analysis.raw.hfc;
+      if (hfcTarget > hfcBoostRef.current) {
+        // Fast attack (50ms)
+        hfcBoostRef.current = 0.8 * hfcBoostRef.current + 0.2 * hfcTarget;
+      } else {
+        // Slower decay (150ms)
+        hfcBoostRef.current = hfcDecayCoef.current * hfcBoostRef.current;
+      }
+
+      // Spawn burst - trigger on bass peaks, decay back to 1
+      if (analysis.peaks.bass) {
+        spawnBurstRef.current = controls.spawnBurstMultiplier;
+      } else {
+        // Decay back toward 1.0
+        spawnBurstRef.current = 1.0 + (spawnBurstRef.current - 1.0) * spawnDecayCoef.current;
+      }
+
       if (controls.autoColorChange) {
         colorMode.processBeat(beat, state.clock.elapsedTime);
       }
     } else {
       beatIntensityRef.current = 0;
+      hfcBoostRef.current = 0;
+      spawnBurstRef.current = 1;
     }
   });
 
   const getAudioData = (bandCount: number) => {
     const analysis = getAnalysis(bandCount);
-    // Apply gain to all band onsets
-    const scaledOnsets = new Float32Array(analysis.bandOnsets.length);
+    // Apply gain to all band onsets (reuse buffer to avoid GC)
+    const scaledOnsets = scaledOnsetsRef.current;
     for (let i = 0; i < analysis.bandOnsets.length; i++) {
       scaledOnsets[i] = analysis.bandOnsets[i] * controls.audioGain;
     }
@@ -93,6 +125,8 @@ export function BlackHoleSimulation({
       bandEnergies: analysis.bandEnergies,
       bandOnsets: scaledOnsets,
       bandCount: analysis.bandCount,
+      hfcBoost: (hfcBoostRef.current * controls.hfcVelocityBoost) / 0.3, // Normalize to control range
+      spawnBurst: spawnBurstRef.current,
     };
   };
 
