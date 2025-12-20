@@ -43,6 +43,15 @@ export interface VisualizationControlsState {
   audioGain: number;
   beatRepulsion: number;
   autoColorChange: boolean;
+
+  // Post-Processing (dev controls)
+  bloomEnabled: boolean;
+  bloomBaseIntensity: number;
+  bloomAudioReactivity: number;
+  chromaticEnabled: boolean;
+  chromaticAudioReactivity: number;
+  hfcVelocityBoost: number;
+  spawnBurstMultiplier: number;
 }
 
 interface VisualizationControlsActions {
@@ -90,6 +99,13 @@ export const pathToKey: Record<string, keyof VisualizationControlsState> = {
   "Audio.audioGain": "audioGain",
   "Audio.beatRepulsion": "beatRepulsion",
   "Audio.autoColorChange": "autoColorChange",
+  "Post-FX.bloomEnabled": "bloomEnabled",
+  "Post-FX.bloomBaseIntensity": "bloomBaseIntensity",
+  "Post-FX.bloomAudioReactivity": "bloomAudioReactivity",
+  "Post-FX.chromaticEnabled": "chromaticEnabled",
+  "Post-FX.chromaticAudioReactivity": "chromaticAudioReactivity",
+  "Post-FX.hfcVelocityBoost": "hfcVelocityBoost",
+  "Post-FX.spawnBurstMultiplier": "spawnBurstMultiplier",
 };
 
 const DEFAULT_STATE: VisualizationControlsState = {
@@ -99,7 +115,7 @@ const DEFAULT_STATE: VisualizationControlsState = {
   beatPulse: 2,
 
   // Particles defaults
-  textureSize: 512,
+  textureSize: 1024,
   pointSize: 1.0,
   brightness: 1.5,
   alpha: 0.8,
@@ -134,6 +150,15 @@ const DEFAULT_STATE: VisualizationControlsState = {
   audioGain: 2,
   beatRepulsion: 20,
   autoColorChange: true,
+
+  // Post-Processing defaults
+  bloomEnabled: true,
+  bloomBaseIntensity: 0.1,
+  bloomAudioReactivity: 1,
+  chromaticEnabled: true,
+  chromaticAudioReactivity: 1,
+  hfcVelocityBoost: 0.3,
+  spawnBurstMultiplier: 2.0,
 };
 
 export const useVisualizationControls = create<VisualizationControlsStore>((set, get) => ({

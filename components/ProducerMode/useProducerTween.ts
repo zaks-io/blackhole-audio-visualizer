@@ -83,7 +83,6 @@ export function useProducerTween(config: ParameterConfig) {
         ease,
         onUpdate: () => {
           vizStore.getState().setByPath(config.path, tweenState.current.value);
-          setProgress(config.path, tweenState.current.progress);
         },
         onComplete: () => {
           setIsTweening(config.path, false);

@@ -183,7 +183,11 @@ export function useMicrophone() {
             spectral.spectralFlux = Math.min(1, Math.sqrt(flux) / 10);
           }
           if (spectrum) {
-            prevSpectrumRef.current = new Float32Array(spectrum);
+            // Reuse buffer to avoid GC pressure (~47 allocations/sec otherwise)
+            if (!prevSpectrumRef.current || prevSpectrumRef.current.length !== spectrum.length) {
+              prevSpectrumRef.current = new Float32Array(spectrum.length);
+            }
+            prevSpectrumRef.current.set(spectrum);
           }
 
           // Perceptual sharpness: already 0-1

@@ -102,6 +102,7 @@ export function useGPUCompute(textureSize: number = DEFAULT_TEXTURE_SIZE) {
     positionVariable.material.uniforms.uBandOnsetsTexture = { value: textures.bandOnsetsTexture };
     positionVariable.material.uniforms.uBandCount = { value: 2.0 };
     positionVariable.material.uniforms.uAudioAmplitude = { value: 1.0 };
+    positionVariable.material.uniforms.uSpawnBurst = { value: 1.0 };
 
     // Store ref to band onsets texture for updates
     bandOnsetsTextureRef.current = textures.bandOnsetsTexture;
@@ -122,6 +123,7 @@ export function useGPUCompute(textureSize: number = DEFAULT_TEXTURE_SIZE) {
     velocityVariable.material.uniforms.uBeatRepulsion = { value: 0.0 };
     velocityVariable.material.uniforms.uPaletteOffset = { value: 0.0 };
     velocityVariable.material.uniforms.uDoKick = { value: false };
+    velocityVariable.material.uniforms.uHFCBoost = { value: 0.0 };
 
     // Set dependencies: position and velocity both depend on each other
     gpuCompute.setVariableDependencies(positionVariable, [positionVariable, velocityVariable]);
@@ -138,6 +140,12 @@ export function useGPUCompute(textureSize: number = DEFAULT_TEXTURE_SIZE) {
     velocityVariableRef.current = velocityVariable;
 
     return () => {
+      // Dispose GPUComputationRenderer and its internal render targets
+      gpuComputeRef.current?.dispose();
+      gpuComputeRef.current = null;
+      positionVariableRef.current = null;
+      velocityVariableRef.current = null;
+
       textures.initialPosition.dispose();
       textures.initialVelocity.dispose();
       textures.bandOnsetsTexture.dispose();
@@ -313,6 +321,18 @@ export function useGPUCompute(textureSize: number = DEFAULT_TEXTURE_SIZE) {
     }
   }, []);
 
+  const setHFCBoost = useCallback((value: number) => {
+    if (velocityVariableRef.current) {
+      velocityVariableRef.current.material.uniforms.uHFCBoost.value = value;
+    }
+  }, []);
+
+  const setSpawnBurst = useCallback((value: number) => {
+    if (positionVariableRef.current) {
+      positionVariableRef.current.material.uniforms.uSpawnBurst.value = value;
+    }
+  }, []);
+
   return {
     getPositionTexture,
     getVelocityTexture,
@@ -335,5 +355,7 @@ export function useGPUCompute(textureSize: number = DEFAULT_TEXTURE_SIZE) {
     setBandOnsets,
     setAudioAmplitude,
     setPaletteOffset,
+    setHFCBoost,
+    setSpawnBurst,
   };
 }
