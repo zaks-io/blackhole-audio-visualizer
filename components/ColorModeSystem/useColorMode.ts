@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useMemo } from "react";
 import {
   PALETTES,
   PALETTE_IDS,
@@ -20,7 +20,8 @@ export function useColorMode(): UseColorModeReturn {
   const lastTriggerTimeRef = useRef(0);
   const silenceStartRef = useRef<number | null>(null);
 
-  const allColors = getAllColors();
+  // Memoize to avoid creating new array on every render
+  const allColors = useMemo(() => getAllColors(), []);
   const paletteOffset = PALETTE_OFFSETS[paletteId];
 
   const setPalette = useCallback((newId: ColorPaletteId) => {

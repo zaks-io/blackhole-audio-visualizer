@@ -44,6 +44,9 @@ export function usePlayPreset() {
       for (const param of preset.parameters) {
         const startValue = vizStore.getState().getByPath(param.path) as number;
 
+        // Skip if value is already at target
+        if (Math.abs(param.value - startValue) < 0.001) continue;
+
         setTargetValue(param.path, param.value);
         setDuration(param.path, param.duration);
         setEase(param.path, param.ease);
@@ -59,7 +62,6 @@ export function usePlayPreset() {
           ease: param.ease,
           onUpdate: () => {
             vizStore.getState().setByPath(param.path, state.value);
-            setProgress(param.path, state.progress);
           },
           onComplete: () => {
             setIsTweening(param.path, false);

@@ -79,7 +79,13 @@ export function VisualizationControls() {
           max={50000}
           step={5000}
         />
-        <SliderControl controlKey="starBrightness" label="Star Brightness" min={0.1} max={3.0} step={0.1} />
+        <SliderControl
+          controlKey="starBrightness"
+          label="Star Brightness"
+          min={0.1}
+          max={3.0}
+          step={0.1}
+        />
       </ControlSection>
 
       <ControlSection title="Audio" id="audio">
@@ -94,6 +100,46 @@ export function VisualizationControls() {
           step={1}
         />
         <SwitchControl controlKey="autoColorChange" label="Auto Color Change" />
+      </ControlSection>
+
+      <ControlSection title="Post-FX" id="post-fx">
+        <SwitchControl controlKey="bloomEnabled" label="Bloom" />
+        <SliderControl
+          controlKey="bloomBaseIntensity"
+          label="Bloom Base"
+          min={0}
+          max={2}
+          step={0.1}
+        />
+        <SliderControl
+          controlKey="bloomAudioReactivity"
+          label="Bloom Reactivity"
+          min={0}
+          max={1}
+          step={0.1}
+        />
+        <SwitchControl controlKey="chromaticEnabled" label="Chromatic Aberration" />
+        <SliderControl
+          controlKey="chromaticAudioReactivity"
+          label="Chromatic Reactivity"
+          min={0}
+          max={1}
+          step={0.1}
+        />
+        <SliderControl
+          controlKey="hfcVelocityBoost"
+          label="HFC Velocity Boost"
+          min={0}
+          max={1}
+          step={0.05}
+        />
+        <SliderControl
+          controlKey="spawnBurstMultiplier"
+          label="Bass Spawn Burst"
+          min={1}
+          max={4}
+          step={0.1}
+        />
       </ControlSection>
     </div>
   );
