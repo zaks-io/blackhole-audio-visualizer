@@ -99,6 +99,7 @@ export function PresetControls() {
   const [importError, setImportError] = useState("");
   const [migrateDialogOpen, setMigrateDialogOpen] = useState(false);
   const [migrating, setMigrating] = useState(false);
+  const [overwriteDialogOpen, setOverwriteDialogOpen] = useState(false);
   const [migrateProgress, setMigrateProgress] = useState({ current: 0, total: 0 });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -376,7 +377,7 @@ export function PresetControls() {
           variant="ghost"
           size="icon"
           className="h-8 w-8 shrink-0"
-          onClick={handleUpdatePreset}
+          onClick={() => setOverwriteDialogOpen(true)}
           disabled={!selectedPreset}
           title="Save changes to preset"
         >
@@ -666,6 +667,32 @@ export function PresetControls() {
                   Migrate All
                 </>
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Overwrite Confirmation Dialog */}
+      <Dialog open={overwriteDialogOpen} onOpenChange={setOverwriteDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Overwrite Preset</DialogTitle>
+            <DialogDescription>
+              This will overwrite &ldquo;{selectedPreset?.name}&rdquo;. This action cannot be
+              undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setOverwriteDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                handleUpdatePreset();
+                setOverwriteDialogOpen(false);
+              }}
+            >
+              Overwrite
             </Button>
           </DialogFooter>
         </DialogContent>
