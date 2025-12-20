@@ -81,7 +81,7 @@ export function BlackHoleSimulation({
       const bassBeat = analysis.peaks.bass ? 1 : 0;
       const onsetBeat = Math.max(analysis.bandOnsets[0] ?? 0, analysis.bandOnsets[1] ?? 0);
       const beat = Math.max(bassBeat * 0.8, onsetBeat) * controls.audioGain;
-      beatIntensityRef.current = beat;
+      beatIntensityRef.current = Math.min(beat, 1.5);
 
       // HFC boost - envelope follow the raw HFC with attack/decay
       const hfcTarget = analysis.raw.hfc;
