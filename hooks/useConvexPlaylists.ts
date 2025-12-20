@@ -23,6 +23,9 @@ export function useConvexPlaylists() {
   const removePresetMutation = useMutation(api.model.playlists.public.removePresetFromPlaylist);
   const reorderPresetsMutation = useMutation(api.model.playlists.public.reorderPlaylistPresets);
   const updatePlaylistItemMutation = useMutation(api.model.playlists.public.updatePlaylistItem);
+  const addCameraPresetMutation = useMutation(api.model.playlists.public.addCameraPreset);
+  const updateCameraPresetMutation = useMutation(api.model.playlists.public.updateCameraPreset);
+  const removeCameraPresetMutation = useMutation(api.model.playlists.public.removeCameraPreset);
 
   const createPlaylist = async (name: string, isPublic: boolean) => {
     return createPlaylistMutation({ name, isPublic });
@@ -30,7 +33,13 @@ export function useConvexPlaylists() {
 
   const updatePlaylist = async (
     playlistId: string,
-    updates: { name?: string; isPublic?: boolean; shuffle?: boolean; defaultWaitDuration?: number }
+    updates: {
+      name?: string;
+      isPublic?: boolean;
+      shuffle?: boolean;
+      defaultWaitDuration?: number;
+      defaultCameraDuration?: number;
+    }
   ) => {
     return updatePlaylistMutation({
       playlistId: playlistId as Id<"playlists">,
@@ -75,6 +84,29 @@ export function useConvexPlaylists() {
     });
   };
 
+  const addCameraPreset = async (playlistId: string, cameraMode: string, duration?: number) => {
+    return addCameraPresetMutation({
+      playlistId: playlistId as Id<"playlists">,
+      cameraMode,
+      duration,
+    });
+  };
+
+  const updateCameraPreset = async (playlistId: string, index: number, duration?: number) => {
+    return updateCameraPresetMutation({
+      playlistId: playlistId as Id<"playlists">,
+      index,
+      duration,
+    });
+  };
+
+  const removeCameraPreset = async (playlistId: string, index: number) => {
+    return removeCameraPresetMutation({
+      playlistId: playlistId as Id<"playlists">,
+      index,
+    });
+  };
+
   return {
     playlists: (myPlaylists ?? []) as Playlist[],
     publicPlaylists: (publicPlaylists ?? []) as Playlist[],
@@ -87,6 +119,9 @@ export function useConvexPlaylists() {
     addPreset,
     removePreset,
     reorderPresets,
+    addCameraPreset,
+    updateCameraPreset,
+    removeCameraPreset,
   };
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useCallback } from "react";
+import { useRef, useCallback, useEffect } from "react";
 import { Canvas } from "@react-three/fiber";
 import { NoToneMapping, SRGBColorSpace } from "three";
 import { PostProcessing } from "@/components/PostProcessing";
@@ -17,6 +17,9 @@ import { useColorMode } from "@/components/ColorModeSystem";
 import { useAudioSource } from "@/hooks/useAudioSource";
 import { useRecording } from "@/hooks/useRecording";
 import { useUIState } from "@/hooks/useUIState";
+import { useCameraPlaylist } from "@/hooks/useCameraPlaylist";
+import { usePlaylistWithPresets } from "@/hooks/useConvexPlaylists";
+import { usePlaylistControls } from "@/components/playlist/usePlaylistControls";
 
 export default function Home() {
   const {
@@ -40,6 +43,33 @@ export default function Home() {
   const colorMode = useColorMode();
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   const { fpsVisible, devControlsVisible } = useUIState();
+
+  // Camera playlist integration
+  const selectedPlaylistId = usePlaylistControls((s) => s.selectedPlaylistId);
+  const shouldPlay = usePlaylistControls((s) => s.shouldPlay);
+  const shouldStop = usePlaylistControls((s) => s.shouldStop);
+  const { playlist } = usePlaylistWithPresets(selectedPlaylistId);
+
+  const cameraPlaylist = useCameraPlaylist(
+    playlist?.cameraPresets,
+    playlist?.shuffle ?? false,
+    playlist?.defaultCameraDuration,
+    cameraMode.setMode
+  );
+
+  // Start camera cycling when visual playlist starts
+  useEffect(() => {
+    if (shouldPlay && playlist?.cameraPresets && playlist.cameraPresets.length > 0) {
+      cameraPlaylist.start();
+    }
+  }, [shouldPlay, playlist?.cameraPresets, cameraPlaylist]);
+
+  // Stop camera cycling when visual playlist stops
+  useEffect(() => {
+    if (shouldStop) {
+      cameraPlaylist.stop();
+    }
+  }, [shouldStop, cameraPlaylist]);
 
   const handleRecordToggle = useCallback(() => {
     if (isRecording) {

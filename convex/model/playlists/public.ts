@@ -104,6 +104,8 @@ export const createPlaylist = mutation({
   },
 });
 
+const VALID_CAMERA_MODES = ["circle", "closeup", "orbit", "edge"];
+
 export const updatePlaylist = mutation({
   args: {
     playlistId: v.id("playlists"),
@@ -111,6 +113,7 @@ export const updatePlaylist = mutation({
     isPublic: v.optional(v.boolean()),
     shuffle: v.optional(v.boolean()),
     defaultWaitDuration: v.optional(v.number()),
+    defaultCameraDuration: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -138,6 +141,8 @@ export const updatePlaylist = mutation({
     if (args.shuffle !== undefined) updates.shuffle = args.shuffle;
     if (args.defaultWaitDuration !== undefined)
       updates.defaultWaitDuration = args.defaultWaitDuration;
+    if (args.defaultCameraDuration !== undefined)
+      updates.defaultCameraDuration = args.defaultCameraDuration;
 
     await ctx.db.patch(args.playlistId, updates);
     return { success: true };
@@ -323,6 +328,136 @@ export const updatePlaylistItem = mutation({
 
     await ctx.db.patch(args.playlistId, {
       items: updatedItems,
+      updatedAt: Date.now(),
+    });
+
+    return { success: true };
+  },
+});
+
+export const addCameraPreset = mutation({
+  args: {
+    playlistId: v.id("playlists"),
+    cameraMode: v.string(),
+    duration: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_token_identifier", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
+      .first();
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    const playlist = await ctx.db.get(args.playlistId);
+    if (!playlist || playlist.userId !== user._id) {
+      throw new Error("Playlist not found or not owned by user");
+    }
+
+    if (!VALID_CAMERA_MODES.includes(args.cameraMode)) {
+      throw new Error("Invalid camera mode");
+    }
+
+    const currentCameraPresets = playlist.cameraPresets ?? [];
+    const newCameraPreset = { mode: args.cameraMode, duration: args.duration };
+
+    await ctx.db.patch(args.playlistId, {
+      cameraPresets: [...currentCameraPresets, newCameraPreset],
+      updatedAt: Date.now(),
+    });
+
+    return { success: true };
+  },
+});
+
+export const updateCameraPreset = mutation({
+  args: {
+    playlistId: v.id("playlists"),
+    index: v.number(),
+    duration: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_token_identifier", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
+      .first();
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    const playlist = await ctx.db.get(args.playlistId);
+    if (!playlist || playlist.userId !== user._id) {
+      throw new Error("Playlist not found or not owned by user");
+    }
+
+    const currentCameraPresets = playlist.cameraPresets ?? [];
+    if (args.index < 0 || args.index >= currentCameraPresets.length) {
+      throw new Error("Invalid index");
+    }
+
+    const updatedCameraPresets = currentCameraPresets.map((preset, i) => {
+      if (i === args.index) {
+        return { ...preset, duration: args.duration };
+      }
+      return preset;
+    });
+
+    await ctx.db.patch(args.playlistId, {
+      cameraPresets: updatedCameraPresets,
+      updatedAt: Date.now(),
+    });
+
+    return { success: true };
+  },
+});
+
+export const removeCameraPreset = mutation({
+  args: {
+    playlistId: v.id("playlists"),
+    index: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_token_identifier", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
+      .first();
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    const playlist = await ctx.db.get(args.playlistId);
+    if (!playlist || playlist.userId !== user._id) {
+      throw new Error("Playlist not found or not owned by user");
+    }
+
+    const currentCameraPresets = playlist.cameraPresets ?? [];
+    if (args.index < 0 || args.index >= currentCameraPresets.length) {
+      throw new Error("Invalid index");
+    }
+
+    const updatedCameraPresets = currentCameraPresets.filter((_, i) => i !== args.index);
+
+    await ctx.db.patch(args.playlistId, {
+      cameraPresets: updatedCameraPresets,
       updatedAt: Date.now(),
     });
 

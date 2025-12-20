@@ -38,6 +38,15 @@ export default defineSchema({
         waitDuration: v.optional(v.number()),
       })
     ),
+    cameraPresets: v.optional(
+      v.array(
+        v.object({
+          mode: v.string(),
+          duration: v.optional(v.number()),
+        })
+      )
+    ),
+    defaultCameraDuration: v.optional(v.number()),
     shuffle: v.boolean(),
     defaultWaitDuration: v.number(),
     isPublic: v.boolean(),

@@ -95,11 +95,18 @@ export interface PlaylistItem {
   waitDuration?: number;
 }
 
+export interface CameraPresetItem {
+  mode: string;
+  duration?: number;
+}
+
 export interface Playlist {
   _id: string;
   userId: string;
   name: string;
   items: PlaylistItem[];
+  cameraPresets?: CameraPresetItem[];
+  defaultCameraDuration?: number;
   shuffle: boolean;
   defaultWaitDuration: number;
   isPublic: boolean;
