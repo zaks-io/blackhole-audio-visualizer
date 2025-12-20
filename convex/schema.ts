@@ -67,4 +67,18 @@ export default defineSchema({
     createdAt: v.number(),
     downloadCount: v.number(),
   }).index("by_created", ["createdAt"]),
+
+  releases: defineTable({
+    storageId: v.id("_storage"),
+    fileName: v.string(),
+    platform: v.union(v.literal("windows"), v.literal("macos")),
+    version: v.string(),
+    isLatest: v.boolean(),
+    uploadedBy: v.id("users"),
+    createdAt: v.number(),
+    downloadCount: v.number(),
+  })
+    .index("by_platform", ["platform"])
+    .index("by_platform_latest", ["platform", "isLatest"])
+    .index("by_platform_version", ["platform", "version"]),
 });
