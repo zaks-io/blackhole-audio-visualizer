@@ -120,7 +120,7 @@ const DEFAULT_STATE: VisualizationControlsState = {
   brightness: 1.5,
   alpha: 0.8,
   maxDistance: 60,
-  colorPalette: "grayscale" as ColorPaletteId,
+  colorPalette: "neon" as ColorPaletteId,
 
   // Physics defaults
   gravity: 100000,
@@ -131,7 +131,7 @@ const DEFAULT_STATE: VisualizationControlsState = {
 
   // Emitters defaults
   emitRadius: 200,
-  emitterCount: 36,
+  emitterCount: 12,
   emitterAngle: 0,
   emitterTilt: 0,
   inwardAngle: 0,
@@ -145,7 +145,7 @@ const DEFAULT_STATE: VisualizationControlsState = {
   starBrightness: 0.2,
 
   // Audio defaults
-  amplitude: 5,
+  amplitude: 10,
   onsetDecay: 0.92,
   audioGain: 2,
   beatRepulsion: 20,
