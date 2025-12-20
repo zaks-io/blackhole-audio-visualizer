@@ -10,6 +10,7 @@ module.exports = {
   },
   files: ["dist-electron/**/*", "out/**/*"],
   mac: {
+    icon: "build-resources/icon.icns",
     category: "public.app-category.music",
     target: ["dmg", "zip"],
     hardenedRuntime: true,
