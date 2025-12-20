@@ -6,6 +6,7 @@ import { Bloom, ChromaticAberration } from "@react-three/postprocessing";
 import { BlendFunction } from "postprocessing";
 import { Vector2 } from "three";
 import { useVisualizationControls } from "@/hooks/useVisualizationControls";
+import { useUIState } from "@/hooks/useUIState";
 import type { AnalyzedAudio } from "@/hooks/useAudioAnalyzer";
 
 interface AudioReactiveEffectsProps {
@@ -45,6 +46,7 @@ let chromaticInstance: any = null;
 
 export function AudioReactiveEffects({ getAnalysis, isAudioConnected }: AudioReactiveEffectsProps) {
   const controls = useVisualizationControls();
+  const { bassStrobeEnabled } = useUIState();
 
   // Envelope followers for smooth audio response
   const bloomEnvelope = useRef(new EnvelopeFollower(5, 200));
@@ -86,21 +88,26 @@ export function AudioReactiveEffects({ getAnalysis, isAudioConnected }: AudioRea
 
     const analysis = getAnalysis();
 
-    // Bloom responds to bass peaks
-    const bassTarget = analysis.peaks.bass ? 1 : 0;
-    const bassEnvValue = bloomEnvelope.current.process(bassTarget);
-    const bloomPeak = bloomBase + bloomReactivity;
-    const bloomIntensity = bloomBase + bassEnvValue * (bloomPeak - bloomBase);
+    // Bloom responds to bass peaks (when bass strobe is enabled)
+    let bloomIntensity = bloomBase;
+    if (bassStrobeEnabled) {
+      const bassTarget = analysis.peaks.bass ? 1 : 0;
+      const bassEnvValue = bloomEnvelope.current.process(bassTarget);
+      const bloomPeak = bloomBase + bloomReactivity;
+      bloomIntensity = bloomBase + bassEnvValue * (bloomPeak - bloomBase);
+    }
 
     if (bloomInstance) {
       bloomInstance.intensity = bloomIntensity;
 
-      // Only update threshold when it changes significantly
-      const centroidInfluence = analysis.raw.spectralCentroid * 0.15 * bloomReactivity;
-      const newThreshold = 0.3 - centroidInfluence;
-      if (Math.abs(newThreshold - prevBloomThreshold.current) > 0.001) {
-        prevBloomThreshold.current = newThreshold;
-        bloomInstance.luminanceMaterial.threshold = newThreshold;
+      // Only update threshold when it changes significantly (and strobe is enabled)
+      if (bassStrobeEnabled) {
+        const centroidInfluence = analysis.raw.spectralCentroid * 0.15 * bloomReactivity;
+        const newThreshold = 0.3 - centroidInfluence;
+        if (Math.abs(newThreshold - prevBloomThreshold.current) > 0.001) {
+          prevBloomThreshold.current = newThreshold;
+          bloomInstance.luminanceMaterial.threshold = newThreshold;
+        }
       }
     }
 
