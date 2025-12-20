@@ -57,7 +57,7 @@ export function AudioSourceButton({
         isConnected && sourceType === "system" && "bg-audio/20 text-audio hover:bg-audio/30",
         isConnected &&
           sourceType === "microphone" &&
-          "bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30",
+          "bg-red-500/20 text-red-400 hover:bg-red-500/30",
         !isConnected && "text-muted-foreground hover:text-foreground"
       )}
     >
@@ -74,7 +74,7 @@ export function AudioSourceButton({
             onClick={() => onConnect("microphone")}
             className="gap-2 cursor-pointer"
           >
-            <Mic className="h-4 w-4 text-emerald-400" />
+            <Mic className="h-4 w-4 text-red-400" />
             <span>Microphone</span>
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => onConnect("system")} className="gap-2 cursor-pointer">

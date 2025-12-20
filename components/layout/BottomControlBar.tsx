@@ -1,6 +1,7 @@
 "use client";
 
 import { SlidersHorizontal, ChevronRight } from "lucide-react";
+import { MobileOverflowMenu } from "./MobileOverflowMenu";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -76,45 +77,48 @@ export function BottomControlBar({
       >
         <div
           className={cn(
-            "glass-panel rounded-full px-4 py-2 flex items-center gap-2",
+            "glass-panel rounded-full px-2 sm:px-4 py-2 flex items-center gap-1 sm:gap-2",
             !controlBarCollapsed && "pointer-events-auto"
           )}
         >
-          {/* Producer Mode Toggle */}
-          <TooltipProvider delayDuration={300}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={toggleProducerMode}
-                  className={cn(
-                    "h-10 w-10 rounded-full",
-                    isProducerModeOpen && "bg-primary/20 text-primary"
-                  )}
-                >
-                  <SlidersHorizontal className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="top" className="text-xs">
-                Producer Mode
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          {/* Producer Mode Toggle - Desktop only */}
+          <div className="hidden md:block">
+            <TooltipProvider delayDuration={300}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={toggleProducerMode}
+                    className={cn(
+                      "h-10 w-10 rounded-full",
+                      isProducerModeOpen && "bg-primary/20 text-primary"
+                    )}
+                  >
+                    <SlidersHorizontal className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="text-xs">
+                  Producer Mode
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
 
-          <Separator orientation="vertical" className="h-6 mx-2" />
+          <Separator orientation="vertical" className="hidden md:block h-6 mx-1 sm:mx-2" />
 
           {/* Camera Controls */}
           <CameraControls
             currentMode={currentCameraMode}
             onModeChange={onCameraModeChange}
             isTransitioning={isCameraTransitioning}
+            compact
           />
 
           {/* Playlist Controls */}
-          <PlaylistControls />
+          <PlaylistControls compact />
 
-          <Separator orientation="vertical" className="h-6 mx-2" />
+          <Separator orientation="vertical" className="h-6 mx-1 sm:mx-2" />
 
           {/* Audio & Recording */}
           <div className="flex items-center gap-1">
@@ -125,47 +129,63 @@ export function BottomControlBar({
               onConnect={onAudioConnect}
               onDisconnect={onAudioDisconnect}
             />
+            {/* RecordButton - Desktop only */}
             {isAdmin && (
-              <RecordButton
-                isRecording={isRecording}
-                duration={recordingDuration}
-                disabled={!isAudioConnected}
-                onToggle={onRecordToggle}
-              />
+              <div className="hidden md:block">
+                <RecordButton
+                  isRecording={isRecording}
+                  duration={recordingDuration}
+                  disabled={!isAudioConnected}
+                  onToggle={onRecordToggle}
+                />
+              </div>
             )}
           </div>
 
-          <Separator orientation="vertical" className="h-6 mx-2" />
+          {/* Mobile Overflow Menu */}
+          <MobileOverflowMenu />
 
-          {/* Settings & Help */}
-          <SettingsMenu />
-          <HelpModal />
+          {/* Desktop: Settings, Help, User, Collapse */}
+          <Separator orientation="vertical" className="hidden sm:block h-6 mx-1 sm:mx-2" />
 
-          <Separator orientation="vertical" className="h-6 mx-2" />
+          {/* Settings - Desktop only */}
+          <div className="hidden md:block">
+            <SettingsMenu />
+          </div>
+          {/* Help - Tablet+ */}
+          <div className="hidden sm:block">
+            <HelpModal />
+          </div>
 
-          {/* User Menu */}
-          <UserMenu />
+          <Separator orientation="vertical" className="hidden sm:block h-6 mx-1 sm:mx-2" />
 
-          <Separator orientation="vertical" className="h-6 mx-2" />
+          {/* User Menu - Tablet+ */}
+          <div className="hidden sm:block">
+            <UserMenu />
+          </div>
 
-          {/* Collapse Button */}
-          <TooltipProvider delayDuration={300}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleHideControls}
-                  className="h-10 w-10 rounded-full"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="top" className="text-xs">
-                Hide Controls
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <Separator orientation="vertical" className="hidden md:block h-6 mx-1 sm:mx-2" />
+
+          {/* Collapse Button - Desktop only */}
+          <div className="hidden md:block">
+            <TooltipProvider delayDuration={300}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleHideControls}
+                    className="h-10 w-10 rounded-full"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="text-xs">
+                  Hide Controls
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
         </div>
       </div>
 

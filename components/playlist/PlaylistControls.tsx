@@ -19,7 +19,11 @@ import { useConvexPlaylists, usePlaylistWithPresets } from "@/hooks/useConvexPla
 import { usePlaylistPlayer } from "@/hooks/usePlaylistPlayer";
 import { usePlaylistControls } from "./usePlaylistControls";
 
-export function PlaylistControls() {
+interface PlaylistControlsProps {
+  compact?: boolean;
+}
+
+export function PlaylistControls({ compact = false }: PlaylistControlsProps) {
   const { isAuthenticated } = useConvexAuth();
   const { playlists, publicPlaylists, isLoading } = useConvexPlaylists();
   const { selectedPlaylistId, setSelectedPlaylistId, shouldPlay, clearTriggerPlay } =
@@ -84,56 +88,60 @@ export function PlaylistControls() {
 
   return (
     <div className="flex items-center gap-1">
-      <Select
-        value={selectedPlaylistId ?? "none"}
-        onValueChange={handleValueChange}
-        disabled={isLoading}
-      >
-        <SelectTrigger
-          className={cn(
-            "h-10 w-36 gap-2 rounded-full border-0 bg-transparent px-3",
-            "hover:bg-accent/50",
-            "focus:ring-0 focus-visible:ring-0",
-            isLoading && "opacity-50 cursor-wait"
-          )}
+      {/* Playlist dropdown - hide on mobile when compact */}
+      <div className={cn(compact && "hidden sm:block")}>
+        <Select
+          value={selectedPlaylistId ?? "none"}
+          onValueChange={handleValueChange}
+          disabled={isLoading}
         >
-          <ListMusic className="h-4 w-4" />
-          <SelectValue placeholder="Playlist" className="truncate">
-            {selectedPlaylist?.name ?? "Playlist"}
-          </SelectValue>
-        </SelectTrigger>
-        <SelectContent position="popper" className="!overflow-y-visible !max-h-none">
-          <SelectItem value="none">None</SelectItem>
+          <SelectTrigger
+            className={cn(
+              "h-10 w-36 gap-2 rounded-full border-0 bg-transparent px-3",
+              "hover:bg-accent/50",
+              "focus:ring-0 focus-visible:ring-0",
+              isLoading && "opacity-50 cursor-wait"
+            )}
+          >
+            <ListMusic className="h-4 w-4" />
+            <SelectValue placeholder="Playlist" className="truncate">
+              {selectedPlaylist?.name ?? "Playlist"}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent position="popper" className="!overflow-y-visible !max-h-none">
+            <SelectItem value="none">None</SelectItem>
 
-          {hasPlaylists && <SelectSeparator />}
+            {hasPlaylists && <SelectSeparator />}
 
-          {isAuthenticated && playlists.length > 0 && (
-            <>
+            {isAuthenticated && playlists.length > 0 && (
+              <>
+                <SelectGroup>
+                  <SelectLabel>My Playlists</SelectLabel>
+                  {playlists.map((p) => (
+                    <SelectItem key={p._id} value={p._id}>
+                      {p.name}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+                {publicPlaylists.length > 0 && <SelectSeparator />}
+              </>
+            )}
+
+            {publicPlaylists.length > 0 && (
               <SelectGroup>
-                <SelectLabel>My Playlists</SelectLabel>
-                {playlists.map((p) => (
+                <SelectLabel>Public Playlists</SelectLabel>
+                {publicPlaylists.map((p) => (
                   <SelectItem key={p._id} value={p._id}>
                     {p.name}
                   </SelectItem>
                 ))}
               </SelectGroup>
-              {publicPlaylists.length > 0 && <SelectSeparator />}
-            </>
-          )}
+            )}
+          </SelectContent>
+        </Select>
+      </div>
 
-          {publicPlaylists.length > 0 && (
-            <SelectGroup>
-              <SelectLabel>Public Playlists</SelectLabel>
-              {publicPlaylists.map((p) => (
-                <SelectItem key={p._id} value={p._id}>
-                  {p.name}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-          )}
-        </SelectContent>
-      </Select>
-
+      {/* Play/Pause button - always visible when playlist selected */}
       {selectedPlaylistId && (
         <div className="relative">
           {state.isPlaying && (state.status === "tweening" || state.status === "waiting") && (
