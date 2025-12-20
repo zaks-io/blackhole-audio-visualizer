@@ -1,12 +1,15 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
+export type Resolution = "auto" | "4k" | "1080" | "720" | "480";
+
 interface UIState {
   debugPanelsVisible: boolean;
   fpsVisible: boolean;
   devControlsVisible: boolean;
   bassStrobeEnabled: boolean;
   controlBarCollapsed: boolean;
+  resolution: Resolution;
   toggleDebugPanels: () => void;
   toggleFPS: () => void;
   toggleDevControls: () => void;
@@ -14,6 +17,7 @@ interface UIState {
   toggleBassStrobe: () => void;
   toggleControlBar: () => void;
   setControlBarCollapsed: (collapsed: boolean) => void;
+  setResolution: (resolution: Resolution) => void;
 }
 
 export const useUIState = create<UIState>()(
@@ -24,6 +28,7 @@ export const useUIState = create<UIState>()(
       devControlsVisible: false,
       bassStrobeEnabled: false,
       controlBarCollapsed: false,
+      resolution: "auto",
       toggleDebugPanels: () => set((state) => ({ debugPanelsVisible: !state.debugPanelsVisible })),
       toggleFPS: () => set((state) => ({ fpsVisible: !state.fpsVisible })),
       toggleDevControls: () => set((state) => ({ devControlsVisible: !state.devControlsVisible })),
@@ -31,6 +36,7 @@ export const useUIState = create<UIState>()(
       toggleBassStrobe: () => set((state) => ({ bassStrobeEnabled: !state.bassStrobeEnabled })),
       toggleControlBar: () => set((state) => ({ controlBarCollapsed: !state.controlBarCollapsed })),
       setControlBarCollapsed: (collapsed) => set({ controlBarCollapsed: collapsed }),
+      setResolution: (resolution) => set({ resolution }),
     }),
     {
       name: "ui-state",

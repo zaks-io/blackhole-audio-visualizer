@@ -12,6 +12,7 @@ attribute float aSize;
 
 uniform float uBeatIntensity;
 uniform float uSizeBoost;
+uniform float uResolutionScale;
 
 varying float vTemp;
 varying float vPointSize;
@@ -23,8 +24,10 @@ void main() {
   gl_Position = projectionMatrix * mvPosition;
 
   float beatSize = 1.0 + uBeatIntensity * uSizeBoost;
-  float size = aSize * beatSize * (400.0 / -mvPosition.z);
-  gl_PointSize = clamp(size, 6.0, 80.0);
+  float size = aSize * beatSize * (400.0 / -mvPosition.z) * uResolutionScale;
+  float minSize = 6.0 * uResolutionScale;
+  float maxSize = 80.0 * uResolutionScale;
+  gl_PointSize = clamp(size, minSize, maxSize);
   vPointSize = gl_PointSize;
 }
 `;
@@ -76,6 +79,7 @@ interface StarFieldProps {
   starCount?: number;
   brightnessBoost?: number;
   sizeBoost?: number;
+  resolutionScale?: number;
 }
 
 export function StarField({
@@ -83,6 +87,7 @@ export function StarField({
   starCount = 30000,
   brightnessBoost = 0.2,
   sizeBoost = 0.3,
+  resolutionScale = 1,
 }: StarFieldProps) {
   const pointsRef = useRef<THREE.Points>(null);
   const materialRef = useRef<THREE.ShaderMaterial>(null);
@@ -124,6 +129,7 @@ export function StarField({
     mat.uniforms.uBeatIntensity.value = beatIntensityRef.current;
     mat.uniforms.uBrightnessBoost.value = brightnessBoost;
     mat.uniforms.uSizeBoost.value = sizeBoost;
+    mat.uniforms.uResolutionScale.value = resolutionScale;
   });
 
   return (
@@ -136,6 +142,7 @@ export function StarField({
           uBeatIntensity: { value: 0 },
           uBrightnessBoost: { value: brightnessBoost },
           uSizeBoost: { value: sizeBoost },
+          uResolutionScale: { value: resolutionScale },
         }}
         transparent
         depthTest

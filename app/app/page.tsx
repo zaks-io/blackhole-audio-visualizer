@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useCallback, useEffect } from "react";
+import { useRef, useCallback, useEffect, useState, useMemo } from "react";
 import { Canvas } from "@react-three/fiber";
 import { NoToneMapping, SRGBColorSpace } from "three";
 import { PostProcessing } from "@/components/PostProcessing";
@@ -20,6 +20,14 @@ import { useUIState } from "@/hooks/useUIState";
 import { useCameraPlaylist } from "@/hooks/useCameraPlaylist";
 import { usePlaylistWithPresets } from "@/hooks/useConvexPlaylists";
 import { usePlaylistControls } from "@/components/playlist/usePlaylistControls";
+import type { Resolution } from "@/hooks/useUIState";
+
+const RESOLUTIONS: Record<Exclude<Resolution, "auto">, { width: number; height: number }> = {
+  "4k": { width: 3840, height: 2160 },
+  "1080": { width: 1920, height: 1080 },
+  "720": { width: 1280, height: 720 },
+  "480": { width: 854, height: 480 },
+};
 
 export default function Home() {
   const {
@@ -42,7 +50,56 @@ export default function Home() {
   const cameraMode = useCameraMode();
   const colorMode = useColorMode();
   const canvasContainerRef = useRef<HTMLDivElement>(null);
-  const { fpsVisible, devControlsVisible } = useUIState();
+  const { fpsVisible, devControlsVisible, resolution } = useUIState();
+  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const resolutionConfig = useMemo(
+    () => (resolution !== "auto" ? RESOLUTIONS[resolution] : null),
+    [resolution]
+  );
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const updateSize = () => {
+      setContainerSize({ width: container.clientWidth, height: container.clientHeight });
+    };
+
+    updateSize();
+
+    const resizeObserver = new ResizeObserver(updateSize);
+    resizeObserver.observe(container);
+    return () => resizeObserver.disconnect();
+  }, []);
+
+  const { displayWidth, displayHeight, effectiveDpr } = useMemo(() => {
+    if (!resolutionConfig || containerSize.width === 0) {
+      return { displayWidth: undefined, displayHeight: undefined, effectiveDpr: 2 };
+    }
+
+    const containerAspect = containerSize.width / containerSize.height;
+    const targetAspect = resolutionConfig.width / resolutionConfig.height;
+
+    let width: number;
+    let height: number;
+
+    if (containerAspect > targetAspect) {
+      // Container is wider - fit to height
+      height = containerSize.height;
+      width = containerSize.height * targetAspect;
+    } else {
+      // Container is taller - fit to width
+      width = containerSize.width;
+      height = containerSize.width / targetAspect;
+    }
+
+    // Calculate dpr needed to render at target resolution
+    const dpr = resolutionConfig.width / width;
+
+    return { displayWidth: width, displayHeight: height, effectiveDpr: dpr };
+  }, [resolutionConfig, containerSize]);
 
   // Camera playlist integration
   const selectedPlaylistId = usePlaylistControls((s) => s.selectedPlaylistId);
@@ -88,9 +145,24 @@ export default function Home() {
       <ProducerModePanel />
 
       {/* Main content area */}
-      <div className="relative w-full h-full min-w-0 min-h-0 overflow-hidden">
-        <div ref={canvasContainerRef} className="w-full h-full">
+      <div
+        ref={containerRef}
+        className="relative w-full h-full min-w-0 min-h-0 overflow-hidden flex items-center justify-center"
+      >
+        <div
+          ref={canvasContainerRef}
+          className={resolutionConfig ? "" : "w-full h-full"}
+          style={
+            resolutionConfig
+              ? {
+                  width: `${displayWidth}px`,
+                  height: `${displayHeight}px`,
+                }
+              : undefined
+          }
+        >
           <Canvas
+            key={resolution}
             camera={{ position: [0, 90, 150], fov: 60 }}
             gl={{
               antialias: true,
@@ -98,7 +170,7 @@ export default function Home() {
               preserveDrawingBuffer: true,
               powerPreference: "high-performance",
             }}
-            dpr={2}
+            dpr={effectiveDpr}
             onCreated={({ gl }) => {
               gl.toneMapping = NoToneMapping;
               gl.outputColorSpace = SRGBColorSpace;
@@ -110,6 +182,7 @@ export default function Home() {
               setOnsetDecay={setOnsetDecay}
               cameraMode={cameraMode}
               colorMode={colorMode}
+              resolutionScale={effectiveDpr / 2}
             />
             <PostProcessing getAnalysis={getAnalysis} isAudioConnected={isConnected} />
             <FPSTracker />

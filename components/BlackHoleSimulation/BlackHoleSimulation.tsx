@@ -42,6 +42,7 @@ interface BlackHoleSimulationProps {
   setOnsetDecay: (value: number) => void;
   cameraMode: CameraModeProps;
   colorMode: ColorModeProps;
+  resolutionScale?: number;
 }
 
 export function BlackHoleSimulation({
@@ -50,6 +51,7 @@ export function BlackHoleSimulation({
   setOnsetDecay,
   cameraMode,
   colorMode,
+  resolutionScale = 1,
 }: BlackHoleSimulationProps) {
   // Get controls from zustand store
   const controls = useVisualizationControls();
@@ -155,6 +157,7 @@ export function BlackHoleSimulation({
           beatIntensityRef={beatIntensityRef}
           starCount={controls.starDensity}
           brightnessBoost={controls.starBrightness}
+          resolutionScale={resolutionScale}
         />
       ) : (
         skyboxPath && <Environment files={skyboxPath} background />

@@ -34,5 +34,5 @@ void main() {
     gl_PointSize = uPointSize * (300.0 / -mvPosition.z);
 
     // Clamp minimum and maximum size
-    gl_PointSize = clamp(gl_PointSize, 1.0, 64.0);
+    gl_PointSize = clamp(gl_PointSize, 2.0, 64.0);
 }
