@@ -7,7 +7,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { CameraControls } from "@/components/camera";
 import { AudioSourceButton } from "@/components/audio";
 import { RecordButton } from "@/components/recording";
-import { SettingsMenu } from "@/components/dialogs";
+import { HelpModal, SettingsMenu } from "@/components/dialogs";
 import { UserMenu } from "@/components/auth/UserMenu";
 import { useProducerMode } from "@/components/ProducerMode";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
@@ -105,8 +105,9 @@ export function BottomControlBar({
 
         <Separator orientation="vertical" className="h-6 mx-2" />
 
-        {/* Settings */}
+        {/* Settings & Help */}
         <SettingsMenu />
+        <HelpModal />
 
         <Separator orientation="vertical" className="h-6 mx-2" />
 
