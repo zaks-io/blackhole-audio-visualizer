@@ -3,6 +3,7 @@
 import { useMemo, useRef, useEffect } from "react";
 import { Environment } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
+import { useShallow } from "zustand/shallow";
 import { ParticleSystem } from "./ParticleSystem";
 import { BlackHole } from "./BlackHole";
 import { CameraSystem } from "@/components/CameraSystem";
@@ -53,18 +54,62 @@ export function BlackHoleSimulation({
   colorMode,
   resolutionScale = 1,
 }: BlackHoleSimulationProps) {
-  // Get controls from zustand store
-  const controls = useVisualizationControls();
+  // Use grouped selectors with shallow comparison to avoid unnecessary re-renders
+  // Only subscribe to values that affect the render output
+  const emitterControls = useVisualizationControls(
+    useShallow((s) => ({
+      emitRadius: s.emitRadius,
+      emitterCount: s.emitterCount,
+      emitterAngle: s.emitterAngle,
+      emitterTilt: s.emitterTilt,
+      showEmitters: s.showEmitters,
+    }))
+  );
+
+  const particleControls = useVisualizationControls(
+    useShallow((s) => ({
+      textureSize: s.textureSize,
+      pointSize: s.pointSize,
+      brightness: s.brightness,
+      alpha: s.alpha,
+      maxDistance: s.maxDistance,
+      gravity: s.gravity,
+      timeScale: s.timeScale,
+      eventHorizonRadius: s.eventHorizonRadius,
+      softening: s.softening,
+      orbitDecay: s.orbitDecay,
+      spawnRate: s.spawnRate,
+      inwardAngle: s.inwardAngle,
+      iscoRatio: s.iscoRatio,
+      beatPulse: s.beatPulse,
+      iscoStrength: s.iscoStrength,
+      emitterSpread: s.emitterSpread,
+      amplitude: s.amplitude,
+      beatRepulsion: s.beatRepulsion,
+    }))
+  );
+
+  const skyboxControls = useVisualizationControls(
+    useShallow((s) => ({
+      skybox: s.skybox,
+      starDensity: s.starDensity,
+      starBrightness: s.starBrightness,
+    }))
+  );
+
+  // These values only affect useEffects, use individual selectors
+  const colorPalette = useVisualizationControls((s) => s.colorPalette);
+  const onsetDecay = useVisualizationControls((s) => s.onsetDecay);
 
   // Sync color palette changes to colorMode
   useEffect(() => {
-    colorMode.setPalette(controls.colorPalette);
-  }, [controls.colorPalette, colorMode]);
+    colorMode.setPalette(colorPalette);
+  }, [colorPalette, colorMode]);
 
   // Sync onset decay changes
   useEffect(() => {
-    setOnsetDecay(controls.onsetDecay);
-  }, [controls.onsetDecay, setOnsetDecay]);
+    setOnsetDecay(onsetDecay);
+  }, [onsetDecay, setOnsetDecay]);
 
   const beatIntensityRef = useRef(0);
 
@@ -78,11 +123,13 @@ export function BlackHoleSimulation({
 
   useFrame((state) => {
     if (isAudioConnected) {
+      // Use getState() to avoid subscriptions for runtime-only values
+      const store = useVisualizationControls.getState();
       const analysis = getAnalysis();
       // Use bass peak detection for beat intensity, or fall back to band onsets
       const bassBeat = analysis.peaks.bass ? 1 : 0;
       const onsetBeat = Math.max(analysis.bandOnsets[0] ?? 0, analysis.bandOnsets[1] ?? 0);
-      const beat = Math.max(bassBeat * 0.8, onsetBeat) * controls.audioGain;
+      const beat = Math.max(bassBeat * 0.8, onsetBeat) * store.audioGain;
       beatIntensityRef.current = Math.min(beat, 1.5);
 
       // HFC boost - envelope follow the raw HFC with attack/decay
@@ -97,13 +144,13 @@ export function BlackHoleSimulation({
 
       // Spawn burst - trigger on bass peaks, decay back to 1
       if (analysis.peaks.bass) {
-        spawnBurstRef.current = controls.spawnBurstMultiplier;
+        spawnBurstRef.current = store.spawnBurstMultiplier;
       } else {
         // Decay back toward 1.0
         spawnBurstRef.current = 1.0 + (spawnBurstRef.current - 1.0) * spawnDecayCoef.current;
       }
 
-      if (controls.autoColorChange) {
+      if (store.autoColorChange) {
         colorMode.processBeat(beat, state.clock.elapsedTime);
       }
     } else {
@@ -116,47 +163,54 @@ export function BlackHoleSimulation({
   const scaledOnsetsRef = useRef(new Float32Array(36));
 
   const getAudioData = () => {
+    // Use getState() to avoid subscriptions for runtime-only values
+    const store = useVisualizationControls.getState();
     const analysis = getAnalysis();
     // Apply gain to all band onsets (reuse buffer to avoid GC)
     const scaledOnsets = scaledOnsetsRef.current;
     for (let i = 0; i < analysis.bandOnsets.length; i++) {
-      scaledOnsets[i] = analysis.bandOnsets[i] * controls.audioGain;
+      scaledOnsets[i] = analysis.bandOnsets[i] * store.audioGain;
     }
     return {
       bandEnergies: analysis.bandEnergies,
       bandOnsets: scaledOnsets,
       bandCount: analysis.bandCount,
-      hfcBoost: (hfcBoostRef.current * controls.hfcVelocityBoost) / 0.3, // Normalize to control range
+      hfcBoost: (hfcBoostRef.current * store.hfcVelocityBoost) / 0.3, // Normalize to control range
       spawnBurst: spawnBurstRef.current,
     };
   };
 
   const emitterPositions = useMemo(() => {
     const positions: [number, number, number][] = [];
-    for (let i = 0; i < controls.emitterCount; i++) {
-      const baseAngle = (i * Math.PI * 2) / controls.emitterCount;
-      const angle = baseAngle + controls.emitterAngle;
-      const x = controls.emitRadius * Math.cos(angle);
-      const z = controls.emitRadius * Math.sin(angle);
-      const y = Math.sin(angle) * controls.emitterTilt;
+    for (let i = 0; i < emitterControls.emitterCount; i++) {
+      const baseAngle = (i * Math.PI * 2) / emitterControls.emitterCount;
+      const angle = baseAngle + emitterControls.emitterAngle;
+      const x = emitterControls.emitRadius * Math.cos(angle);
+      const z = emitterControls.emitRadius * Math.sin(angle);
+      const y = Math.sin(angle) * emitterControls.emitterTilt;
       positions.push([x, y, z]);
     }
     return positions;
-  }, [controls.emitRadius, controls.emitterCount, controls.emitterAngle, controls.emitterTilt]);
+  }, [
+    emitterControls.emitRadius,
+    emitterControls.emitterCount,
+    emitterControls.emitterAngle,
+    emitterControls.emitterTilt,
+  ]);
 
-  const skyboxPath = SKYBOX_OPTIONS[controls.skybox] || "";
+  const skyboxPath = SKYBOX_OPTIONS[skyboxControls.skybox] || "";
 
-  const isProceduralStars = controls.skybox === "Procedural Stars";
+  const isProceduralStars = skyboxControls.skybox === "Procedural Stars";
 
   return (
     <>
       <color attach="background" args={["#000000"]} />
       {isProceduralStars ? (
         <StarField
-          key={controls.starDensity}
+          key={skyboxControls.starDensity}
           beatIntensityRef={beatIntensityRef}
-          starCount={controls.starDensity}
-          brightnessBoost={controls.starBrightness}
+          starCount={skyboxControls.starDensity}
+          brightnessBoost={skyboxControls.starBrightness}
           resolutionScale={resolutionScale}
         />
       ) : (
@@ -164,42 +218,42 @@ export function BlackHoleSimulation({
       )}
 
       <ParticleSystem
-        key={controls.textureSize}
-        textureSize={controls.textureSize}
-        pointSize={controls.pointSize}
-        brightness={controls.brightness}
-        alpha={controls.alpha}
-        maxDistance={controls.maxDistance}
+        key={particleControls.textureSize}
+        textureSize={particleControls.textureSize}
+        pointSize={particleControls.pointSize}
+        brightness={particleControls.brightness}
+        alpha={particleControls.alpha}
+        maxDistance={particleControls.maxDistance}
         allColors={colorMode.allColors}
         paletteOffset={colorMode.paletteOffset}
-        gravitationalParameter={controls.gravity}
-        timeScale={controls.timeScale}
-        eventHorizonRadius={controls.eventHorizonRadius}
-        softening={controls.softening}
-        orbitDecay={controls.orbitDecay}
-        emissionRadius={controls.emitRadius}
-        emitterCount={controls.emitterCount}
-        emitterAngle={controls.emitterAngle}
-        emitterTilt={controls.emitterTilt}
-        spawnRate={controls.spawnRate}
-        inwardAngle={controls.inwardAngle}
-        iscoRadius={controls.eventHorizonRadius * controls.iscoRatio}
-        beatPulse={controls.beatPulse}
-        iscoStrength={controls.iscoStrength}
-        emitterSpread={controls.emitterSpread}
-        audioAmplitude={controls.amplitude}
-        beatRepulsion={controls.beatRepulsion}
+        gravitationalParameter={particleControls.gravity}
+        timeScale={particleControls.timeScale}
+        eventHorizonRadius={particleControls.eventHorizonRadius}
+        softening={particleControls.softening}
+        orbitDecay={particleControls.orbitDecay}
+        emissionRadius={emitterControls.emitRadius}
+        emitterCount={emitterControls.emitterCount}
+        emitterAngle={emitterControls.emitterAngle}
+        emitterTilt={emitterControls.emitterTilt}
+        spawnRate={particleControls.spawnRate}
+        inwardAngle={particleControls.inwardAngle}
+        iscoRadius={particleControls.eventHorizonRadius * particleControls.iscoRatio}
+        beatPulse={particleControls.beatPulse}
+        iscoStrength={particleControls.iscoStrength}
+        emitterSpread={particleControls.emitterSpread}
+        audioAmplitude={particleControls.amplitude}
+        beatRepulsion={particleControls.beatRepulsion}
         getAudioData={getAudioData}
         audioEnabled={isAudioConnected}
       />
       <BlackHole
-        eventHorizonRadius={controls.eventHorizonRadius}
+        eventHorizonRadius={particleControls.eventHorizonRadius}
         beatIntensityRef={beatIntensityRef}
-        beatPulse={controls.beatPulse}
+        beatPulse={particleControls.beatPulse}
       />
 
       {/* Emitter position indicators */}
-      {controls.showEmitters &&
+      {emitterControls.showEmitters &&
         emitterPositions.map((pos, i) => (
           <mesh key={i} position={pos}>
             <sphereGeometry args={[0.5, 16, 16]} />

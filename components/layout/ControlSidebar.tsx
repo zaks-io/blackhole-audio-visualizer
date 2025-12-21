@@ -1,6 +1,6 @@
 "use client";
 
-import type { RefObject } from "react";
+import { useState, type RefObject } from "react";
 import { Settings } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { VisualizationControls } from "@/components/controls";
@@ -12,6 +12,8 @@ interface ControlSidebarProps {
 }
 
 export function ControlSidebar({ analysisRef }: ControlSidebarProps) {
+  const [activeTab, setActiveTab] = useState("controls");
+
   return (
     <div className="h-screen w-80 flex flex-col border-l border-white/10 glass-panel-solid">
       {/* Header */}
@@ -21,7 +23,11 @@ export function ControlSidebar({ analysisRef }: ControlSidebarProps) {
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="controls" className="flex-1 flex flex-col overflow-hidden">
+      <Tabs
+        value={activeTab}
+        onValueChange={setActiveTab}
+        className="flex-1 flex flex-col overflow-hidden"
+      >
         <TabsList className="px-3 shrink-0">
           <TabsTrigger value="controls">Controls</TabsTrigger>
           <TabsTrigger value="audio">Audio</TabsTrigger>
@@ -33,7 +39,7 @@ export function ControlSidebar({ analysisRef }: ControlSidebarProps) {
 
         <TabsContent value="audio" className="flex-1 overflow-y-auto px-4 py-2 scrollbar-thin">
           {analysisRef ? (
-            <AudioDebugTab analysisRef={analysisRef} />
+            <AudioDebugTab analysisRef={analysisRef} isVisible={activeTab === "audio"} />
           ) : (
             <div className="text-xs text-muted-foreground text-center py-8">
               Connect audio to see analysis

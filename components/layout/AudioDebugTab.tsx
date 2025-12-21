@@ -9,13 +9,16 @@ import { PeakTimeline } from "@/components/AudioAnalysisDebug/PeakTimeline";
 
 interface AudioDebugTabProps {
   analysisRef: RefObject<AnalyzedAudio | null>;
+  isVisible?: boolean;
 }
 
-export function AudioDebugTab({ analysisRef }: AudioDebugTabProps) {
+export function AudioDebugTab({ analysisRef, isVisible = true }: AudioDebugTabProps) {
   const [analysis, setAnalysis] = useState<AnalyzedAudio | null>(null);
 
-  // Poll the ref at 10Hz for UI updates
+  // Poll the ref at 10Hz for UI updates - only when visible
   useEffect(() => {
+    if (!isVisible) return;
+
     const interval = setInterval(() => {
       const current = analysisRef.current;
       if (current) {
@@ -39,7 +42,7 @@ export function AudioDebugTab({ analysisRef }: AudioDebugTabProps) {
     }, 100);
 
     return () => clearInterval(interval);
-  }, [analysisRef]);
+  }, [analysisRef, isVisible]);
 
   const energy = analysis?.energy;
   const raw = analysis?.raw;

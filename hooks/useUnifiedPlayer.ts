@@ -16,11 +16,12 @@ export interface SectionTiming {
 export interface UnifiedPlayerState {
   isPlaying: boolean;
   isPaused: boolean;
-  currentTime: number;
   duration: number;
   currentSectionIndex: number;
   status: "idle" | "playing" | "paused" | "ended";
 }
+
+export type TimeSubscriber = (currentTime: number, duration: number) => void;
 
 export interface UnifiedPlayerConfig {
   playlist: PlaylistWithPresets | null;
@@ -32,7 +33,6 @@ export interface UnifiedPlayerConfig {
 const initialState: UnifiedPlayerState = {
   isPlaying: false,
   isPaused: false,
-  currentTime: 0,
   duration: 0,
   currentSectionIndex: -1,
   status: "idle",
@@ -68,11 +68,12 @@ export function useUnifiedPlayer(config: UnifiedPlayerConfig) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const currentSectionRef = useRef(-1);
-  const lastDisplayedSecondRef = useRef(-1);
   const progressTweenRef = useRef<gsap.core.Tween | null>(null);
   const updateLoopAudioRef = useRef<() => void>(() => {});
   const updateLoopTimedRef = useRef<() => void>(() => {});
   const loopEnabledRef = useRef(loopEnabled);
+  const currentTimeRef = useRef(0);
+  const timeSubscribersRef = useRef<Set<TimeSubscriber>>(new Set());
 
   const sectionTimings = useMemo((): SectionTiming[] => {
     if (!playlist) return [];
@@ -157,7 +158,7 @@ export function useUnifiedPlayer(config: UnifiedPlayerConfig) {
     }
     stopAll();
     currentSectionRef.current = -1;
-    lastDisplayedSecondRef.current = -1;
+    currentTimeRef.current = 0;
   }, [stopAll]);
 
   useEffect(() => {
@@ -168,11 +169,16 @@ export function useUnifiedPlayer(config: UnifiedPlayerConfig) {
       const currentTimeMs = currentTime * 1000;
       const section = findSectionAtTime(currentTimeMs);
       const sectionIndex = section?.index ?? -1;
-      const displayedSecond = Math.floor(currentTime);
 
-      // Only update state when section changes or displayed second changes
+      // Update ref (no React re-render)
+      currentTimeRef.current = currentTime;
+
+      // Notify subscribers (they handle their own rendering)
+      const duration = audioRef.current.duration || 0;
+      timeSubscribersRef.current.forEach((subscriber) => subscriber(currentTime, duration));
+
+      // Only update React state when section changes
       const sectionChanged = sectionIndex !== currentSectionRef.current && sectionIndex >= 0;
-      const secondChanged = displayedSecond !== lastDisplayedSecondRef.current;
 
       if (sectionChanged) {
         currentSectionRef.current = sectionIndex;
@@ -193,14 +199,9 @@ export function useUnifiedPlayer(config: UnifiedPlayerConfig) {
             }
           }
         }
-      }
-
-      if (sectionChanged || secondChanged) {
-        lastDisplayedSecondRef.current = displayedSecond;
         setState((s) => ({
           ...s,
           currentSectionIndex: sectionIndex,
-          currentTime,
         }));
       }
 
@@ -217,11 +218,16 @@ export function useUnifiedPlayer(config: UnifiedPlayerConfig) {
       const currentTime = currentTimeMs / 1000;
       const section = findSectionAtTime(currentTimeMs);
       const sectionIndex = section?.index ?? -1;
-      const displayedSecond = Math.floor(currentTime);
 
-      // Only update state when section changes or displayed second changes
+      // Update ref (no React re-render)
+      currentTimeRef.current = currentTime;
+
+      // Notify subscribers (they handle their own rendering)
+      const duration = totalDurationMs / 1000;
+      timeSubscribersRef.current.forEach((subscriber) => subscriber(currentTime, duration));
+
+      // Only update React state when section changes
       const sectionChanged = sectionIndex !== currentSectionRef.current && sectionIndex >= 0;
-      const secondChanged = displayedSecond !== lastDisplayedSecondRef.current;
 
       if (sectionChanged) {
         currentSectionRef.current = sectionIndex;
@@ -242,14 +248,9 @@ export function useUnifiedPlayer(config: UnifiedPlayerConfig) {
             }
           }
         }
-      }
-
-      if (sectionChanged || secondChanged) {
-        lastDisplayedSecondRef.current = displayedSecond;
         setState((s) => ({
           ...s,
           currentSectionIndex: sectionIndex,
-          currentTime,
         }));
       }
 
@@ -279,9 +280,9 @@ export function useUnifiedPlayer(config: UnifiedPlayerConfig) {
           if (audioRef.current) {
             audioRef.current.currentTime = 0;
             currentSectionRef.current = -1; // Force section re-detection
+            currentTimeRef.current = 0;
             setState((s) => ({
               ...s,
-              currentTime: 0,
               currentSectionIndex: -1,
             }));
             audioRef.current.play().catch(() => {
@@ -309,11 +310,11 @@ export function useUnifiedPlayer(config: UnifiedPlayerConfig) {
       audioRef.current.addEventListener("loadedmetadata", handleLoadedMetadata);
 
       audioRef.current.play().then(() => {
+        currentTimeRef.current = 0;
         setState({
           isPlaying: true,
           isPaused: false,
           currentSectionIndex: -1,
-          currentTime: 0,
           duration: totalDurationMs / 1000,
           status: "playing",
         });
@@ -352,11 +353,11 @@ export function useUnifiedPlayer(config: UnifiedPlayerConfig) {
         },
       });
 
+      currentTimeRef.current = 0;
       setState({
         isPlaying: true,
         isPaused: false,
         currentSectionIndex: -1,
-        currentTime: 0,
         duration: totalDurationMs / 1000,
         status: "playing",
       });
@@ -438,12 +439,19 @@ export function useUnifiedPlayer(config: UnifiedPlayerConfig) {
       const clampedTimeMs = Math.max(0, Math.min(timeMs, totalDurationMs));
       const clampedTimeSeconds = clampedTimeMs / 1000;
 
+      // Update the time ref
+      currentTimeRef.current = clampedTimeSeconds;
+
       if (audioRef.current) {
         audioRef.current.currentTime = clampedTimeSeconds;
       } else if (progressTweenRef.current) {
         const progress = clampedTimeMs / totalDurationMs;
         progressTweenRef.current.progress(progress);
       }
+
+      // Notify subscribers of seek
+      const duration = audioRef.current?.duration || totalDurationMs / 1000;
+      timeSubscribersRef.current.forEach((subscriber) => subscriber(clampedTimeSeconds, duration));
 
       const section = findSectionAtTime(clampedTimeMs);
 
@@ -472,12 +480,6 @@ export function useUnifiedPlayer(config: UnifiedPlayerConfig) {
         setState((s) => ({
           ...s,
           currentSectionIndex: section.index,
-          currentTime: clampedTimeSeconds,
-        }));
-      } else {
-        setState((s) => ({
-          ...s,
-          currentTime: clampedTimeSeconds,
         }));
       }
     },
@@ -507,6 +509,15 @@ export function useUnifiedPlayer(config: UnifiedPlayerConfig) {
 
   const getAudioElement = useCallback(() => audioRef.current, []);
 
+  const subscribeToTime = useCallback((callback: TimeSubscriber) => {
+    timeSubscribersRef.current.add(callback);
+    return () => {
+      timeSubscribersRef.current.delete(callback);
+    };
+  }, []);
+
+  const getCurrentTime = useCallback(() => currentTimeRef.current, []);
+
   return {
     state,
     play,
@@ -522,5 +533,7 @@ export function useUnifiedPlayer(config: UnifiedPlayerConfig) {
     currentPreset,
     audioElement,
     getAudioElement,
+    subscribeToTime,
+    getCurrentTime,
   };
 }

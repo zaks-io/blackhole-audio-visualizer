@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import {
   Sheet,
   SheetContent,
@@ -25,7 +26,7 @@ function formatDuration(ms: number): string {
   return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
 }
 
-export function SceneInfoPanel({
+function SceneInfoPanelComponent({
   scene,
   sectionTimings,
   currentSectionIndex,
@@ -113,3 +114,5 @@ export function SceneInfoPanel({
     </Sheet>
   );
 }
+
+export const SceneInfoPanel = memo(SceneInfoPanelComponent);

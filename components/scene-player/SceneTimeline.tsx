@@ -1,11 +1,12 @@
 "use client";
 
-import { useRef, useCallback, useState } from "react";
-import type { SectionTiming } from "@/hooks/useUnifiedPlayer";
+import { useRef, useCallback, useState, useEffect, memo } from "react";
+import type { SectionTiming, TimeSubscriber } from "@/hooks/useUnifiedPlayer";
 import { cn } from "@/lib/utils";
 
 interface SceneTimelineProps {
-  currentTime: number;
+  subscribeToTime: (callback: TimeSubscriber) => () => void;
+  getCurrentTime: () => number;
   duration: number;
   sectionTimings: SectionTiming[];
   currentSectionIndex: number;
@@ -13,8 +14,9 @@ interface SceneTimelineProps {
   disabled?: boolean;
 }
 
-export function SceneTimeline({
-  currentTime,
+function SceneTimelineComponent({
+  subscribeToTime,
+  getCurrentTime,
   duration,
   sectionTimings,
   currentSectionIndex,
@@ -22,10 +24,36 @@ export function SceneTimeline({
   disabled = false,
 }: SceneTimelineProps) {
   const trackRef = useRef<HTMLDivElement>(null);
+  const progressBarRef = useRef<HTMLDivElement>(null);
+  const playheadRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const durationRef = useRef(duration);
 
-  const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
+  // Update duration ref when duration changes (outside render)
+  useEffect(() => {
+    durationRef.current = duration;
+  }, [duration]);
+
   const totalDurationMs = duration * 1000;
+
+  // Subscribe to time updates for progress bar and playhead
+  useEffect(() => {
+    const updateProgress = (currentTime: number, dur: number) => {
+      const progress = dur > 0 ? (currentTime / dur) * 100 : 0;
+      if (progressBarRef.current) {
+        progressBarRef.current.style.width = `${progress}%`;
+      }
+      if (playheadRef.current) {
+        playheadRef.current.style.left = `calc(${progress}% - 6px)`;
+      }
+    };
+
+    // Set initial progress
+    updateProgress(getCurrentTime(), duration);
+
+    const unsubscribe = subscribeToTime(updateProgress);
+    return unsubscribe;
+  }, [subscribeToTime, getCurrentTime, duration]);
 
   const handleSeek = useCallback(
     (clientX: number) => {
@@ -34,10 +62,10 @@ export function SceneTimeline({
       const rect = trackRef.current.getBoundingClientRect();
       const x = clientX - rect.left;
       const percentage = Math.max(0, Math.min(1, x / rect.width));
-      const seekTime = percentage * duration;
+      const seekTime = percentage * durationRef.current;
       onSeek(seekTime);
     },
-    [duration, onSeek, disabled]
+    [onSeek, disabled]
   );
 
   const handlePointerDown = useCallback(
@@ -105,21 +133,24 @@ export function SceneTimeline({
         );
       })}
 
-      {/* Progress bar */}
+      {/* Progress bar - updated via ref */}
       <div
-        className="absolute top-0 bottom-0 left-0 bg-white/60 transition-[width] duration-75"
-        style={{ width: `${progress}%` }}
+        ref={progressBarRef}
+        className="absolute top-0 bottom-0 left-0 bg-white/60"
+        style={{ width: "0%" }}
       />
 
-      {/* Playhead */}
+      {/* Playhead - updated via ref */}
       <div
+        ref={playheadRef}
         className={cn(
           "absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-white shadow-lg",
-          "transition-[left] duration-75",
           isDragging && "scale-125"
         )}
-        style={{ left: `calc(${progress}% - 6px)` }}
+        style={{ left: "calc(0% - 6px)" }}
       />
     </div>
   );
 }
+
+export const SceneTimeline = memo(SceneTimelineComponent);

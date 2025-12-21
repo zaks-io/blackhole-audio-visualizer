@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, memo } from "react";
 import { useRouter } from "next/navigation";
 import {
   Play,
@@ -25,6 +25,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { SceneTimeline } from "./SceneTimeline";
+import { TimeDisplay } from "./TimeDisplay";
 import { SceneInfoPanel } from "./SceneInfoPanel";
 import { useUIState } from "@/hooks/useUIState";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
@@ -38,13 +39,7 @@ interface ScenePlayerControlsProps {
   player: ReturnType<typeof useUnifiedPlayer>;
 }
 
-function formatTime(seconds: number): string {
-  const mins = Math.floor(seconds / 60);
-  const secs = Math.floor(seconds % 60);
-  return `${mins}:${secs.toString().padStart(2, "0")}`;
-}
-
-export function ScenePlayerControls({ scene, player }: ScenePlayerControlsProps) {
+function ScenePlayerControlsComponent({ scene, player }: ScenePlayerControlsProps) {
   const router = useRouter();
   const [isInfoOpen, setIsInfoOpen] = useState(false);
   const {
@@ -70,8 +65,19 @@ export function ScenePlayerControls({ scene, player }: ScenePlayerControlsProps)
     setControlBarCollapsed(false);
   }, [setControlBarCollapsed]);
 
-  const { state, play, pause, resume, seek, setLoop, loopEnabled, sectionTimings } = player;
-  const { isPlaying, isPaused, currentTime, duration, currentSectionIndex } = state;
+  const {
+    state,
+    play,
+    pause,
+    resume,
+    seek,
+    setLoop,
+    loopEnabled,
+    sectionTimings,
+    subscribeToTime,
+    getCurrentTime,
+  } = player;
+  const { isPlaying, isPaused, duration, currentSectionIndex } = state;
 
   const canPlay = !!scene.audioUrl || (scene.playlist && scene.playlist.items.length > 0);
 
@@ -99,7 +105,7 @@ export function ScenePlayerControls({ scene, player }: ScenePlayerControlsProps)
   const showPlayButton = !isPlaying || isPaused;
 
   return (
-    <>
+    <TooltipProvider delayDuration={300}>
       {/* Floating pill toolbar */}
       <div
         className={cn(
@@ -114,52 +120,49 @@ export function ScenePlayerControls({ scene, player }: ScenePlayerControlsProps)
           )}
         >
           {/* Back button */}
-          <TooltipProvider delayDuration={300}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => router.push("/app")}
-                  className="h-10 w-10 rounded-full"
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="top" className="text-xs">
-                Back to Home
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => router.push("/app")}
+                className="h-10 w-10 rounded-full"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="text-xs">
+              Back to Home
+            </TooltipContent>
+          </Tooltip>
 
           {/* Play/Pause button */}
-          <TooltipProvider delayDuration={300}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handlePlayPause}
-                  disabled={!canPlay}
-                  className="h-10 w-10 rounded-full"
-                >
-                  {showPlayButton ? (
-                    <Play className="h-5 w-5 ml-0.5" />
-                  ) : (
-                    <Pause className="h-5 w-5" />
-                  )}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="top" className="text-xs">
-                {showPlayButton ? "Play" : "Pause"}
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handlePlayPause}
+                disabled={!canPlay}
+                className="h-10 w-10 rounded-full"
+              >
+                {showPlayButton ? (
+                  <Play className="h-5 w-5 ml-0.5" />
+                ) : (
+                  <Pause className="h-5 w-5" />
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="text-xs">
+              {showPlayButton ? "Play" : "Pause"}
+            </TooltipContent>
+          </Tooltip>
 
           {/* Timeline */}
           <div className="w-64 sm:w-80 md:w-96">
             <SceneTimeline
-              currentTime={currentTime}
+              subscribeToTime={subscribeToTime}
+              getCurrentTime={getCurrentTime}
               duration={duration}
               sectionTimings={sectionTimings}
               currentSectionIndex={currentSectionIndex}
@@ -168,93 +171,87 @@ export function ScenePlayerControls({ scene, player }: ScenePlayerControlsProps)
             />
           </div>
 
-          {/* Time display */}
-          <div className="text-sm text-white/70 tabular-nums min-w-[80px] text-center">
-            {formatTime(currentTime)} / {formatTime(duration)}
-          </div>
+          {/* Time display - self-rendering via subscription */}
+          <TimeDisplay
+            subscribeToTime={subscribeToTime}
+            getCurrentTime={getCurrentTime}
+            duration={duration}
+          />
 
           {/* Loop toggle */}
-          <TooltipProvider delayDuration={300}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleToggleLoop}
-                  className={cn(
-                    "h-10 w-10 rounded-full",
-                    loopEnabled && "bg-primary/20 text-primary"
-                  )}
-                >
-                  <Repeat className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="top" className="text-xs">
-                {loopEnabled ? "Disable Loop" : "Enable Loop"}
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleToggleLoop}
+                className={cn(
+                  "h-10 w-10 rounded-full",
+                  loopEnabled && "bg-primary/20 text-primary"
+                )}
+              >
+                <Repeat className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="text-xs">
+              {loopEnabled ? "Disable Loop" : "Enable Loop"}
+            </TooltipContent>
+          </Tooltip>
 
           {/* Info button */}
-          <TooltipProvider delayDuration={300}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setIsInfoOpen(true)}
-                  className="h-10 w-10 rounded-full"
-                >
-                  <Info className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="top" className="text-xs">
-                Scene Info
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsInfoOpen(true)}
+                className="h-10 w-10 rounded-full"
+              >
+                <Info className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="text-xs">
+              Scene Info
+            </TooltipContent>
+          </Tooltip>
 
           {/* Scene Editor button - Admin only */}
           {isAdmin && (
-            <TooltipProvider delayDuration={300}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => (isSceneEditorOpen ? closeSceneEditor() : openSceneEditor())}
-                    className={cn(
-                      "h-10 w-10 rounded-full",
-                      isSceneEditorOpen && "bg-primary/20 text-primary"
-                    )}
-                  >
-                    <Film className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="top" className="text-xs">
-                  Scene Editor
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => (isSceneEditorOpen ? closeSceneEditor() : openSceneEditor())}
+                  className={cn(
+                    "h-10 w-10 rounded-full",
+                    isSceneEditorOpen && "bg-primary/20 text-primary"
+                  )}
+                >
+                  <Film className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="text-xs">
+                Scene Editor
+              </TooltipContent>
+            </Tooltip>
           )}
 
           {/* Settings dropdown - Admin only */}
           {isAdmin && (
             <DropdownMenu>
-              <TooltipProvider delayDuration={300}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full">
-                        <Settings className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                  </TooltipTrigger>
-                  <TooltipContent side="top" className="text-xs">
-                    Settings
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full">
+                      <Settings className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="text-xs">
+                  Settings
+                </TooltipContent>
+              </Tooltip>
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuItem
                   onSelect={(e) => e.preventDefault()}
@@ -291,23 +288,21 @@ export function ScenePlayerControls({ scene, player }: ScenePlayerControlsProps)
           )}
 
           {/* Collapse button */}
-          <TooltipProvider delayDuration={300}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleHideControls}
-                  className="h-10 w-10 rounded-full"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="top" className="text-xs">
-                Hide Controls
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleHideControls}
+                className="h-10 w-10 rounded-full"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="text-xs">
+              Hide Controls
+            </TooltipContent>
+          </Tooltip>
         </div>
 
         {/* Current section name */}
@@ -329,22 +324,20 @@ export function ScenePlayerControls({ scene, player }: ScenePlayerControlsProps)
             : "opacity-0 translate-x-4 pointer-events-none"
         )}
       >
-        <TooltipProvider delayDuration={300}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                onClick={handleShowControls}
-                className="glass-panel h-12 w-12 rounded-full p-0"
-              >
-                <ChevronRight className="h-5 w-5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="left" className="text-xs">
-              Show Controls
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              onClick={handleShowControls}
+              className="glass-panel h-12 w-12 rounded-full p-0"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="left" className="text-xs">
+            Show Controls
+          </TooltipContent>
+        </Tooltip>
       </div>
 
       {/* Info panel */}
@@ -355,6 +348,8 @@ export function ScenePlayerControls({ scene, player }: ScenePlayerControlsProps)
         isOpen={isInfoOpen}
         onClose={() => setIsInfoOpen(false)}
       />
-    </>
+    </TooltipProvider>
   );
 }
+
+export const ScenePlayerControls = memo(ScenePlayerControlsComponent);
