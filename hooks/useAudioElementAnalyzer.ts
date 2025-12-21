@@ -14,6 +14,7 @@ const audioContextCache = new WeakMap<
     context: AudioContext;
     source: MediaElementAudioSourceNode;
     analyser: AnalyserNode;
+    mediaStreamDestination: MediaStreamAudioDestinationNode;
   }
 >();
 
@@ -194,7 +195,15 @@ export function useAudioElementAnalyzer(
           analyser.smoothingTimeConstant = 0.8;
           source.connect(analyser);
           analyser.connect(audioContext.destination);
-          audioContextCache.set(element, { context: audioContext, source, analyser });
+          // Create MediaStreamDestination for recording
+          const mediaStreamDestination = audioContext.createMediaStreamDestination();
+          source.connect(mediaStreamDestination);
+          audioContextCache.set(element, {
+            context: audioContext,
+            source,
+            analyser,
+            mediaStreamDestination,
+          });
         }
 
         if (audioContext.state === "suspended") {
@@ -238,8 +247,17 @@ export function useAudioElementAnalyzer(
 
   const isConnected = useCallback(() => isConnectedRef.current, []);
 
+  const getRecordingStream = useCallback((): MediaStream | null => {
+    if (connectedElementRef.current) {
+      const cached = audioContextCache.get(connectedElementRef.current);
+      return cached?.mediaStreamDestination?.stream ?? null;
+    }
+    return null;
+  }, []);
+
   return {
     getAnalysis,
     isConnected,
+    getRecordingStream,
   };
 }

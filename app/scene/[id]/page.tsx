@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useMemo } from "react";
+import { use, useMemo, useRef } from "react";
 import { Canvas } from "@react-three/fiber";
 import { NoToneMapping, SRGBColorSpace } from "three";
 import { PostProcessing } from "@/components/PostProcessing";
@@ -87,8 +87,12 @@ function ScenePlayerContent({ sceneId }: { sceneId: string }) {
     onCameraModeChange: (mode) => cameraMode.setMode(mode as CameraMode),
   });
 
-  const audioElement = player.state.isPlaying ? player.audioElement : null;
-  const { getAnalysis, isConnected } = useAudioElementAnalyzer(audioElement);
+  // Always connect analyzer so recording stream is available when needed
+  const { getAnalysis, isConnected, getRecordingStream } = useAudioElementAnalyzer(
+    player.audioElement
+  );
+
+  const canvasContainerRef = useRef<HTMLDivElement>(null);
 
   if (isLoading) {
     return <SceneLoading />;
@@ -101,7 +105,10 @@ function ScenePlayerContent({ sceneId }: { sceneId: string }) {
   return (
     <div className="w-screen h-dvh bg-black grid grid-cols-[1fr_auto_auto]">
       {/* Main canvas - takes full screen */}
-      <div className="relative w-full h-full min-w-0 min-h-0 overflow-hidden flex items-center justify-center">
+      <div
+        ref={canvasContainerRef}
+        className="relative w-full h-full min-w-0 min-h-0 overflow-hidden flex items-center justify-center"
+      >
         <Canvas
           camera={{ position: [0, 90, 150], fov: 60 }}
           gl={{
@@ -129,7 +136,12 @@ function ScenePlayerContent({ sceneId }: { sceneId: string }) {
         </Canvas>
 
         {/* Floating controls - inside canvas div like main app */}
-        <ScenePlayerControls scene={scene} player={player} />
+        <ScenePlayerControls
+          scene={scene}
+          player={player}
+          canvasRef={canvasContainerRef}
+          getRecordingStream={getRecordingStream}
+        />
 
         {/* Song generation overlay */}
         {scene.song?.status === "generating" && <SongGeneratingOverlay />}

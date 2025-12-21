@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, memo } from "react";
+import { useState, useCallback, memo, type RefObject } from "react";
 import { useRouter } from "next/navigation";
 import {
   Play,
@@ -30,6 +30,8 @@ import { SceneInfoPanel } from "./SceneInfoPanel";
 import { useUIState } from "@/hooks/useUIState";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useSceneControls } from "@/components/scenes/useSceneControls";
+import { useSceneRecording } from "@/hooks/useSceneRecording";
+import { RecordButton } from "@/components/recording/RecordButton";
 import type { SceneWithDetails } from "@/hooks/useConvexScenes";
 import type { useUnifiedPlayer } from "@/hooks/useUnifiedPlayer";
 import { cn } from "@/lib/utils";
@@ -37,9 +39,16 @@ import { cn } from "@/lib/utils";
 interface ScenePlayerControlsProps {
   scene: SceneWithDetails;
   player: ReturnType<typeof useUnifiedPlayer>;
+  canvasRef: RefObject<HTMLDivElement | null>;
+  getRecordingStream: () => MediaStream | null;
 }
 
-function ScenePlayerControlsComponent({ scene, player }: ScenePlayerControlsProps) {
+function ScenePlayerControlsComponent({
+  scene,
+  player,
+  canvasRef,
+  getRecordingStream,
+}: ScenePlayerControlsProps) {
   const router = useRouter();
   const [isInfoOpen, setIsInfoOpen] = useState(false);
   const {
@@ -55,6 +64,12 @@ function ScenePlayerControlsComponent({ scene, player }: ScenePlayerControlsProp
   } = useUIState();
   const { openSceneEditor, closeSceneEditor, isSceneEditorOpen } = useSceneControls();
   const isAdmin = useIsAdmin();
+
+  const sceneRecording = useSceneRecording({
+    player,
+    getRecordingStream,
+    canvasRef,
+  });
 
   const handleHideControls = useCallback(() => {
     setDevControlsVisible(false);
@@ -235,6 +250,20 @@ function ScenePlayerControlsComponent({ scene, player }: ScenePlayerControlsProp
                 Scene Editor
               </TooltipContent>
             </Tooltip>
+          )}
+
+          {/* Record button - Admin only */}
+          {isAdmin && (
+            <RecordButton
+              isRecording={sceneRecording.isRecording}
+              duration={sceneRecording.duration}
+              disabled={!scene.audioUrl || scene.song?.status === "generating"}
+              onToggle={
+                sceneRecording.isRecording
+                  ? sceneRecording.stopRecording
+                  : sceneRecording.startRecording
+              }
+            />
           )}
 
           {/* Settings dropdown - Admin only */}
