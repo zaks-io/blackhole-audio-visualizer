@@ -124,12 +124,11 @@ export function ParticleSystem({
     return { positions: pos, references: refs };
   }, [particleCount, textureSize]);
 
-  // Create color array for shader (56 colors - all palettes)
+  // Create color array for shader (all palettes)
   const colorArray = useMemo(() => {
     const colors: THREE.Color[] = [];
-    for (let i = 0; i < 56; i++) {
-      const colorHex = allColors[i % allColors.length];
-      colors.push(new THREE.Color(colorHex));
+    for (let i = 0; i < allColors.length; i++) {
+      colors.push(new THREE.Color(allColors[i]));
     }
     return colors;
   }, [allColors]);
@@ -171,9 +170,8 @@ export function ParticleSystem({
       const firstColor = allColors[0];
       if (prevFirstColorRef.current !== firstColor) {
         prevFirstColorRef.current = firstColor;
-        for (let i = 0; i < 56; i++) {
-          const colorHex = allColors[i % allColors.length];
-          materialRef.current.uniforms.uEmitterColors.value[i].set(colorHex);
+        for (let i = 0; i < allColors.length; i++) {
+          materialRef.current.uniforms.uEmitterColors.value[i].set(allColors[i]);
         }
       }
     }
