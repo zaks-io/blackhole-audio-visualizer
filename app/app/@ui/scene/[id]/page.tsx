@@ -1,74 +1,29 @@
-"use client";
-
-import { use, useRef, useMemo, useEffect } from "react";
-import { ScenePlayerControls } from "@/components/scene-player/ScenePlayerControls";
-import { TopToolbar } from "@/components/layout";
-import { useCameraMode, type CameraMode } from "@/components/CameraSystem";
-import { useViewerMode } from "@/hooks/useViewerMode";
-import { useUnifiedAudio } from "@/hooks/useUnifiedAudio";
-import { usePublicSceneWithDetails } from "@/hooks/useConvexScenes";
-import { useUnifiedPlayer } from "@/hooks/useUnifiedPlayer";
-import type { PlaylistWithPresets } from "@/components/ProducerMode/types";
+import { preloadQuery } from "convex/nextjs";
+import { api } from "@/convex/_generated/api";
+import { SceneModeUIClient } from "./SceneModeUIClient";
+import { Id } from "@/convex/_generated/dataModel";
 
 interface PageProps {
   params: Promise<{ id: string }>;
 }
 
-export default function SceneModeUI({ params }: PageProps) {
-  const { id: sceneId } = use(params);
-  const setMode = useViewerMode((s) => s.setMode);
+export default async function ScenePage({ params }: PageProps) {
+  const { id } = await params;
 
-  // Sync URL to store
-  useEffect(() => {
-    setMode("scene", sceneId);
-  }, [sceneId, setMode]);
+  console.log(`[SSR] Preloading scene: ${id}`);
 
-  const cameraMode = useCameraMode();
-  const canvasContainerRef = useRef<HTMLDivElement>(null);
-
-  const { scene } = usePublicSceneWithDetails(sceneId);
-
-  const scenePlaylist: PlaylistWithPresets | null = useMemo(() => {
-    if (!scene?.playlist) return null;
-    return {
-      _id: scene.playlist._id,
-      userId: scene.userId,
-      name: scene.playlist.name,
-      items: scene.playlist.items,
-      shuffle: false,
-      defaultWaitDuration: 10,
-      isPublic: false,
-      updatedAt: 0,
-      presets: scene.playlist.presets as PlaylistWithPresets["presets"],
-    };
-  }, [scene]);
-
-  const scenePlayer = useUnifiedPlayer({
-    playlist: scenePlaylist,
-    audioUrl: scene?.audioUrl,
-    loop: true,
-    onCameraModeChange: (m) => cameraMode.setMode(m as CameraMode),
-  });
-
-  const audio = useUnifiedAudio({
-    sceneAudioElement: scenePlayer.audioElement,
-  });
-
-  // No loading overlays - Canvas continues to show while scene loads
-  if (!scene) {
-    return null;
+  let preloadedScene;
+  try {
+    preloadedScene = await preloadQuery(api.model.scenes.public.getSceneWithDetailsPublic, {
+      sceneId: id as Id<"scenes">,
+    });
+    console.log(`[SSR] Preload complete for ${id}`);
+  } catch (error) {
+    console.error(`[SSR] Error preloading scene ${id}:`, error);
+    // Even if preload fails (e.g. auth), we want to render the client component
+    // which handles the null state gracefully
+    throw error;
   }
 
-  return (
-    <>
-      <TopToolbar currentScene={scene} />
-
-      <ScenePlayerControls
-        scene={scene}
-        player={scenePlayer}
-        canvasRef={canvasContainerRef}
-        getRecordingStream={audio.getRecordingStream}
-      />
-    </>
-  );
+  return <SceneModeUIClient sceneId={id} preloadedScene={preloadedScene} />;
 }
