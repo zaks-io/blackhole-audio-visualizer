@@ -422,6 +422,38 @@ export const startSongGeneration = action({
     if (!composition) {
       throw new Error("Composition not found");
     }
+    const requestToolCallId = `user_requested_generation_${songId}`;
+    await sceneAgent.saveMessages(ctx, {
+      threadId: song.threadId,
+      messages: [
+        {
+          role: "assistant",
+          content: [
+            {
+              type: "tool-call",
+              toolCallId: requestToolCallId,
+              toolName: "userRequestedGeneration",
+              args: { songId: songId as string },
+            },
+          ],
+        },
+        {
+          role: "tool",
+          content: [
+            {
+              type: "tool-result",
+              toolCallId: requestToolCallId,
+              toolName: "userRequestedGeneration",
+              result: {
+                success: true,
+                status: "generating",
+                songId: songId as string,
+              },
+            },
+          ],
+        },
+      ],
+    });
 
     // Update status to "generating"
     await ctx.runMutation(internal.model.scenes.public.updateSongStatus, {
@@ -476,42 +508,39 @@ export const startSongGeneration = action({
 
       const toolCallId = `generate_song_${songId}`;
 
-      // Save tool-call message first (as if agent called generateSong)
-      await sceneAgent.saveMessage(ctx, {
+      await sceneAgent.saveMessages(ctx, {
         threadId: song.threadId,
-        message: {
-          role: "assistant",
-          content: [
-            {
-              type: "tool-call",
-              toolCallId,
-              toolName: "generateSong",
-              args: { songId: songId as string },
-            },
-          ],
-        },
-      });
-
-      // Save tool-result message immediately after
-      await sceneAgent.saveMessage(ctx, {
-        threadId: song.threadId,
-        message: {
-          role: "tool",
-          content: [
-            {
-              type: "tool-result",
-              toolCallId,
-              toolName: "generateSong",
-              result: {
-                success: true,
-                songId: songId as string,
-                name: song.name,
-                durationMs: totalDurationMs,
-                audioUrl,
+        messages: [
+          {
+            role: "assistant",
+            content: [
+              {
+                type: "tool-call",
+                toolCallId,
+                toolName: "generateSong",
+                args: { songId: songId as string },
               },
-            },
-          ],
-        },
+            ],
+          },
+          {
+            role: "tool",
+            content: [
+              {
+                type: "tool-result",
+                toolCallId,
+                toolName: "generateSong",
+                result: {
+                  success: true,
+                  status: "completed",
+                  songId: songId as string,
+                  name: song.name,
+                  durationMs: totalDurationMs,
+                  audioUrl,
+                },
+              },
+            ],
+          },
+        ],
       });
 
       // Continue agent to generate visualization

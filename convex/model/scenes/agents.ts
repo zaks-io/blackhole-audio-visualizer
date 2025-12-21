@@ -392,7 +392,6 @@ const generateVisualizationPlaylist = createTool({
       { songId: args.songId as Id<"generatedSongs"> }
     );
     if (!song) return { action: "error", error: "Song not found" };
-    if (song.status !== "ready") return { action: "error", error: "Song is not in ready status" };
     if (!song.compositionId) return { action: "error", error: "Song has no composition" };
     const composition: Doc<"compositions"> | null = await ctx.runQuery(
       internal.model.scenes.public.getCompositionInternal,
