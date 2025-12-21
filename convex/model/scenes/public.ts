@@ -503,6 +503,16 @@ export const startSongGeneration = action({
         durationMs: totalDurationMs,
       });
 
+      // Create and trigger transcription
+      const transcriptionId = await ctx.runMutation(internal.model.transcriptions.internal.create, {
+        songId,
+      });
+      await ctx.scheduler.runAfter(0, internal.model.transcriptions.internal.start, {
+        transcriptionId,
+        songId,
+        storageId,
+      });
+
       // Get audio URL for the tool result
       const audioUrl = await ctx.storage.getUrl(storageId);
 

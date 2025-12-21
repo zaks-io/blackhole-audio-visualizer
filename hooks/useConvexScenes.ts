@@ -61,6 +61,7 @@ export function useConvexScenes() {
   const createSceneThreadAction = useAction(api.model.scenes.public.createSceneThread);
   const sendSceneMessageAction = useAction(api.model.scenes.public.sendSceneMessage);
   const startSongGenerationAction = useAction(api.model.scenes.public.startSongGeneration);
+  const triggerTranscriptionAction = useAction(api.model.transcriptions.public.trigger);
 
   const createSceneThread = async (sceneId?: string) => {
     return createSceneThreadAction({ sceneId: sceneId as Id<"scenes"> | undefined });
@@ -76,6 +77,10 @@ export function useConvexScenes() {
 
   const startSongGeneration = async (songId: Id<"generatedSongs">) => {
     return startSongGenerationAction({ songId });
+  };
+
+  const triggerTranscription = async (songId: Id<"generatedSongs">) => {
+    return triggerTranscriptionAction({ songId });
   };
 
   const saveScene = async (args: {
@@ -134,6 +139,7 @@ export function useConvexScenes() {
     sendSceneMessage,
     // Generation
     startSongGeneration,
+    triggerTranscription,
     // CRUD
     saveScene,
     updateScene,

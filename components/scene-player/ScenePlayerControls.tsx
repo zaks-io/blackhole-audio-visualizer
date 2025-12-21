@@ -14,12 +14,14 @@ import {
   Zap,
   ArrowLeft,
   ChevronRight,
+  Subtitles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Switch } from "@/components/ui/switch";
@@ -32,7 +34,9 @@ import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useSceneControls } from "@/components/scenes/useSceneControls";
 import { useSceneRecording } from "@/hooks/useSceneRecording";
 import { RecordButton } from "@/components/recording/RecordButton";
-import type { SceneWithDetails } from "@/hooks/useConvexScenes";
+import { useConvexScenes, type SceneWithDetails } from "@/hooks/useConvexScenes";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import type { useUnifiedPlayer } from "@/hooks/useUnifiedPlayer";
 import { cn } from "@/lib/utils";
 
@@ -64,6 +68,11 @@ function ScenePlayerControlsComponent({
   } = useUIState();
   const { openSceneEditor, closeSceneEditor, isSceneEditorOpen } = useSceneControls();
   const isAdmin = useIsAdmin();
+  const { triggerTranscription } = useConvexScenes();
+  const transcription = useQuery(
+    api.model.transcriptions.public.getBySong,
+    scene.song?._id ? { songId: scene.song._id } : "skip"
+  );
 
   const sceneRecording = useSceneRecording({
     player,
@@ -311,6 +320,26 @@ function ScenePlayerControlsComponent({
                     <span>Developer Controls</span>
                   </div>
                   <Switch checked={devControlsVisible} onCheckedChange={toggleDevControls} />
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onSelect={() => {
+                    if (scene.song?._id) {
+                      triggerTranscription(scene.song._id);
+                    }
+                  }}
+                  disabled={!scene.song?._id || transcription?.status === "processing"}
+                >
+                  <div className="flex items-center gap-2">
+                    <Subtitles className="h-4 w-4" />
+                    <span>
+                      {transcription?.status === "processing"
+                        ? "Processing..."
+                        : transcription
+                          ? "Regenerate Transcript"
+                          : "Generate Transcript"}
+                    </span>
+                  </div>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

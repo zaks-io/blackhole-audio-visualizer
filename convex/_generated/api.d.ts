@@ -17,6 +17,8 @@ import type * as model_releases_public from "../model/releases/public.js";
 import type * as model_scenes_agents from "../model/scenes/agents.js";
 import type * as model_scenes_internal from "../model/scenes/internal.js";
 import type * as model_scenes_public from "../model/scenes/public.js";
+import type * as model_transcriptions_internal from "../model/transcriptions/internal.js";
+import type * as model_transcriptions_public from "../model/transcriptions/public.js";
 import type * as model_users_public from "../model/users/public.js";
 
 import type { ApiFromModules, FilterApi, FunctionReference } from "convex/server";
@@ -31,6 +33,8 @@ declare const fullApi: ApiFromModules<{
   "model/scenes/agents": typeof model_scenes_agents;
   "model/scenes/internal": typeof model_scenes_internal;
   "model/scenes/public": typeof model_scenes_public;
+  "model/transcriptions/internal": typeof model_transcriptions_internal;
+  "model/transcriptions/public": typeof model_transcriptions_public;
   "model/users/public": typeof model_users_public;
 }>;
 

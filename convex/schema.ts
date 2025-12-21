@@ -112,6 +112,33 @@ export default defineSchema({
     .index("by_thread", ["threadId"])
     .index("by_status", ["status"]),
 
+  transcriptions: defineTable({
+    songId: v.id("generatedSongs"),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("processing"),
+      v.literal("completed"),
+      v.literal("failed")
+    ),
+    languageCode: v.optional(v.string()),
+    languageProbability: v.optional(v.number()),
+    text: v.optional(v.string()),
+    words: v.optional(
+      v.array(
+        v.object({
+          text: v.string(),
+          start: v.union(v.number(), v.null()),
+          end: v.union(v.number(), v.null()),
+          type: v.union(v.literal("word"), v.literal("spacing"), v.literal("audio_event")),
+          speakerId: v.optional(v.union(v.string(), v.null())),
+        })
+      )
+    ),
+    error: v.optional(v.string()),
+  })
+    .index("by_song", ["songId"])
+    .index("by_status", ["status"]),
+
   scenes: defineTable({
     userId: v.id("users"),
     name: v.string(),
