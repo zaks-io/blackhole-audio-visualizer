@@ -50,6 +50,9 @@ export interface VisualizationControlsState {
   bloomAudioReactivity: number;
   chromaticEnabled: boolean;
   chromaticAudioReactivity: number;
+  vignetteEnabled: boolean;
+  vignetteOffset: number;
+  vignetteDarkness: number;
   hfcVelocityBoost: number;
   spawnBurstMultiplier: number;
 }
@@ -104,6 +107,9 @@ export const pathToKey: Record<string, keyof VisualizationControlsState> = {
   "Post-FX.bloomAudioReactivity": "bloomAudioReactivity",
   "Post-FX.chromaticEnabled": "chromaticEnabled",
   "Post-FX.chromaticAudioReactivity": "chromaticAudioReactivity",
+  "Post-FX.vignetteEnabled": "vignetteEnabled",
+  "Post-FX.vignetteOffset": "vignetteOffset",
+  "Post-FX.vignetteDarkness": "vignetteDarkness",
   "Post-FX.hfcVelocityBoost": "hfcVelocityBoost",
   "Post-FX.spawnBurstMultiplier": "spawnBurstMultiplier",
 };
@@ -157,6 +163,9 @@ const DEFAULT_STATE: VisualizationControlsState = {
   bloomAudioReactivity: 1,
   chromaticEnabled: true,
   chromaticAudioReactivity: 1,
+  vignetteEnabled: true,
+  vignetteOffset: 0.5,
+  vignetteDarkness: 0.5,
   hfcVelocityBoost: 0.3,
   spawnBurstMultiplier: 2.0,
 };

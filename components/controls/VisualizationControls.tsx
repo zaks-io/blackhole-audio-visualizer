@@ -126,6 +126,21 @@ export function VisualizationControls() {
           max={1}
           step={0.1}
         />
+        <SwitchControl controlKey="vignetteEnabled" label="Vignette" />
+        <SliderControl
+          controlKey="vignetteOffset"
+          label="Vignette Offset"
+          min={0}
+          max={1}
+          step={0.01}
+        />
+        <SliderControl
+          controlKey="vignetteDarkness"
+          label="Vignette Darkness"
+          min={0}
+          max={1}
+          step={0.01}
+        />
         <SliderControl
           controlKey="hfcVelocityBoost"
           label="HFC Velocity Boost"
