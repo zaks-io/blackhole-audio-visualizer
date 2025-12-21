@@ -2,7 +2,7 @@ varying float vDistance;
 varying vec3 vPosition;
 varying float vColorIndex;
 
-uniform vec3 uEmitterColors[56];
+uniform vec3 uEmitterColors[288];
 uniform float uMaxDistance;
 uniform float uBrightness;
 uniform float uAlpha;
