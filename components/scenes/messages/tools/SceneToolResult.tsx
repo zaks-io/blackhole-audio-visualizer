@@ -64,10 +64,10 @@ export const SceneToolResult = memo(function SceneToolResult({
 
     // If we reach here and status is done, it just completed (live)
     if (status === "done" && sceneId && !hasNavigated.current) {
-      const isOnScenePage = pathname === `/scene/${sceneId}`;
+      const isOnScenePage = pathname === `/app/scene/${sceneId}`;
       if (!isOnScenePage) {
         hasNavigated.current = true;
-        router.push(`/scene/${sceneId}`);
+        router.push(`/app/scene/${sceneId}`);
       }
     }
   }, [status, sceneId, pathname, router]);
@@ -93,7 +93,7 @@ export const SceneToolResult = memo(function SceneToolResult({
           <span>{actionText}</span>
           {sceneId ? (
             <Link
-              href={`/scene/${sceneId}`}
+              href={`/app/scene/${sceneId}`}
               className="text-violet-400 hover:text-violet-300 hover:underline truncate"
             >
               {sceneName || sceneId}

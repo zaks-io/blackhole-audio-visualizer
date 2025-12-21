@@ -37,7 +37,7 @@ export function SceneControls({ compact = false }: SceneControlsProps) {
       openSceneEditor();
     } else {
       // Navigate to dedicated scene page
-      router.push(`/scene/${value}`);
+      router.push(`/app/scene/${value}`);
     }
   };
 
