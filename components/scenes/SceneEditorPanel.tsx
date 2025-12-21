@@ -19,7 +19,7 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { AssistantMessage } from "./messages/AssistantMessage";
 
-export function SceneEditorPanel() {
+export function SceneEditorPanel({ sceneId }: { sceneId?: string }) {
   const {
     isSceneEditorOpen,
     closeSceneEditor,
@@ -29,7 +29,7 @@ export function SceneEditorPanel() {
     setIsCreatingScene,
   } = useSceneControls();
 
-  const { createSceneThread, sendComposerMessage, startSongGeneration } = useConvexScenes();
+  const { createSceneThread, sendSceneMessage, startSongGeneration } = useConvexScenes();
 
   const { conversations } = useAllConversations();
 
@@ -45,7 +45,7 @@ export function SceneEditorPanel() {
   const isStreaming = !!(chatThreadId && messages?.some((m) => m.status === "streaming"));
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    messagesEndRef.current?.scrollIntoView({ behavior: "instant" });
   }, [messages]);
 
   const handleSendMessage = async () => {
@@ -57,12 +57,12 @@ export function SceneEditorPanel() {
     let threadId: string = chatThreadId ?? "";
 
     if (!chatThreadId) {
-      const result = await createSceneThread();
+      const result = await createSceneThread(sceneId);
       threadId = result.threadId;
       setChatThreadId(threadId);
     }
 
-    await sendComposerMessage(threadId, prompt);
+    await sendSceneMessage(threadId, prompt, sceneId);
   };
 
   const handleGenerate = useCallback(
@@ -87,7 +87,7 @@ export function SceneEditorPanel() {
   return (
     <div
       className={cn(
-        "h-screen flex flex-col border-l border-white/10 glass-panel-solid",
+        "h-screen flex flex-col border-l border-white/10 glass-panel-solid z-40",
         "transition-all duration-300 ease-out overflow-hidden",
         isSceneEditorOpen ? "w-96" : "w-0"
       )}

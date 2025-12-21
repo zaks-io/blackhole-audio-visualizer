@@ -7,6 +7,16 @@ import type { AnalyzedAudio } from "./useAudioAnalyzer";
 
 const MAX_BANDS = 36;
 
+// Cache AudioContext per audio element - an element can only have one MediaElementAudioSourceNode
+const audioContextCache = new WeakMap<
+  HTMLAudioElement,
+  {
+    context: AudioContext;
+    source: MediaElementAudioSourceNode;
+    analyser: AnalyserNode;
+  }
+>();
+
 const DEFAULT_ANALYSIS: AnalyzedAudio = {
   energy: {
     overall: 0,
@@ -158,32 +168,37 @@ export function useAudioElementAnalyzer(
       }
 
       // If we have an existing connection to a different element, just stop the loop
-      // but keep the context (it can't be reused for the new element anyway)
       if (isConnectedRef.current) {
         stopAnalysisLoop();
         isConnectedRef.current = false;
       }
 
       try {
-        // Create new AudioContext for this element
-        const audioContext = new AudioContext();
+        // Check cache for existing AudioContext, source, and analyser
+        const cached = audioContextCache.get(element);
+        let audioContext: AudioContext;
+        let source: MediaElementAudioSourceNode;
+        let analyser: AnalyserNode;
+
+        if (cached) {
+          // Reuse cached context, source, and analyser
+          audioContext = cached.context;
+          source = cached.source;
+          analyser = cached.analyser;
+        } else {
+          // First time connecting this element - create and cache
+          audioContext = new AudioContext();
+          source = audioContext.createMediaElementSource(element);
+          analyser = audioContext.createAnalyser();
+          analyser.fftSize = fftSize;
+          analyser.smoothingTimeConstant = 0.8;
+          source.connect(analyser);
+          analyser.connect(audioContext.destination);
+          audioContextCache.set(element, { context: audioContext, source, analyser });
+        }
 
         if (audioContext.state === "suspended") {
           await audioContext.resume();
-        }
-
-        const source = audioContext.createMediaElementSource(element);
-        const analyser = audioContext.createAnalyser();
-
-        analyser.fftSize = fftSize;
-        analyser.smoothingTimeConstant = 0.8;
-
-        source.connect(analyser);
-        analyser.connect(audioContext.destination);
-
-        // Close old context if exists
-        if (audioContextRef.current) {
-          audioContextRef.current.close();
         }
 
         audioContextRef.current = audioContext;
@@ -214,15 +229,8 @@ export function useAudioElementAnalyzer(
     };
   }, [audioElement, connect, disconnect]);
 
-  // Close AudioContext on unmount only
-  useEffect(() => {
-    return () => {
-      if (audioContextRef.current) {
-        audioContextRef.current.close();
-        audioContextRef.current = null;
-      }
-    };
-  }, []);
+  // Note: We don't close AudioContext on unmount because it's cached in the WeakMap.
+  // The WeakMap handles cleanup when the audio element is garbage collected.
 
   const getAnalysis = useCallback((): AnalyzedAudio => {
     return analysisRef.current;

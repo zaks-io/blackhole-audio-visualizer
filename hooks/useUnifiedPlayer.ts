@@ -26,6 +26,7 @@ export interface UnifiedPlayerConfig {
   playlist: PlaylistWithPresets | null;
   audioUrl?: string | null;
   loop?: boolean;
+  onCameraModeChange?: (mode: string) => void;
 }
 
 const initialState: UnifiedPlayerState = {
@@ -43,6 +44,7 @@ function convexPresetToPreset(preset: ConvexPreset): Preset {
     name: preset.name,
     colorPalette: preset.colorPalette,
     parameters: preset.parameters,
+    cameraMode: preset.cameraMode,
   };
 }
 
@@ -57,14 +59,16 @@ function createQuickPreset(preset: Preset, duration: number): Preset {
 }
 
 export function useUnifiedPlayer(config: UnifiedPlayerConfig) {
-  const { playlist, audioUrl, loop = false } = config;
+  const { playlist, audioUrl, loop = false, onCameraModeChange } = config;
   const { playPreset, stopAll } = usePlayPreset();
   const [state, setState] = useState<UnifiedPlayerState>(initialState);
   const [loopEnabled, setLoopEnabled] = useState(loop);
+  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const currentSectionRef = useRef(-1);
+  const lastDisplayedSecondRef = useRef(-1);
   const progressTweenRef = useRef<gsap.core.Tween | null>(null);
   const updateLoopAudioRef = useRef<() => void>(() => {});
   const updateLoopTimedRef = useRef<() => void>(() => {});
@@ -98,6 +102,7 @@ export function useUnifiedPlayer(config: UnifiedPlayerConfig) {
 
     if (!audioRef.current) {
       audioRef.current = new Audio();
+      setAudioElement(audioRef.current);
     }
     audioRef.current.crossOrigin = "anonymous";
     audioRef.current.preload = "auto";
@@ -152,37 +157,56 @@ export function useUnifiedPlayer(config: UnifiedPlayerConfig) {
     }
     stopAll();
     currentSectionRef.current = -1;
+    lastDisplayedSecondRef.current = -1;
   }, [stopAll]);
 
   useEffect(() => {
     updateLoopAudioRef.current = () => {
       if (!audioRef.current) return;
 
-      const currentTimeMs = audioRef.current.currentTime * 1000;
+      const currentTime = audioRef.current.currentTime;
+      const currentTimeMs = currentTime * 1000;
       const section = findSectionAtTime(currentTimeMs);
       const sectionIndex = section?.index ?? -1;
+      const displayedSecond = Math.floor(currentTime);
 
-      if (sectionIndex !== currentSectionRef.current && sectionIndex >= 0) {
+      // Only update state when section changes or displayed second changes
+      const sectionChanged = sectionIndex !== currentSectionRef.current && sectionIndex >= 0;
+      const secondChanged = displayedSecond !== lastDisplayedSecondRef.current;
+
+      if (sectionChanged) {
         currentSectionRef.current = sectionIndex;
         const preset = getPresetForSection(sectionIndex);
         if (preset) {
-          playPreset(convexPresetToPreset(preset));
+          const convertedPreset = convexPresetToPreset(preset);
+          playPreset(convertedPreset);
+
+          // Trigger camera mode change only if mode is different from previous
+          if (onCameraModeChange && convertedPreset.cameraMode) {
+            const previousPreset = sectionIndex > 0 ? getPresetForSection(sectionIndex - 1) : null;
+            const previousCameraMode = previousPreset
+              ? convexPresetToPreset(previousPreset).cameraMode
+              : null;
+
+            if (convertedPreset.cameraMode !== previousCameraMode) {
+              onCameraModeChange(convertedPreset.cameraMode);
+            }
+          }
         }
+      }
+
+      if (sectionChanged || secondChanged) {
+        lastDisplayedSecondRef.current = displayedSecond;
         setState((s) => ({
           ...s,
           currentSectionIndex: sectionIndex,
-          currentTime: audioRef.current?.currentTime ?? 0,
-        }));
-      } else {
-        setState((s) => ({
-          ...s,
-          currentTime: audioRef.current?.currentTime ?? 0,
+          currentTime,
         }));
       }
 
       animationFrameRef.current = requestAnimationFrame(updateLoopAudioRef.current);
     };
-  }, [findSectionAtTime, getPresetForSection, playPreset]);
+  }, [findSectionAtTime, getPresetForSection, playPreset, onCameraModeChange]);
 
   useEffect(() => {
     updateLoopTimedRef.current = () => {
@@ -190,26 +214,48 @@ export function useUnifiedPlayer(config: UnifiedPlayerConfig) {
 
       const progress = progressTweenRef.current.progress();
       const currentTimeMs = progress * totalDurationMs;
+      const currentTime = currentTimeMs / 1000;
       const section = findSectionAtTime(currentTimeMs);
       const sectionIndex = section?.index ?? -1;
+      const displayedSecond = Math.floor(currentTime);
 
-      if (sectionIndex !== currentSectionRef.current && sectionIndex >= 0) {
+      // Only update state when section changes or displayed second changes
+      const sectionChanged = sectionIndex !== currentSectionRef.current && sectionIndex >= 0;
+      const secondChanged = displayedSecond !== lastDisplayedSecondRef.current;
+
+      if (sectionChanged) {
         currentSectionRef.current = sectionIndex;
         const preset = getPresetForSection(sectionIndex);
         if (preset) {
-          playPreset(convexPresetToPreset(preset));
+          const convertedPreset = convexPresetToPreset(preset);
+          playPreset(convertedPreset);
+
+          // Trigger camera mode change only if mode is different from previous
+          if (onCameraModeChange && convertedPreset.cameraMode) {
+            const previousPreset = sectionIndex > 0 ? getPresetForSection(sectionIndex - 1) : null;
+            const previousCameraMode = previousPreset
+              ? convexPresetToPreset(previousPreset).cameraMode
+              : null;
+
+            if (convertedPreset.cameraMode !== previousCameraMode) {
+              onCameraModeChange(convertedPreset.cameraMode);
+            }
+          }
         }
       }
 
-      setState((s) => ({
-        ...s,
-        currentSectionIndex: sectionIndex,
-        currentTime: currentTimeMs / 1000,
-      }));
+      if (sectionChanged || secondChanged) {
+        lastDisplayedSecondRef.current = displayedSecond;
+        setState((s) => ({
+          ...s,
+          currentSectionIndex: sectionIndex,
+          currentTime,
+        }));
+      }
 
       animationFrameRef.current = requestAnimationFrame(updateLoopTimedRef.current);
     };
-  }, [findSectionAtTime, getPresetForSection, playPreset, totalDurationMs]);
+  }, [findSectionAtTime, getPresetForSection, playPreset, totalDurationMs, onCameraModeChange]);
 
   const play = useCallback(() => {
     if (!playlist || playlist.items.length === 0) return;
@@ -220,6 +266,7 @@ export function useUnifiedPlayer(config: UnifiedPlayerConfig) {
     if (audioUrl) {
       if (!audioRef.current) {
         audioRef.current = new Audio();
+        setAudioElement(audioRef.current);
       }
       audioRef.current.crossOrigin = "anonymous";
       audioRef.current.src = audioUrl;
@@ -276,8 +323,14 @@ export function useUnifiedPlayer(config: UnifiedPlayerConfig) {
         const preset = getPresetForSection(0);
         if (preset) {
           currentSectionRef.current = 0;
-          playPreset(convexPresetToPreset(preset));
+          const convertedPreset = convexPresetToPreset(preset);
+          playPreset(convertedPreset);
           setState((s) => ({ ...s, currentSectionIndex: 0 }));
+
+          // Trigger initial camera mode
+          if (onCameraModeChange && convertedPreset.cameraMode) {
+            onCameraModeChange(convertedPreset.cameraMode);
+          }
         }
       });
     } else {
@@ -313,11 +366,26 @@ export function useUnifiedPlayer(config: UnifiedPlayerConfig) {
       const preset = getPresetForSection(0);
       if (preset) {
         currentSectionRef.current = 0;
-        playPreset(convexPresetToPreset(preset));
+        const convertedPreset = convexPresetToPreset(preset);
+        playPreset(convertedPreset);
         setState((s) => ({ ...s, currentSectionIndex: 0 }));
+
+        // Trigger initial camera mode
+        if (onCameraModeChange && convertedPreset.cameraMode) {
+          onCameraModeChange(convertedPreset.cameraMode);
+        }
       }
     }
-  }, [playlist, audioUrl, loopEnabled, cleanup, totalDurationMs, getPresetForSection, playPreset]);
+  }, [
+    playlist,
+    audioUrl,
+    loopEnabled,
+    cleanup,
+    totalDurationMs,
+    getPresetForSection,
+    playPreset,
+    onCameraModeChange,
+  ]);
 
   const pause = useCallback(() => {
     if (!state.isPlaying || state.isPaused) return;
@@ -380,11 +448,26 @@ export function useUnifiedPlayer(config: UnifiedPlayerConfig) {
       const section = findSectionAtTime(clampedTimeMs);
 
       if (section && section.index !== currentSectionRef.current) {
+        const previousSectionIndex = currentSectionRef.current;
         currentSectionRef.current = section.index;
         const preset = getPresetForSection(section.index);
         if (preset) {
-          const quickPreset = createQuickPreset(convexPresetToPreset(preset), 0.3);
+          const convertedPreset = convexPresetToPreset(preset);
+          const quickPreset = createQuickPreset(convertedPreset, 0.3);
           playPreset(quickPreset);
+
+          // Trigger camera mode change only if mode is different from previous
+          if (onCameraModeChange && convertedPreset.cameraMode) {
+            const previousPreset =
+              previousSectionIndex >= 0 ? getPresetForSection(previousSectionIndex) : null;
+            const previousCameraMode = previousPreset
+              ? convexPresetToPreset(previousPreset).cameraMode
+              : null;
+
+            if (convertedPreset.cameraMode !== previousCameraMode) {
+              onCameraModeChange(convertedPreset.cameraMode);
+            }
+          }
         }
         setState((s) => ({
           ...s,
@@ -398,7 +481,7 @@ export function useUnifiedPlayer(config: UnifiedPlayerConfig) {
         }));
       }
     },
-    [totalDurationMs, findSectionAtTime, getPresetForSection, playPreset]
+    [totalDurationMs, findSectionAtTime, getPresetForSection, playPreset, onCameraModeChange]
   );
 
   const setLoop = useCallback((enabled: boolean) => {
@@ -437,6 +520,7 @@ export function useUnifiedPlayer(config: UnifiedPlayerConfig) {
     totalDurationMs,
     currentSection,
     currentPreset,
+    audioElement,
     getAudioElement,
   };
 }

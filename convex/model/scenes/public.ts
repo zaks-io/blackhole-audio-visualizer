@@ -4,7 +4,7 @@ import { v } from "convex/values";
 import { internal, components } from "../../_generated/api";
 import { sceneAgent } from "./agents";
 import { listUIMessages, syncStreams, vStreamArgs } from "@convex-dev/agent";
-import { stepCountIs } from "ai";
+import { stepCountIs, ModelMessage } from "ai";
 
 if (!process.env.ELEVENLABS_API_KEY) {
   throw new Error("ELEVENLABS_API_KEY is not set");
@@ -78,13 +78,15 @@ export const createPresetForScene = internalMutation({
         ease: v.string(),
       })
     ),
+    cameraMode: v.optional(v.string()),
   },
-  handler: async (ctx, { userId, name, colorPalette, parameters }) => {
+  handler: async (ctx, { userId, name, colorPalette, parameters, cameraMode }) => {
     return ctx.db.insert("presets", {
       userId,
       name,
       colorPalette,
       parameters,
+      cameraMode,
       isPublic: false,
       updatedAt: Date.now(),
     });
@@ -190,6 +192,21 @@ export const updateSongStatus = internalMutation({
   },
 });
 
+export const updateSongComposition = internalMutation({
+  args: {
+    songId: v.id("generatedSongs"),
+    compositionId: v.id("compositions"),
+  },
+  handler: async (ctx, { songId, compositionId }) => {
+    const song = await ctx.db.get(songId);
+    if (!song) throw new Error("Song not found");
+    if (song.status !== "ready") {
+      throw new Error("Can only update composition for songs in ready status");
+    }
+    await ctx.db.patch(songId, { compositionId });
+  },
+});
+
 export const saveSceneForAgent = internalMutation({
   args: {
     userId: v.id("users"),
@@ -262,8 +279,8 @@ export const updateSceneForAgent = internalMutation({
 // ============================================================================
 
 export const createSceneThread = action({
-  args: {},
-  handler: async (ctx) => {
+  args: { sceneId: v.optional(v.id("scenes")) },
+  handler: async (ctx, args) => {
     await requireAdmin(ctx);
 
     // Create a new thread using the agent
@@ -274,6 +291,7 @@ export const createSceneThread = action({
     // Create a scene conversation record to track this thread
     await ctx.runMutation(internal.model.scenes.public.createConversationRecord, {
       threadId,
+      sceneId: args.sceneId,
     });
 
     return { threadId };
@@ -298,12 +316,13 @@ export const listThreadMessages = query({
 // Chat Actions
 // ============================================================================
 
-export const sendComposerMessage = action({
+export const sendSceneMessage = action({
   args: {
     threadId: v.string(),
     prompt: v.string(),
+    sceneId: v.optional(v.id("scenes")),
   },
-  handler: async (ctx, { threadId, prompt }) => {
+  handler: async (ctx, { threadId, prompt, sceneId }) => {
     const identity = await requireAdmin(ctx);
 
     const user = await ctx.runQuery(internal.model.scenes.public.getUserByToken, {
@@ -314,7 +333,47 @@ export const sendComposerMessage = action({
       ctx,
       { threadId, userId: user?._id },
       { prompt, stopWhen: stepCountIs(10) },
-      { saveStreamDeltas: true }
+      {
+        saveStreamDeltas: true,
+        contextHandler: async (ctx, args) => {
+          const context: ModelMessage[] = [];
+          if (sceneId) {
+            const scene = await ctx.runQuery(internal.model.scenes.internal.getById, {
+              sceneId,
+            });
+            if (scene) {
+              context.push({
+                role: "assistant",
+                content: [
+                  {
+                    type: "text",
+                    text: `# Current Scene Context
+
+The user is on the following scene's page:
+
+Name: ${scene.name}
+ID: ${scene._id}
+Description: ${scene.description}
+Song Id: ${scene.songId}
+Playlist Id: ${scene.playlistId}
+Is Public: ${scene.isPublic}
+Is Owner: ${scene.userId === user?._id}
+`,
+                  },
+                ],
+              });
+            }
+          }
+          return [
+            ...context,
+            ...args.search,
+            ...args.recent,
+            ...args.inputMessages,
+            ...args.inputPrompt,
+            ...args.existingResponses,
+          ];
+        },
+      }
     );
   },
 });
@@ -379,7 +438,7 @@ export const startSongGeneration = action({
         },
         body: JSON.stringify({
           composition_plan: composition,
-          output_format: "mp3_44100_128",
+          output_format: "mp3_44100_192",
         }),
       });
 

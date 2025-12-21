@@ -75,6 +75,7 @@ export interface Preset {
   name: string;
   colorPalette: string;
   parameters: PresetParameter[];
+  cameraMode?: string;
 }
 
 // Convex types (using string for IDs to match Convex's Id type at runtime)
@@ -84,6 +85,7 @@ export interface ConvexPreset {
   name: string;
   colorPalette: string;
   parameters: PresetParameter[];
+  cameraMode?: string;
   isPublic: boolean;
   updatedAt: number;
 }

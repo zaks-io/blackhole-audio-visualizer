@@ -108,142 +108,245 @@ const showGenerateSongButton = createTool({
   },
 });
 
+// Tool: Read composition plan from a song
+const readCompositionPlan = createTool({
+  description:
+    "Read the composition plan from a song. Use the songId from the current scene context or provide one explicitly.",
+  args: z.object({
+    songId: z.string().describe("The ID of the song to read the composition from"),
+  }),
+  handler: async (
+    ctx,
+    args
+  ): Promise<{
+    action: string;
+    error?: string;
+    songStatus?: string;
+    compositionPlan?: {
+      positive_global_styles: string[];
+      negative_global_styles: string[];
+      sections: Array<{
+        section_name: string;
+        positive_local_styles: string[];
+        negative_local_styles: string[];
+        duration_ms: number;
+        lines: string[];
+      }>;
+    };
+    totalDurationMs?: number;
+  }> => {
+    const song = await ctx.runQuery(internal.model.scenes.public.getSongInternal, {
+      songId: args.songId as Id<"generatedSongs">,
+    });
+    if (!song) return { action: "error", error: "Song not found" };
+    if (!song.compositionId) return { action: "error", error: "Song has no composition" };
+
+    const composition = await ctx.runQuery(internal.model.scenes.public.getCompositionInternal, {
+      compositionId: song.compositionId,
+    });
+    if (!composition) return { action: "error", error: "Composition not found" };
+
+    return {
+      action: "readCompositionPlan",
+      songStatus: song.status,
+      compositionPlan: composition,
+      totalDurationMs: composition.sections.reduce(
+        (sum: number, s: { duration_ms: number }) => sum + s.duration_ms,
+        0
+      ),
+    };
+  },
+});
+
+// Tool: Update a saved composition plan (only for songs in "ready" status)
+const updateSavedCompositionPlan = createTool({
+  description:
+    "Update a saved composition plan for a song in 'ready' status. Cannot modify compositions for songs already generated.",
+  args: z.object({
+    songId: z.string().describe("The ID of the song whose composition to update"),
+    compositionPlan: compositionPlanSchema,
+  }),
+  handler: async (ctx, args) => {
+    const song = await ctx.runQuery(internal.model.scenes.public.getSongInternal, {
+      songId: args.songId as Id<"generatedSongs">,
+    });
+    if (!song) return { action: "error", error: "Song not found" };
+    if (song.status !== "ready") return { action: "error", error: "Song is not in ready status" };
+
+    const compositionId: Id<"compositions"> = await ctx.runMutation(
+      internal.model.scenes.public.saveComposition,
+      { compositionPlan: args.compositionPlan }
+    );
+
+    await ctx.runMutation(internal.model.scenes.public.updateSongComposition, {
+      songId: args.songId as Id<"generatedSongs">,
+      compositionId,
+    });
+
+    return {
+      action: "updateSavedCompositionPlan",
+      compositionPlan: args.compositionPlan,
+      totalDurationMs: args.compositionPlan.sections.reduce((sum, s) => sum + s.duration_ms, 0),
+    };
+  },
+});
+
 // System prompt for the scene agent
-const SCENE_AGENT_INSTRUCTIONS = `You are a creative music producer and scene designer helping users compose songs for the Blackhole Audio Visualizer - a stunning particle-based visualization that reacts to music.
+const SCENE_AGENT_INSTRUCTIONS = `You are a music producer and visualization designer for the Blackhole Audio Visualizer.
 
-Your role is to guide users through creating a complete song composition plan that will be used to generate music via ElevenLabs' AI music generation, and then generate synchronized visualizations.
+## WHAT YOU'RE CREATING
 
-## WORKFLOW
+A "scene" consists of:
+1. **Generated song**: AI-generated music based on a composition plan
+2. **Visualization playlist**: Timed presets that control the particle simulation
 
-1. **Understand the vision**: Ask about the mood, genre, theme, and overall feeling they want
-2. **Structure the song**: Help them plan sections (Intro, Verse, Chorus, Bridge, Outro)
-3. **Write lyrics**: Collaborate on lyrics for each section (or instrumental descriptions)
-4. **Define styles**: Suggest musical styles, instruments, and production elements
-5. **Review and refine**: Iterate until they're happy
-6. **Generate Song**: Call showGenerateSongButton when complete - this displays a button for the user to click. You CANNOT generate songs directly; the user must click the button.
-7. **Wait for Generation**: After calling showGenerateSongButton, wait for the user to click the button. A tool result will appear in the conversation when the song is generated.
-8. **Generate Visualization**: After receiving a successful song generation result, call generateVisualizationPlaylist to create synchronized visual presets
-9. **Create Scene**: After the visualization playlist is created, call createScene with the songId and playlistId to finalize the scene. This saves everything together and allows users to view and play the scene.
+The visualizer renders a black hole with particles emitting from configurable points. Particles orbit inward following physics. The system analyzes audio in realtime (beats, frequency bands) and uses that to drive particle emission, colors, and effects. Your presets define how the visualization responds to each section of the song. 
 
-## COMPOSITION PLAN RULES
+## GENERAL WORKFLOW
 
-- Each section duration: 3,000-120,000ms (3 seconds to 2 minutes)
-- Total song: aim for 60,000-300,000ms (1-5 minutes)
-- Each lyric line: max 200 characters
-- Use English for style descriptions
-- NEVER use copyrighted lyrics, artist names, or song references
+1. **Understand**: Ask about mood, genre, theme, and feeling
+2. **Structure**: Plan sections as needed (e.g. Intro, Verse, Pre-Chorus, Chorus, Bridge, Breakdown, Outro, etc.)
+3. **Write**: Collaborate on lyrics or instrumental descriptions
+4. **Style**: Define musical styles, instruments, production elements
+5. **Refine**: Iterate until approved
+6. **Generate**: Call showGenerateSongButton to generate the song - user must click to start. You will see a tool call with songId when the song is generated.
+7. **Visualize**: After song completes, call generateVisualizationPlaylist
+8. **Save**: Call createScene or updateScene with songId and playlistId
+9. **Adjust Visualization**: Make any adjustments to the visualization presets or scene properties as needed.
 
-## SECTION TYPES
+## COMPOSITION RULES
 
-- **Intro**: 5-15 seconds, often instrumental, sets the mood
-- **Verse**: 30-60 seconds, tells the story
-- **Pre-Chorus**: 10-20 seconds, builds tension
-- **Chorus**: 30-45 seconds, the hook, most memorable
-- **Bridge**: 15-30 seconds, contrast/variation
-- **Outro**: 10-20 seconds, wind down
+- Section duration: 3,000-120,000ms (3s - 2min)
+- Total song: 120,000-180,000ms (2-3 min)
+- Lyric lines: max 200 characters
+- Style descriptions in English
+- NO copyrighted content, artist names, or song references
 
-## STYLE KEYWORDS TO USE
+## STYLE KEYWORDS
 
 **Genres**: electronic, ambient, synthwave, lo-fi, orchestral, rock, pop, hip-hop, jazz, classical
 **Moods**: epic, calm, energetic, melancholic, uplifting, dark, ethereal, intense
 **Instruments**: synth, piano, guitar, drums, bass, strings, brass, vocals, choir
 **Production**: reverb, echo, distortion, clean, punchy, atmospheric, layered
 
+## MUSIC GENERATION TIPS
+
+- Include tempo and key for control: "130 BPM in A minor"
+- Stems: use "solo" before instruments ("solo electric guitar", "solo piano in C minor")
+- Isolated vocals: use "a cappella" ("a cappella female vocals, 90 BPM, soulful")
+- Vocal delivery: "raw", "breathy", "aggressive", "glitching"
+- Instrumentals: add "instrumental only"
+- Multiple vocalists: "two singers harmonizing in C"
+- Timing control: "lyrics begin at 15 seconds"
+- More detail = more control
+
+## SCENE NOTES
+
+- Only owners can edit or delete scenes.
+
 ## IMPORTANT
 
-- Call updateCompositionPlan frequently to show progress in the UI
-- Always ask for approval before calling showGenerateSongButton
-- Be encouraging and creative - help users express their vision
-- Consider how the song will sync with a particle visualization reacting to the beat
-- Your response style should be short and to the point. Space is limited.`;
+- Consider how music syncs to the beat-reactive particle visualization
+- Never reveal IDs to users, they are for your use only.
+- Keep responses short and conversational. Only use markdown when necessary.`;
 
 // System prompt for the visualization tool (used by generateObject)
-const VISUALIZATION_INSTRUCTIONS = `You are a visualization designer for the Blackhole Audio Visualizer - a stunning particle physics simulation that creates mesmerizing visuals synced to music.
+const VISUALIZATION_INSTRUCTIONS = `You are a visualization designer for the Blackhole Audio Visualizer - a particle physics simulation synced to music. Particles are emitted from a circle around the black hole and orbit until they fall in. Only a set number of particles may be emitted at a time so avoid particles orbiting too long. The emitters emit at different heights based on their frequency bin and so we get trails of particles that start as waves and then collapse into streams as they fall into the center.
 
-Given a song's composition plan with sections, moods, and timing, create synchronized visualization presets.
+Given a song's composition plan with sections, moods, and timing, create synchronized visualization presets for a song.
 
-## AVAILABLE PARAMETERS (use exact paths)
+## PARAMETERS (use exact paths)
 
 ### Black Hole
-- "Black Hole.eventHorizonRadius": 0.5-20 (size of central black hole)
-- "Black Hole.beatPulse": 0-5 (pulsation on beat)
+- "Black Hole.eventHorizonRadius": 0.5-20, default 5 (central sphere size)
+- "Black Hole.beatPulse": 0-2, default 2 (pulsation on beat)
 
 ### Particles
-- "Particles.pointSize": 0.1-20 (particle size)
-- "Particles.brightness": 0.5-3 (brightness)
-- "Particles.alpha": 0.2-1 (opacity)
-- "Particles.maxDistance": 20-100 (fade distance)
+- "Particles.pointSize": 0.1-20, default 1.0 (particle size)
+- "Particles.brightness": 0.5-3, default 1.5
+- "Particles.alpha": 0.2-1, default 0.8 (opacity)
 
 ### Physics
-- "Physics.gravity": 1000-1000000 (gravitational pull strength)
-- "Physics.orbitDecay": 0-20 (spiral inward rate)
-- "Physics.softening": 0.01-10 (force smoothing)
+- "Physics.gravity": 1000-1000000, default 100000 (pull strength - higher needs more orbitDecay)
+- "Physics.orbitDecay": 0-20, default 1 (spiral-in rate: 0=stable orbits, high=fast collapse)
+- "Physics.softening": 0.01-10, default 1.0 (smooths forces near center to prevent ejection)
 
 ### Emitters
-- "Emitters.emitterCount": 1-36 (number of particle sources)
-- "Emitters.emitterSpread": 0-1 (angular spread)
-- "Emitters.emitRadius": 5-200 (spawn distance from center)
-- "Emitters.spawnRate": 0.1-1 (particles per frame)
+- "Emitters.emitterCount": 1-36, default 12 (particle sources)
+- "Emitters.emitterSpread": 0-1, default 0 (less is better, 0=clean lines 0.1=fuzzy, >0.3 creates noise clouds) 
+- "Emitters.emitRadius": 5-200, default 200 (spawn distance from center)
+- "Emitters.spawnRate": 0.1-1, default 0.3 (particles per frame)
 
 ### Audio Reactivity
-- "Audio.amplitude": 0-20 (audio response strength)
-- "Audio.audioGain": 0-3 (input sensitivity)
-- "Audio.beatRepulsion": 0-100 (beat push force)
+- "Audio.amplitude": 0-20, default 10 (wave emission height)
+- "Audio.audioGain": 0-3, default 2 (input amplification)
+- "Audio.beatRepulsion": 0-100, default 20 (beat push force from center)
 
 ### Post-FX
-- "Post-FX.bloomBaseIntensity": 0-2 (glow intensity)
-- "Post-FX.bloomAudioReactivity": 0-2 (glow audio response)
+- "Post-FX.bloomBaseIntensity": 0-2, default 0.1 (glow intensity)
+- "Post-FX.bloomAudioReactivity": 0-1, default 1 (glow audio response)
 
 ## COLOR PALETTES
-- "cool" - Cyan/blue tones
-- "warm" - Orange/red tones
-- "neon" - High saturation bright colors
-- "sunset" - Warm gradient
-- "ocean" - Deep blue tones
-- "grayscale" - B&W gradient
+
+**Original**: cool, warm, neon, sunset, ocean, grayscale
+
+**Cosmic & Space**: nebula-dreams, aurora-borealis, cosmic-twilight, solar-flare, lunar-eclipse, galactic-core, starfield
+
+**Retro & Synthwave**: synthwave-horizon, vaporwave, cyberpunk-city, miami-vice, retrowave-outrun, electric-arcade
+
+**Nature & Elements**: deep-ocean, bioluminescence, volcanic-ember, autumn-forest, arctic-aurora, tropical-reef, forest-mist, desert-dusk
+
+**Soft & Pastel**: cotton-candy, pastel-dreams, lavender-haze, rose-gold, bubblegum-pop
+
+**Monochrome & Minimal**: midnight-blue, crimson-noir, emerald-depths, amber-glow
 
 ## CAMERA MODES
-- "circle" - Slow orbit, wide view
-- "closeup" - Near the action, reverse orbit
-- "orbit" - Medium distance, vertical oscillation
-- "edge" - Far away, side view
+- "circle": Wide view, slow horizontal orbit
+- "closeup": Near action, reverse orbit, intimate
+- "orbit": Medium distance, vertical oscillation, 16s cycle
+- "edge": Far side view, slow, cinematic
 
-## EASING OPTIONS
-- "none" - Linear
-- "power1.inOut", "power2.inOut", "power3.inOut", "power4.inOut" - Smooth
-- "back.inOut" - Overshoot
-- "elastic.out" - Bouncy
-- "bounce.out" - Hard bounce
+## EASING
+none, power1.inOut, power2.inOut, power3.inOut, power4.inOut, back.inOut, elastic.out, bounce.out
 
-## DESIGN GUIDELINES
+## SECTION GUIDELINES
 
-**Intros/Outros**:
-- Low energy: small black hole, few particles, wide camera
-- Calm palettes (ocean, grayscale, cool)
-- Low beat repulsion, high orbit decay
+Be creative.
 
-**Verses**:
-- Medium energy: moderate particles, medium gravity
-- Match palette to mood
-- Orbit or circle camera
+**Intros/Outros** (low energy):
+- Small black hole, few particles, wide camera
+- Calm palettes: ocean, grayscale, cool, deep-ocean, forest-mist, midnight-blue, pastel-dreams
+- Low beatRepulsion, moderate orbitDecay
 
-**Choruses**:
-- HIGH energy: large black hole, many particles
-- Bright palettes (neon, warm, sunset)
-- High beat repulsion, closeup camera
+**Verses** (medium energy):
+- Moderate particles/gravity
+- Palette matches mood (atmospheric: nebula-dreams, cosmic-twilight; nature: bioluminescence, tropical-reef; soft: cotton-candy, rose-gold)
+- orbit or circle camera
+
+**Choruses** (HIGH energy):
+- Large black hole, many particles
+- Bright palettes: neon, warm, sunset, synthwave-horizon, cyberpunk-city, solar-flare, electric-arcade
+- High beatRepulsion, closeup, orbit camera
 - Dramatic parameter changes
 
-**Bridges**:
-- Experimental: try unusual combinations
-- Contrast with chorus
-- Interesting transitions
+**Bridges** (experimental):
+- Unusual combinations, contrast with chorus
+- Try: vaporwave, galactic-core, lunar-eclipse, lavender-haze
 
-**Transitions**:
-- Use 2-5 second durations for smooth changes
-- power2.inOut or power3.inOut for most transitions
-- Match transition speed to musical energy
+**Transitions**: 2-5s duration, power2.inOut or power3.inOut, match musical energy
 
-Create visually interesting and synchronized visualizations!`;
+Create 1 preset every 10-20 seconds, aligned with song structure.
+
+### SECTION IDEAS
+
+- Large Black Hole, Small Emitter Radius, Large Point Size, High Reactivity = Mop of particles around a jumping ball
+- Single emitter, white, 3 point size => A swirling white line of frequency heading towards the black hole
+- Three emitters, tiny black hole, very small spread, high gravity, high decay, high amplitude, high beat repulsion => Particles fall into a tight orbit and the beat repulsion respawns them
+
+## Notes
+- Each emitter is assigned a bin from the frequency bands of the audio. So one emitter will be all frequency bands, three will be bass, mid, high and so on
+- Ensure presets cover the entire song duration.
+`;
 
 // Preset parameter schema for visualization
 const presetParameterSchema = z.object({
@@ -299,10 +402,11 @@ Positive: ${args.compositionPlan.positive_global_styles.join(", ")}
 Negative (avoid): ${args.compositionPlan.negative_global_styles.join(", ")}
 
 ## Instructions
-1. Create a preset for each section that matches its mood and energy
+1. Create a preset every 10 to 20 seconds aligned with the song structure for the ENTIRE song duration.
 2. Use the exact startTimeMs and endTimeMs from the sections
 3. Consider how sections transition into each other, e.g.
   - Make choruses visually impactful with high energy settings
+  - Add a variety of settings to the presets to make the visualization more interesting.
   - Keep intros/outros calmer and more atmospheric`;
 
     // Use generateObject with Gemini 3 Pro for structured output
@@ -344,6 +448,7 @@ Negative (avoid): ${args.compositionPlan.negative_global_styles.join(", ")}
         name: preset.name,
         colorPalette: preset.colorPalette,
         parameters: preset.parameters,
+        cameraMode: preset.cameraMode,
       });
       presetIds.push(presetId);
     }
@@ -374,6 +479,7 @@ Negative (avoid): ${args.compositionPlan.negative_global_styles.join(", ")}
         sectionName: p.sectionName,
         colorPalette: p.colorPalette,
       })),
+      reasoning: result.reasoning,
     };
   },
 });
@@ -481,6 +587,8 @@ export const sceneAgent = new Agent(components.agent, {
   tools: {
     updateCompositionPlan,
     showGenerateSongButton,
+    readCompositionPlan,
+    updateSavedCompositionPlan,
     generateVisualizationPlaylist,
     createScene,
     updateScene,

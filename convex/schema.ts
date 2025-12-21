@@ -22,6 +22,7 @@ export default defineSchema({
         ease: v.string(),
       })
     ),
+    cameraMode: v.optional(v.string()),
     isPublic: v.boolean(),
     updatedAt: v.number(),
   })

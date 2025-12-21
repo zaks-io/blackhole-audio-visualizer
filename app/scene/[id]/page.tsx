@@ -1,17 +1,21 @@
 "use client";
 
-import { use, useMemo, useRef, useEffect, useState } from "react";
+import { use, useMemo } from "react";
 import { Canvas } from "@react-three/fiber";
 import { NoToneMapping, SRGBColorSpace } from "three";
 import { PostProcessing } from "@/components/PostProcessing";
 import { BlackHoleSimulation } from "@/components/BlackHoleSimulation";
 import { FPSTracker } from "@/hooks/useFPSMonitor";
-import { useCameraMode } from "@/components/CameraSystem";
+import { FPSMeter } from "@/components/debug/FPSMeter";
+import { useCameraMode, type CameraMode } from "@/components/CameraSystem";
 import { useColorMode } from "@/components/ColorModeSystem";
 import { usePublicSceneWithDetails } from "@/hooks/useConvexScenes";
 import { useUnifiedPlayer } from "@/hooks/useUnifiedPlayer";
 import { useAudioElementAnalyzer } from "@/hooks/useAudioElementAnalyzer";
+import { useUIState } from "@/hooks/useUIState";
 import { ScenePlayerControls } from "@/components/scene-player/ScenePlayerControls";
+import { ControlSidebar } from "@/components/layout/ControlSidebar";
+import { SceneEditorPanel } from "@/components/scenes/SceneEditorPanel";
 import type { PlaylistWithPresets } from "@/components/ProducerMode/types";
 import { Loader2 } from "lucide-react";
 
@@ -43,10 +47,10 @@ function SceneLoading() {
   );
 }
 
-function SongGenerating() {
+function SongGeneratingOverlay() {
   return (
-    <div className="w-screen h-dvh flex items-center justify-center bg-black text-white">
-      <div className="text-center">
+    <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+      <div className="text-center text-white">
         <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
         <h1 className="text-xl font-bold mb-2">Song is being generated</h1>
         <p className="text-muted-foreground">Please wait while the audio is being created...</p>
@@ -59,8 +63,7 @@ function ScenePlayerContent({ sceneId }: { sceneId: string }) {
   const { scene, isLoading } = usePublicSceneWithDetails(sceneId);
   const cameraMode = useCameraMode();
   const colorMode = useColorMode();
-  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
-  const lastElementRef = useRef<HTMLAudioElement | null>(null);
+  const { devControlsVisible, fpsVisible } = useUIState();
 
   const playlist: PlaylistWithPresets | null = useMemo(() => {
     if (!scene?.playlist) return null;
@@ -80,24 +83,11 @@ function ScenePlayerContent({ sceneId }: { sceneId: string }) {
   const player = useUnifiedPlayer({
     playlist,
     audioUrl: scene?.audioUrl,
-    loop: false,
+    loop: true,
+    onCameraModeChange: (mode) => cameraMode.setMode(mode as CameraMode),
   });
 
-  // Poll for audio element changes when playing
-  useEffect(() => {
-    const checkElement = () => {
-      const el = player.state.isPlaying ? player.getAudioElement() : null;
-      if (el !== lastElementRef.current) {
-        lastElementRef.current = el;
-        setAudioElement(el);
-      }
-    };
-
-    const interval = setInterval(checkElement, 50);
-    checkElement();
-    return () => clearInterval(interval);
-  }, [player.state.isPlaying, player]);
-
+  const audioElement = player.state.isPlaying ? player.audioElement : null;
   const { getAnalysis, isConnected } = useAudioElementAnalyzer(audioElement);
 
   if (isLoading) {
@@ -108,13 +98,10 @@ function ScenePlayerContent({ sceneId }: { sceneId: string }) {
     return <SceneNotFound />;
   }
 
-  if (scene.song?.status === "generating") {
-    return <SongGenerating />;
-  }
-
   return (
-    <div className="w-screen h-dvh flex flex-col bg-black">
-      <div className="flex-1 relative">
+    <div className="w-screen h-dvh bg-black grid grid-cols-[1fr_auto_auto]">
+      {/* Main canvas - takes full screen */}
+      <div className="relative w-full h-full min-w-0 min-h-0 overflow-hidden flex items-center justify-center">
         <Canvas
           camera={{ position: [0, 90, 150], fov: 60 }}
           gl={{
@@ -140,9 +127,21 @@ function ScenePlayerContent({ sceneId }: { sceneId: string }) {
           <PostProcessing getAnalysis={getAnalysis} isAudioConnected={isConnected()} />
           <FPSTracker />
         </Canvas>
+
+        {/* Floating controls - inside canvas div like main app */}
+        <ScenePlayerControls scene={scene} player={player} />
+
+        {/* Song generation overlay */}
+        {scene.song?.status === "generating" && <SongGeneratingOverlay />}
+
+        {fpsVisible && <FPSMeter />}
       </div>
 
-      <ScenePlayerControls scene={scene} player={player} />
+      {/* Scene Editor Panel */}
+      <SceneEditorPanel sceneId={sceneId} />
+
+      {/* Developer controls sidebar */}
+      {devControlsVisible && <ControlSidebar />}
     </div>
   );
 }

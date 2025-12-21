@@ -10,6 +10,7 @@ import { ReasoningBlock } from "./ReasoningBlock";
 import { DefaultToolResult } from "./tools/DefaultToolResult";
 import { CompositionPlanToolResult } from "./tools/CompositionPlanToolResult";
 import { GenerateSongButton } from "./tools/GenerateSongButton";
+import { SceneToolResult } from "./tools/SceneToolResult";
 import { Streamdown } from "streamdown";
 import remarkGfm from "remark-gfm";
 import { Bug } from "lucide-react";
@@ -28,6 +29,8 @@ type ToolRendererProps = {
 const TOOL_RENDERERS: Record<string, React.ComponentType<ToolRendererProps>> = {
   updateCompositionPlan: CompositionPlanToolResult,
   showGenerateSongButton: GenerateSongButton,
+  createScene: SceneToolResult,
+  updateScene: SceneToolResult,
 };
 
 interface AssistantMessageTextProps {

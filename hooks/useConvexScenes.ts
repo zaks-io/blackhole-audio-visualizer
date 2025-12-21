@@ -59,15 +59,19 @@ export function useConvexScenes() {
   const linkConversationMutation = useMutation(api.model.scenes.public.linkConversationToScene);
 
   const createSceneThreadAction = useAction(api.model.scenes.public.createSceneThread);
-  const sendComposerMessageAction = useAction(api.model.scenes.public.sendComposerMessage);
+  const sendSceneMessageAction = useAction(api.model.scenes.public.sendSceneMessage);
   const startSongGenerationAction = useAction(api.model.scenes.public.startSongGeneration);
 
-  const createSceneThread = async () => {
-    return createSceneThreadAction({});
+  const createSceneThread = async (sceneId?: string) => {
+    return createSceneThreadAction({ sceneId: sceneId as Id<"scenes"> | undefined });
   };
 
-  const sendComposerMessage = async (threadId: string, prompt: string) => {
-    return sendComposerMessageAction({ threadId, prompt });
+  const sendSceneMessage = async (threadId: string, prompt: string, sceneId?: string) => {
+    return sendSceneMessageAction({
+      threadId,
+      prompt,
+      sceneId: sceneId as Id<"scenes"> | undefined,
+    });
   };
 
   const startSongGeneration = async (songId: Id<"generatedSongs">) => {
@@ -127,7 +131,7 @@ export function useConvexScenes() {
     isAuthenticated,
     // Thread & Chat
     createSceneThread,
-    sendComposerMessage,
+    sendSceneMessage,
     // Generation
     startSongGeneration,
     // CRUD
