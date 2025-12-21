@@ -152,7 +152,7 @@ export default function CanvasSlot() {
 
   return (
     <div className="absolute inset-0 grid grid-cols-[auto_1fr_auto_auto]">
-      {/* Producer Mode Panel - available in all modes */}
+      {/* Preset Editor Panel - available in all modes */}
       <ProducerModePanel />
 
       {/* Main content area */}

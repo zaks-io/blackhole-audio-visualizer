@@ -4,15 +4,11 @@ import { type RefObject } from "react";
 import { useViewerMode } from "@/hooks/useViewerMode";
 import { BottomControlBar } from "./BottomControlBar";
 import { ScenePlayerControls } from "@/components/scene-player/ScenePlayerControls";
-import type { CameraMode } from "@/components/CameraSystem";
 import type { AudioSourceType } from "@/hooks/useAudioSource";
 import type { useUnifiedPlayer } from "@/hooks/useUnifiedPlayer";
 import type { SceneWithDetails } from "@/hooks/useConvexScenes";
 
 interface LiveModeProps {
-  currentCameraMode: CameraMode;
-  onCameraModeChange: (mode: CameraMode) => void;
-  isCameraTransitioning: boolean;
   isAudioConnected: boolean;
   audioSourceType: AudioSourceType | null;
   canUseSystemAudio: boolean;
@@ -51,9 +47,6 @@ export function UnifiedControlBar({ liveProps, sceneProps }: UnifiedControlBarPr
 
   return (
     <BottomControlBar
-      currentCameraMode={liveProps.currentCameraMode}
-      onCameraModeChange={liveProps.onCameraModeChange}
-      isCameraTransitioning={liveProps.isCameraTransitioning}
       isAudioConnected={liveProps.isAudioConnected}
       audioSourceType={liveProps.audioSourceType}
       canUseSystemAudio={liveProps.canUseSystemAudio}

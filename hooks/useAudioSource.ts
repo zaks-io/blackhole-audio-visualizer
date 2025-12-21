@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useCallback, useSyncExternalStore } from "react";
+import { useCallback, useSyncExternalStore } from "react";
 import { useAudioAnalyzer, type AnalyzedAudio } from "./useAudioAnalyzer";
+import { useAudioConnectionState } from "./useAudioConnectionState";
 import {
   isElectron,
   getSystemAudioStream,
@@ -31,11 +32,16 @@ export interface UseAudioSourceReturn {
 const emptySubscribe = () => () => {};
 
 export function useAudioSource(): UseAudioSourceReturn {
-  const [sourceType, setSourceType] = useState<AudioSourceType | null>(null);
-  const [showPermissionDialog, setShowPermissionDialog] = useState(false);
-  const [showMicPermissionDialog, setShowMicPermissionDialog] = useState(false);
-  const [isConnectedState, setIsConnectedState] = useState(false);
   const analyzer = useAudioAnalyzer();
+
+  // Use Zustand for reactive connection state
+  const isConnected = useAudioConnectionState((s) => s.liveConnected);
+  const sourceType = useAudioConnectionState((s) => s.liveSourceType);
+  const showPermissionDialog = useAudioConnectionState((s) => s.showPermissionDialog);
+  const showMicPermissionDialog = useAudioConnectionState((s) => s.showMicPermissionDialog);
+  const setLiveConnected = useAudioConnectionState((s) => s.setLiveConnected);
+  const setShowPermissionDialog = useAudioConnectionState((s) => s.setShowPermissionDialog);
+  const setShowMicPermissionDialog = useAudioConnectionState((s) => s.setShowMicPermissionDialog);
 
   const canUseSystemAudio = useSyncExternalStore(emptySubscribe, isElectron, () => false);
 
@@ -44,21 +50,21 @@ export function useAudioSource(): UseAudioSourceReturn {
       window.electronAPI.openScreenRecordingPreferences();
     }
     setShowPermissionDialog(false);
-  }, []);
+  }, [setShowPermissionDialog]);
 
   const closePermissionDialog = useCallback(() => {
     setShowPermissionDialog(false);
-  }, []);
+  }, [setShowPermissionDialog]);
 
   const closeMicPermissionDialog = useCallback(() => {
     setShowMicPermissionDialog(false);
-  }, []);
+  }, [setShowMicPermissionDialog]);
 
   const connect = useCallback(
     async (type: AudioSourceType = "microphone") => {
       if (analyzer.isConnected()) {
         analyzer.disconnect();
-        setIsConnectedState(false);
+        setLiveConnected(false);
       }
 
       if (type === "system") {
@@ -85,8 +91,7 @@ export function useAudioSource(): UseAudioSourceReturn {
         const stream = await getSystemAudioStream();
         if (stream) {
           await analyzer.connect(stream);
-          setSourceType("system");
-          setIsConnectedState(true);
+          setLiveConnected(true, "system");
         } else {
           // Stream failed, show permission dialog
           setShowPermissionDialog(true);
@@ -94,8 +99,7 @@ export function useAudioSource(): UseAudioSourceReturn {
       } else {
         try {
           await analyzer.connect();
-          setSourceType("microphone");
-          setIsConnectedState(true);
+          setLiveConnected(true, "microphone");
         } catch (err) {
           if (err instanceof Error && err.name === "NotAllowedError") {
             setShowMicPermissionDialog(true);
@@ -103,7 +107,13 @@ export function useAudioSource(): UseAudioSourceReturn {
         }
       }
     },
-    [analyzer, canUseSystemAudio]
+    [
+      analyzer,
+      canUseSystemAudio,
+      setLiveConnected,
+      setShowPermissionDialog,
+      setShowMicPermissionDialog,
+    ]
   );
 
   const disconnect = useCallback(() => {
@@ -111,15 +121,14 @@ export function useAudioSource(): UseAudioSourceReturn {
       window.electronAPI.disableLoopbackAudio();
     }
     analyzer.disconnect();
-    setSourceType(null);
-    setIsConnectedState(false);
-  }, [analyzer, sourceType]);
+    setLiveConnected(false);
+  }, [analyzer, sourceType, setLiveConnected]);
 
   return {
     connect,
     disconnect,
     getAnalysis: analyzer.getAnalysis,
-    isConnected: isConnectedState,
+    isConnected,
     sourceType,
     setOnsetDecay: analyzer.setOnsetDecay,
     getStream: analyzer.getStream,

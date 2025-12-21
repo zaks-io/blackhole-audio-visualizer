@@ -10,6 +10,9 @@ import {
   Download,
   ChevronRight,
   Monitor,
+  Repeat,
+  Circle,
+  Subtitles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -39,7 +42,27 @@ const RESOLUTION_LABELS: Record<Resolution, string> = {
   "480": "480p (854×480)",
 };
 
-export function SettingsMenu() {
+interface SettingsMenuProps {
+  loopEnabled?: boolean;
+  onLoopToggle?: () => void;
+  isRecording?: boolean;
+  recordingDuration?: number;
+  onRecordToggle?: () => void;
+  recordDisabled?: boolean;
+  onTranscribe?: () => void;
+  transcriptionStatus?: "idle" | "processing" | "complete";
+}
+
+export function SettingsMenu({
+  loopEnabled,
+  onLoopToggle,
+  isRecording,
+  recordingDuration = 0,
+  onRecordToggle,
+  recordDisabled,
+  onTranscribe,
+  transcriptionStatus,
+}: SettingsMenuProps = {}) {
   const {
     fpsVisible,
     toggleFPS,
@@ -146,6 +169,60 @@ export function SettingsMenu() {
           </div>
           <Switch id="bass-strobe" checked={bassStrobeEnabled} onCheckedChange={toggleBassStrobe} />
         </div>
+
+        {/* Scene-specific options */}
+        {onLoopToggle !== undefined && (
+          <>
+            <DropdownMenuSeparator />
+            <div className="flex items-center justify-between px-2 py-1.5">
+              <div className="flex items-center gap-2">
+                <Repeat className="h-4 w-4 text-muted-foreground" />
+                <Label htmlFor="loop" className="text-sm">
+                  Loop Playback
+                </Label>
+              </div>
+              <Switch id="loop" checked={loopEnabled} onCheckedChange={onLoopToggle} />
+            </div>
+          </>
+        )}
+
+        {onRecordToggle !== undefined && isAdmin && (
+          <button
+            onClick={onRecordToggle}
+            disabled={recordDisabled}
+            className="flex items-center justify-between w-full text-left px-2 py-1.5 hover:bg-accent rounded-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <div className="flex items-center gap-2">
+              <Circle
+                className={`h-4 w-4 ${isRecording ? "text-red-500 fill-red-500" : "text-muted-foreground"}`}
+              />
+              <span className="text-sm">
+                {isRecording
+                  ? `Recording ${Math.floor(recordingDuration / 60)}:${(recordingDuration % 60).toString().padStart(2, "0")}`
+                  : "Start Recording"}
+              </span>
+            </div>
+          </button>
+        )}
+
+        {onTranscribe !== undefined && isAdmin && (
+          <button
+            onClick={onTranscribe}
+            disabled={transcriptionStatus === "processing"}
+            className="flex items-center justify-between w-full text-left px-2 py-1.5 hover:bg-accent rounded-sm disabled:opacity-50"
+          >
+            <div className="flex items-center gap-2">
+              <Subtitles className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm">
+                {transcriptionStatus === "processing"
+                  ? "Processing..."
+                  : transcriptionStatus === "complete"
+                    ? "Regenerate Transcript"
+                    : "Generate Transcript"}
+              </span>
+            </div>
+          </button>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );

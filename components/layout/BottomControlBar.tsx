@@ -5,9 +5,7 @@ import { MobileOverflowMenu } from "./MobileOverflowMenu";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { CameraControls } from "@/components/camera";
-import { PlaylistControls } from "@/components/playlist";
-import { SceneControls } from "@/components/scenes";
+import { ModeToggle } from "./ModeToggle";
 import { AudioSourceButton } from "@/components/audio";
 import { RecordButton } from "@/components/recording";
 import { HelpModal, SettingsMenu } from "@/components/dialogs";
@@ -16,30 +14,20 @@ import { useProducerMode } from "@/components/ProducerMode";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useUIState } from "@/hooks/useUIState";
 import { cn } from "@/lib/utils";
-import type { CameraMode } from "@/components/CameraSystem";
 import type { AudioSourceType } from "@/hooks/useAudioSource";
 
 interface BottomControlBarProps {
-  // Camera props
-  currentCameraMode: CameraMode;
-  onCameraModeChange: (mode: CameraMode) => void;
-  isCameraTransitioning: boolean;
-  // Audio props
   isAudioConnected: boolean;
   audioSourceType: AudioSourceType | null;
   canUseSystemAudio: boolean;
   onAudioConnect: (sourceType: AudioSourceType) => void;
   onAudioDisconnect: () => void;
-  // Recording props
   isRecording: boolean;
   recordingDuration: number;
   onRecordToggle: () => void;
 }
 
 export function BottomControlBar({
-  currentCameraMode,
-  onCameraModeChange,
-  isCameraTransitioning,
   isAudioConnected,
   audioSourceType,
   canUseSystemAudio,
@@ -82,7 +70,7 @@ export function BottomControlBar({
             !controlBarCollapsed && "pointer-events-auto"
           )}
         >
-          {/* Producer Mode Toggle - Desktop only */}
+          {/* Preset Editor Toggle - Desktop only */}
           <div className="hidden md:block">
             <TooltipProvider delayDuration={300}>
               <Tooltip>
@@ -100,7 +88,7 @@ export function BottomControlBar({
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="top" className="text-xs">
-                  Producer Mode
+                  Preset Editor
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -108,19 +96,8 @@ export function BottomControlBar({
 
           <Separator orientation="vertical" className="hidden md:block h-6 mx-1 sm:mx-2" />
 
-          {/* Camera Controls */}
-          <CameraControls
-            currentMode={currentCameraMode}
-            onModeChange={onCameraModeChange}
-            isTransitioning={isCameraTransitioning}
-            compact
-          />
-
-          {/* Playlist Controls */}
-          <PlaylistControls compact />
-
-          {/* Scene Controls - Admin only */}
-          {isAdmin && <SceneControls compact />}
+          {/* Mode Toggle */}
+          <ModeToggle />
 
           <Separator orientation="vertical" className="h-6 mx-1 sm:mx-2" />
 

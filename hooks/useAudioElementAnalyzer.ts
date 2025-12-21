@@ -1,7 +1,8 @@
 "use client";
 
-import { useRef, useCallback, useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useVisualizationControls } from "@/hooks/useVisualizationControls";
+import { useAudioConnectionState } from "./useAudioConnectionState";
 import type { WorkerInput, WorkerOutput } from "@/lib/workers/audioAnalysisTypes";
 import type { AnalyzedAudio } from "./useAudioAnalyzer";
 
@@ -61,137 +62,138 @@ export interface UseAudioElementAnalyzerOptions {
   fftSize?: number;
 }
 
+// Module-level singletons for scene audio - shared across all hook instances
+let sceneAudioContext: AudioContext | null = null;
+let sceneAnalyserNode: AnalyserNode | null = null;
+let sceneWorker: Worker | null = null;
+let sceneIsConnected = false;
+let sceneFrequencyData: Uint8Array<ArrayBuffer> | null = null;
+let sceneRafId: number | null = null;
+let sceneConnectedElement: HTMLAudioElement | null = null;
+let sceneWorkerInitialized = false;
+
+// Shared analysis ref for scene mode
+const sceneAnalysisRef = { current: { ...DEFAULT_ANALYSIS } as AnalyzedAudio };
+
+function initSceneWorker() {
+  if (sceneWorkerInitialized || typeof window === "undefined") return;
+
+  sceneWorker = new Worker(new URL("../lib/workers/audioAnalysis.worker.ts", import.meta.url));
+
+  sceneWorker.onmessage = (e: MessageEvent<WorkerOutput>) => {
+    if (e.data.type === "result") {
+      const result = e.data;
+      sceneAnalysisRef.current = {
+        energy: result.energy,
+        peaks: result.peaks,
+        raw: result.raw,
+        thresholds: result.thresholds,
+        spectrum: result.spectrum,
+        bandOnsets: result.bandOnsets,
+        bandEnergies: result.bandEnergies,
+        bandCount: result.bandCount,
+        peakHistory: result.peakHistory,
+      };
+    }
+  };
+
+  sceneWorkerInitialized = true;
+}
+
+function startSceneAnalysisLoop() {
+  const loop = () => {
+    if (sceneAnalyserNode && sceneFrequencyData && sceneWorker && sceneIsConnected) {
+      sceneAnalyserNode.getByteFrequencyData(sceneFrequencyData);
+
+      const bandCount = Math.floor(useVisualizationControls.getState().emitterCount);
+
+      const dataCopy = new Uint8Array(sceneFrequencyData);
+      const message: WorkerInput = {
+        type: "analyze",
+        frequencyData: dataCopy,
+        sampleRate: sceneAudioContext?.sampleRate ?? 48000,
+        fftSize: sceneAnalyserNode.fftSize,
+        bandCount,
+        onsetDecay: 0.92,
+        timestamp: performance.now(),
+      };
+      sceneWorker.postMessage(message);
+    }
+
+    if (sceneIsConnected) {
+      sceneRafId = requestAnimationFrame(loop);
+    }
+  };
+
+  sceneRafId = requestAnimationFrame(loop);
+}
+
+function stopSceneAnalysisLoop() {
+  if (sceneRafId !== null) {
+    cancelAnimationFrame(sceneRafId);
+    sceneRafId = null;
+  }
+}
+
 export function useAudioElementAnalyzer(
   audioElement: HTMLAudioElement | null,
   options: UseAudioElementAnalyzerOptions = {}
 ) {
   const { fftSize = 512 } = options;
+  const fftSizeRef = useRef(fftSize);
+  const setSceneConnected = useAudioConnectionState((s) => s.setSceneConnected);
 
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const analyserRef = useRef<AnalyserNode | null>(null);
-  const sourceRef = useRef<MediaElementAudioSourceNode | null>(null);
-  const workerRef = useRef<Worker | null>(null);
-  const isConnectedRef = useRef(false);
-  const analysisRef = useRef<AnalyzedAudio>({ ...DEFAULT_ANALYSIS });
-  const frequencyDataRef = useRef<Uint8Array<ArrayBuffer> | null>(null);
-  const rafIdRef = useRef<number | null>(null);
-  const connectedElementRef = useRef<HTMLAudioElement | null>(null);
-
-  // Initialize worker
+  // Initialize worker once
   useEffect(() => {
-    workerRef.current = new Worker(
-      new URL("../lib/workers/audioAnalysis.worker.ts", import.meta.url)
-    );
-
-    workerRef.current.onmessage = (e: MessageEvent<WorkerOutput>) => {
-      if (e.data.type === "result") {
-        const result = e.data;
-        analysisRef.current = {
-          energy: result.energy,
-          peaks: result.peaks,
-          raw: result.raw,
-          thresholds: result.thresholds,
-          spectrum: result.spectrum,
-          bandOnsets: result.bandOnsets,
-          bandEnergies: result.bandEnergies,
-          bandCount: result.bandCount,
-          peakHistory: result.peakHistory,
-        };
-      }
-    };
-
-    return () => {
-      workerRef.current?.terminate();
-      workerRef.current = null;
-    };
-  }, []);
-
-  const startAnalysisLoop = useCallback(() => {
-    const loop = () => {
-      const analyser = analyserRef.current;
-      const frequencyData = frequencyDataRef.current;
-      const worker = workerRef.current;
-
-      if (analyser && frequencyData && worker && isConnectedRef.current) {
-        analyser.getByteFrequencyData(frequencyData);
-
-        const bandCount = Math.floor(useVisualizationControls.getState().emitterCount);
-
-        const dataCopy = new Uint8Array(frequencyData);
-        const message: WorkerInput = {
-          type: "analyze",
-          frequencyData: dataCopy,
-          sampleRate: audioContextRef.current?.sampleRate ?? 48000,
-          fftSize: analyser.fftSize,
-          bandCount,
-          onsetDecay: 0.92,
-          timestamp: performance.now(),
-        };
-        worker.postMessage(message);
-      }
-
-      if (isConnectedRef.current) {
-        rafIdRef.current = requestAnimationFrame(loop);
-      }
-    };
-
-    rafIdRef.current = requestAnimationFrame(loop);
-  }, []);
-
-  const stopAnalysisLoop = useCallback(() => {
-    if (rafIdRef.current !== null) {
-      cancelAnimationFrame(rafIdRef.current);
-      rafIdRef.current = null;
-    }
+    initSceneWorker();
   }, []);
 
   const disconnect = useCallback(() => {
-    stopAnalysisLoop();
+    stopSceneAnalysisLoop();
 
     // Don't close the AudioContext - once an element is connected via
     // createMediaElementSource, closing the context breaks the element forever.
-    // We just stop the analysis loop and reset state.
-    sourceRef.current = null;
-    analyserRef.current = null;
-    frequencyDataRef.current = null;
-    isConnectedRef.current = false;
-    connectedElementRef.current = null;
+    sceneAnalyserNode = null;
+    sceneFrequencyData = null;
+    sceneIsConnected = false;
+    sceneConnectedElement = null;
 
-    workerRef.current?.postMessage({ type: "reset" });
-    analysisRef.current = { ...DEFAULT_ANALYSIS };
-  }, [stopAnalysisLoop]);
+    sceneWorker?.postMessage({ type: "reset" });
+    sceneAnalysisRef.current = { ...DEFAULT_ANALYSIS };
+    setSceneConnected(false);
+  }, [setSceneConnected]);
 
   const connect = useCallback(
     async (element: HTMLAudioElement) => {
       // Already connected to this element
-      if (connectedElementRef.current === element && isConnectedRef.current) {
+      if (sceneConnectedElement === element && sceneIsConnected) {
         return;
       }
 
       // If we have an existing connection to a different element, just stop the loop
-      if (isConnectedRef.current) {
-        stopAnalysisLoop();
-        isConnectedRef.current = false;
+      if (sceneIsConnected) {
+        stopSceneAnalysisLoop();
+        sceneIsConnected = false;
       }
+
+      initSceneWorker();
 
       try {
         // Check cache for existing AudioContext, source, and analyser
         const cached = audioContextCache.get(element);
         let audioContext: AudioContext;
-        let source: MediaElementAudioSourceNode;
         let analyser: AnalyserNode;
 
         if (cached) {
           // Reuse cached context, source, and analyser
           audioContext = cached.context;
-          source = cached.source;
           analyser = cached.analyser;
         } else {
           // First time connecting this element - create and cache
           audioContext = new AudioContext();
-          source = audioContext.createMediaElementSource(element);
+          const source = audioContext.createMediaElementSource(element);
           analyser = audioContext.createAnalyser();
-          analyser.fftSize = fftSize;
+          analyser.fftSize = fftSizeRef.current;
           analyser.smoothingTimeConstant = 0.8;
           source.connect(analyser);
           analyser.connect(audioContext.destination);
@@ -210,46 +212,45 @@ export function useAudioElementAnalyzer(
           await audioContext.resume();
         }
 
-        audioContextRef.current = audioContext;
-        sourceRef.current = source;
-        analyserRef.current = analyser;
-        frequencyDataRef.current = new Uint8Array(analyser.frequencyBinCount);
-        isConnectedRef.current = true;
-        connectedElementRef.current = element;
+        sceneAudioContext = audioContext;
+        sceneAnalyserNode = analyser;
+        sceneFrequencyData = new Uint8Array(analyser.frequencyBinCount);
+        sceneIsConnected = true;
+        sceneConnectedElement = element;
+        setSceneConnected(true);
 
-        startAnalysisLoop();
+        startSceneAnalysisLoop();
       } catch (error) {
         console.error("Failed to connect audio element to analyzer:", error);
       }
     },
-    [fftSize, stopAnalysisLoop, startAnalysisLoop]
+    [setSceneConnected]
   );
 
   // Connect when audio element changes
   useEffect(() => {
     if (audioElement) {
       connect(audioElement);
-    } else {
-      disconnect();
     }
+    // Don't disconnect when called with null - another component might own the singleton
 
     return () => {
-      disconnect();
+      // Only disconnect on unmount if we were the one who connected
+      if (audioElement) {
+        disconnect();
+      }
     };
   }, [audioElement, connect, disconnect]);
 
-  // Note: We don't close AudioContext on unmount because it's cached in the WeakMap.
-  // The WeakMap handles cleanup when the audio element is garbage collected.
-
   const getAnalysis = useCallback((): AnalyzedAudio => {
-    return analysisRef.current;
+    return sceneAnalysisRef.current;
   }, []);
 
-  const isConnected = useCallback(() => isConnectedRef.current, []);
+  const isConnected = useCallback(() => sceneIsConnected, []);
 
   const getRecordingStream = useCallback((): MediaStream | null => {
-    if (connectedElementRef.current) {
-      const cached = audioContextCache.get(connectedElementRef.current);
+    if (sceneConnectedElement) {
+      const cached = audioContextCache.get(sceneConnectedElement);
       return cached?.mediaStreamDestination?.stream ?? null;
     }
     return null;

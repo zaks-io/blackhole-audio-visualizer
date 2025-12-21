@@ -2,6 +2,7 @@
 
 import { use, useRef, useMemo, useEffect } from "react";
 import { ScenePlayerControls } from "@/components/scene-player/ScenePlayerControls";
+import { TopToolbar } from "@/components/layout";
 import { useCameraMode, type CameraMode } from "@/components/CameraSystem";
 import { useViewerMode } from "@/hooks/useViewerMode";
 import { useUnifiedAudio } from "@/hooks/useUnifiedAudio";
@@ -59,11 +60,15 @@ export default function SceneModeUI({ params }: PageProps) {
   }
 
   return (
-    <ScenePlayerControls
-      scene={scene}
-      player={scenePlayer}
-      canvasRef={canvasContainerRef}
-      getRecordingStream={audio.getRecordingStream}
-    />
+    <>
+      <TopToolbar currentScene={scene} />
+
+      <ScenePlayerControls
+        scene={scene}
+        player={scenePlayer}
+        canvasRef={canvasContainerRef}
+        getRecordingStream={audio.getRecordingStream}
+      />
+    </>
   );
 }

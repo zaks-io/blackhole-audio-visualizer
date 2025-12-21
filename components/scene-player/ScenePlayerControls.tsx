@@ -1,39 +1,21 @@
 "use client";
 
 import { useState, useCallback, memo, type RefObject } from "react";
-import { useRouter } from "next/navigation";
-import {
-  Play,
-  Pause,
-  Repeat,
-  Info,
-  Settings,
-  Film,
-  Code,
-  Gauge,
-  Zap,
-  ArrowLeft,
-  ChevronRight,
-  Subtitles,
-} from "lucide-react";
+import { Play, Pause, Info, Film, ChevronRight, SlidersHorizontal, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { SceneTimeline } from "./SceneTimeline";
 import { TimeDisplay } from "./TimeDisplay";
 import { SceneInfoPanel } from "./SceneInfoPanel";
+import { ModeToggle } from "@/components/layout/ModeToggle";
+import { useProducerMode } from "@/components/ProducerMode";
+import { SettingsMenu } from "@/components/dialogs";
+import { UserMenu } from "@/components/auth/UserMenu";
 import { useUIState } from "@/hooks/useUIState";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useSceneControls } from "@/components/scenes/useSceneControls";
 import { useSceneRecording } from "@/hooks/useSceneRecording";
-import { RecordButton } from "@/components/recording/RecordButton";
 import { useConvexScenes, type SceneWithDetails } from "@/hooks/useConvexScenes";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -53,19 +35,13 @@ function ScenePlayerControlsComponent({
   canvasRef,
   getRecordingStream,
 }: ScenePlayerControlsProps) {
-  const router = useRouter();
   const [isInfoOpen, setIsInfoOpen] = useState(false);
   const {
-    devControlsVisible,
-    toggleDevControls,
-    fpsVisible,
-    toggleFPS,
-    bassStrobeEnabled,
-    toggleBassStrobe,
-    controlBarCollapsed,
-    setControlBarCollapsed,
-    setDevControlsVisible,
-  } = useUIState();
+    isOpen: isProducerModeOpen,
+    toggleOpen: toggleProducerMode,
+    setOpen: setProducerModeOpen,
+  } = useProducerMode();
+  const { controlBarCollapsed, setControlBarCollapsed, setDevControlsVisible } = useUIState();
   const { openSceneEditor, closeSceneEditor, isSceneEditorOpen } = useSceneControls();
   const isAdmin = useIsAdmin();
   const { triggerTranscription } = useConvexScenes();
@@ -81,9 +57,10 @@ function ScenePlayerControlsComponent({
   });
 
   const handleHideControls = useCallback(() => {
+    setProducerModeOpen(false);
     setDevControlsVisible(false);
     setControlBarCollapsed(true);
-  }, [setDevControlsVisible, setControlBarCollapsed]);
+  }, [setProducerModeOpen, setDevControlsVisible, setControlBarCollapsed]);
 
   const handleShowControls = useCallback(() => {
     setControlBarCollapsed(false);
@@ -126,6 +103,20 @@ function ScenePlayerControlsComponent({
     setLoop(!loopEnabled);
   }, [loopEnabled, setLoop]);
 
+  const handleRecordToggle = useCallback(() => {
+    if (sceneRecording.isRecording) {
+      sceneRecording.stopRecording();
+    } else {
+      sceneRecording.startRecording();
+    }
+  }, [sceneRecording]);
+
+  const handleTranscribe = useCallback(() => {
+    if (scene.song?._id) {
+      triggerTranscription(scene.song._id);
+    }
+  }, [scene.song, triggerTranscription]);
+
   const showPlayButton = !isPlaying || isPaused;
 
   return (
@@ -139,26 +130,62 @@ function ScenePlayerControlsComponent({
       >
         <div
           className={cn(
-            "glass-panel rounded-full px-4 py-2 flex items-center gap-2",
+            "glass-panel rounded-full px-2 sm:px-4 py-2 flex items-center gap-1 sm:gap-2",
             !controlBarCollapsed && "pointer-events-auto"
           )}
         >
-          {/* Back button */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => router.push("/app")}
-                className="h-10 w-10 rounded-full"
-              >
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="top" className="text-xs">
-              Back to Home
-            </TooltipContent>
-          </Tooltip>
+          {/* Preset Editor Toggle - Desktop only */}
+          <div className="hidden md:block">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={toggleProducerMode}
+                  className={cn(
+                    "h-10 w-10 rounded-full",
+                    isProducerModeOpen && "bg-primary/20 text-primary"
+                  )}
+                >
+                  <SlidersHorizontal className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="text-xs">
+                Preset Editor
+              </TooltipContent>
+            </Tooltip>
+          </div>
+
+          {/* Scene Editor button - Admin only, Desktop only */}
+          {isAdmin && (
+            <div className="hidden md:block">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => (isSceneEditorOpen ? closeSceneEditor() : openSceneEditor())}
+                    className={cn(
+                      "h-10 w-10 rounded-full",
+                      isSceneEditorOpen && "bg-primary/20 text-primary"
+                    )}
+                  >
+                    <Film className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="text-xs">
+                  Scene Editor
+                </TooltipContent>
+              </Tooltip>
+            </div>
+          )}
+
+          <Separator orientation="vertical" className="hidden md:block h-6 mx-1 sm:mx-2" />
+
+          {/* Mode Toggle */}
+          <ModeToggle />
+
+          <Separator orientation="vertical" className="h-6 mx-1 sm:mx-2" />
 
           {/* Play/Pause button */}
           <Tooltip>
@@ -183,7 +210,7 @@ function ScenePlayerControlsComponent({
           </Tooltip>
 
           {/* Timeline */}
-          <div className="w-64 sm:w-80 md:w-96">
+          <div className="w-48 sm:w-64 md:w-80">
             <SceneTimeline
               subscribeToTime={subscribeToTime}
               getCurrentTime={getCurrentTime}
@@ -202,26 +229,6 @@ function ScenePlayerControlsComponent({
             duration={duration}
           />
 
-          {/* Loop toggle */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleToggleLoop}
-                className={cn(
-                  "h-10 w-10 rounded-full",
-                  loopEnabled && "bg-primary/20 text-primary"
-                )}
-              >
-                <Repeat className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="top" className="text-xs">
-              {loopEnabled ? "Disable Loop" : "Enable Loop"}
-            </TooltipContent>
-          </Tooltip>
-
           {/* Info button */}
           <Tooltip>
             <TooltipTrigger asChild>
@@ -239,128 +246,69 @@ function ScenePlayerControlsComponent({
             </TooltipContent>
           </Tooltip>
 
-          {/* Scene Editor button - Admin only */}
-          {isAdmin && (
+          <Separator orientation="vertical" className="hidden sm:block h-6 mx-1 sm:mx-2" />
+
+          {/* Settings - Desktop only */}
+          <div className="hidden md:block">
+            <SettingsMenu
+              loopEnabled={loopEnabled}
+              onLoopToggle={handleToggleLoop}
+              isRecording={sceneRecording.isRecording}
+              recordingDuration={sceneRecording.duration}
+              onRecordToggle={handleRecordToggle}
+              recordDisabled={!scene.audioUrl || scene.song?.status === "generating"}
+              onTranscribe={scene.song?._id ? handleTranscribe : undefined}
+              transcriptionStatus={
+                transcription?.status === "processing"
+                  ? "processing"
+                  : transcription
+                    ? "complete"
+                    : "idle"
+              }
+            />
+          </div>
+
+          {/* Help - Tablet+ (placeholder) */}
+          <div className="hidden sm:block">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full">
+                  <HelpCircle className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="text-xs">
+                Help
+              </TooltipContent>
+            </Tooltip>
+          </div>
+
+          <Separator orientation="vertical" className="hidden sm:block h-6 mx-1 sm:mx-2" />
+
+          {/* User Menu - Tablet+ */}
+          <div className="hidden sm:block">
+            <UserMenu />
+          </div>
+
+          <Separator orientation="vertical" className="hidden md:block h-6 mx-1 sm:mx-2" />
+
+          {/* Collapse Button - Desktop only */}
+          <div className="hidden md:block">
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => (isSceneEditorOpen ? closeSceneEditor() : openSceneEditor())}
-                  className={cn(
-                    "h-10 w-10 rounded-full",
-                    isSceneEditorOpen && "bg-primary/20 text-primary"
-                  )}
+                  onClick={handleHideControls}
+                  className="h-10 w-10 rounded-full"
                 >
-                  <Film className="h-4 w-4" />
+                  <ChevronRight className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="top" className="text-xs">
-                Scene Editor
+                Hide Controls
               </TooltipContent>
             </Tooltip>
-          )}
-
-          {/* Record button - Admin only */}
-          {isAdmin && (
-            <RecordButton
-              isRecording={sceneRecording.isRecording}
-              duration={sceneRecording.duration}
-              disabled={!scene.audioUrl || scene.song?.status === "generating"}
-              onToggle={
-                sceneRecording.isRecording
-                  ? sceneRecording.stopRecording
-                  : sceneRecording.startRecording
-              }
-            />
-          )}
-
-          {/* Settings dropdown - Admin only */}
-          {isAdmin && (
-            <DropdownMenu>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full">
-                      <Settings className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                </TooltipTrigger>
-                <TooltipContent side="top" className="text-xs">
-                  Settings
-                </TooltipContent>
-              </Tooltip>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem
-                  onSelect={(e) => e.preventDefault()}
-                  className="flex items-center justify-between"
-                >
-                  <div className="flex items-center gap-2">
-                    <Gauge className="h-4 w-4" />
-                    <span>FPS Meter</span>
-                  </div>
-                  <Switch checked={fpsVisible} onCheckedChange={toggleFPS} />
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onSelect={(e) => e.preventDefault()}
-                  className="flex items-center justify-between"
-                >
-                  <div className="flex items-center gap-2">
-                    <Zap className="h-4 w-4" />
-                    <span>Bass Strobe</span>
-                  </div>
-                  <Switch checked={bassStrobeEnabled} onCheckedChange={toggleBassStrobe} />
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onSelect={(e) => e.preventDefault()}
-                  className="flex items-center justify-between"
-                >
-                  <div className="flex items-center gap-2">
-                    <Code className="h-4 w-4" />
-                    <span>Developer Controls</span>
-                  </div>
-                  <Switch checked={devControlsVisible} onCheckedChange={toggleDevControls} />
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onSelect={() => {
-                    if (scene.song?._id) {
-                      triggerTranscription(scene.song._id);
-                    }
-                  }}
-                  disabled={!scene.song?._id || transcription?.status === "processing"}
-                >
-                  <div className="flex items-center gap-2">
-                    <Subtitles className="h-4 w-4" />
-                    <span>
-                      {transcription?.status === "processing"
-                        ? "Processing..."
-                        : transcription
-                          ? "Regenerate Transcript"
-                          : "Generate Transcript"}
-                    </span>
-                  </div>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-
-          {/* Collapse button */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleHideControls}
-                className="h-10 w-10 rounded-full"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="top" className="text-xs">
-              Hide Controls
-            </TooltipContent>
-          </Tooltip>
+          </div>
         </div>
 
         {/* Current section name */}

@@ -43,7 +43,7 @@ export function ProducerModePanel() {
         <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
           <div className="flex items-center gap-2">
             <SlidersHorizontal className="h-4 w-4 text-primary" />
-            <span className="text-sm font-medium">Producer Mode</span>
+            <span className="text-sm font-medium">Preset Editor</span>
           </div>
           <Button
             variant="ghost"

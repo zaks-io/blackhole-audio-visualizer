@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useCallback, useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useVisualizationControls } from "@/hooks/useVisualizationControls";
 import type { WorkerInput, WorkerOutput } from "@/lib/workers/audioAnalysisTypes";
 
@@ -89,116 +89,103 @@ export interface UseAudioAnalyzerOptions {
   fftSize?: number;
 }
 
-export function useAudioAnalyzer(options: UseAudioAnalyzerOptions = {}) {
-  const { onsetDecay = 0.92, fftSize = 512 } = options;
+// Module-level singletons - shared across all hook instances
+let audioContext: AudioContext | null = null;
+let analyserNode: AnalyserNode | null = null;
+let stream: MediaStream | null = null;
+let worker: Worker | null = null;
+let isConnected = false;
+let frequencyData: Uint8Array<ArrayBuffer> | null = null;
+let rafId: number | null = null;
+let onsetDecay = 0.92;
+let workerInitialized = false;
 
-  // Audio nodes
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const analyserRef = useRef<AnalyserNode | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
+// Shared analysis ref - all components read from here
+const analysisRef = { current: { ...DEFAULT_ANALYSIS } as AnalyzedAudio };
 
-  // Worker
-  const workerRef = useRef<Worker | null>(null);
+function initWorker() {
+  if (workerInitialized || typeof window === "undefined") return;
 
-  // Analysis state - cached result from worker
-  const isConnectedRef = useRef(false);
-  const analysisRef = useRef<AnalyzedAudio>({ ...DEFAULT_ANALYSIS });
+  worker = new Worker(new URL("../lib/workers/audioAnalysis.worker.ts", import.meta.url));
 
-  // Reusable buffer for FFT data
-  const frequencyDataRef = useRef<Uint8Array<ArrayBuffer> | null>(null);
-
-  // Animation frame for sending data to worker
-  const rafIdRef = useRef<number | null>(null);
-  const onsetDecayRef = useRef(onsetDecay);
-
-  // Initialize worker
-  useEffect(() => {
-    workerRef.current = new Worker(
-      new URL("../lib/workers/audioAnalysis.worker.ts", import.meta.url)
-    );
-
-    workerRef.current.onmessage = (e: MessageEvent<WorkerOutput>) => {
-      if (e.data.type === "result") {
-        // Update cached analysis with worker result
-        const result = e.data;
-        analysisRef.current = {
-          energy: result.energy,
-          peaks: result.peaks,
-          raw: result.raw,
-          thresholds: result.thresholds,
-          spectrum: result.spectrum,
-          bandOnsets: result.bandOnsets,
-          bandEnergies: result.bandEnergies,
-          bandCount: result.bandCount,
-          peakHistory: result.peakHistory,
-        };
-      }
-    };
-
-    return () => {
-      workerRef.current?.terminate();
-      workerRef.current = null;
-    };
-  }, []);
-
-  // Animation loop to send data to worker
-  const startAnalysisLoop = useCallback(() => {
-    const loop = () => {
-      const analyser = analyserRef.current;
-      const frequencyData = frequencyDataRef.current;
-      const worker = workerRef.current;
-
-      if (analyser && frequencyData && worker && isConnectedRef.current) {
-        // Get FFT data from AnalyserNode
-        analyser.getByteFrequencyData(frequencyData);
-
-        // Get band count from store
-        const bandCount = Math.floor(useVisualizationControls.getState().emitterCount);
-
-        // Send to worker for analysis
-        // Copy the data to avoid issues with buffer detachment
-        const dataCopy = new Uint8Array(frequencyData);
-        const message: WorkerInput = {
-          type: "analyze",
-          frequencyData: dataCopy,
-          sampleRate: audioContextRef.current?.sampleRate ?? 48000,
-          fftSize: analyser.fftSize,
-          bandCount,
-          onsetDecay: onsetDecayRef.current,
-          timestamp: performance.now(),
-        };
-        worker.postMessage(message);
-      }
-
-      if (isConnectedRef.current) {
-        rafIdRef.current = requestAnimationFrame(loop);
-      }
-    };
-
-    rafIdRef.current = requestAnimationFrame(loop);
-  }, []);
-
-  const stopAnalysisLoop = useCallback(() => {
-    if (rafIdRef.current !== null) {
-      cancelAnimationFrame(rafIdRef.current);
-      rafIdRef.current = null;
+  worker.onmessage = (e: MessageEvent<WorkerOutput>) => {
+    if (e.data.type === "result") {
+      const result = e.data;
+      analysisRef.current = {
+        energy: result.energy,
+        peaks: result.peaks,
+        raw: result.raw,
+        thresholds: result.thresholds,
+        spectrum: result.spectrum,
+        bandOnsets: result.bandOnsets,
+        bandEnergies: result.bandEnergies,
+        bandCount: result.bandCount,
+        peakHistory: result.peakHistory,
+      };
     }
+  };
+
+  workerInitialized = true;
+}
+
+function startAnalysisLoop() {
+  const loop = () => {
+    if (analyserNode && frequencyData && worker && isConnected) {
+      analyserNode.getByteFrequencyData(frequencyData);
+
+      const bandCount = Math.floor(useVisualizationControls.getState().emitterCount);
+
+      const dataCopy = new Uint8Array(frequencyData);
+      const message: WorkerInput = {
+        type: "analyze",
+        frequencyData: dataCopy,
+        sampleRate: audioContext?.sampleRate ?? 48000,
+        fftSize: analyserNode.fftSize,
+        bandCount,
+        onsetDecay,
+        timestamp: performance.now(),
+      };
+      worker.postMessage(message);
+    }
+
+    if (isConnected) {
+      rafId = requestAnimationFrame(loop);
+    }
+  };
+
+  rafId = requestAnimationFrame(loop);
+}
+
+function stopAnalysisLoop() {
+  if (rafId !== null) {
+    cancelAnimationFrame(rafId);
+    rafId = null;
+  }
+}
+
+export function useAudioAnalyzer(options: UseAudioAnalyzerOptions = {}) {
+  const { onsetDecay: initialOnsetDecay = 0.92, fftSize = 512 } = options;
+  const fftSizeRef = useRef(fftSize);
+
+  // Initialize worker once
+  useEffect(() => {
+    initWorker();
   }, []);
 
-  // Update onset decay
-  const setOnsetDecay = useCallback((decay: number) => {
-    onsetDecayRef.current = decay;
-    workerRef.current?.postMessage({ type: "setDecay", decay });
+  const setOnsetDecayValue = useCallback((decay: number) => {
+    onsetDecay = decay;
+    worker?.postMessage({ type: "setDecay", decay });
   }, []);
 
-  // Connect to audio source
   const connect = useCallback(
     async (externalStream?: MediaStream) => {
-      if (isConnectedRef.current) return;
+      if (isConnected) return;
 
-      let stream: MediaStream;
+      initWorker();
+
+      let mediaStream: MediaStream;
       try {
-        stream =
+        mediaStream =
           externalStream ??
           (await navigator.mediaDevices.getUserMedia({
             audio: {
@@ -213,71 +200,65 @@ export function useAudioAnalyzer(options: UseAudioAnalyzerOptions = {}) {
         throw err;
       }
 
-      streamRef.current = stream;
-      const audioContext = new AudioContext();
+      stream = mediaStream;
+      audioContext = new AudioContext();
 
       if (audioContext.state === "suspended") {
         await audioContext.resume();
       }
 
-      const source = audioContext.createMediaStreamSource(stream);
+      const source = audioContext.createMediaStreamSource(mediaStream);
       const analyser = audioContext.createAnalyser();
 
-      analyser.fftSize = fftSize;
+      analyser.fftSize = fftSizeRef.current;
       analyser.smoothingTimeConstant = 0.8;
 
       source.connect(analyser);
 
-      audioContextRef.current = audioContext;
-      analyserRef.current = analyser;
-      frequencyDataRef.current = new Uint8Array(analyser.frequencyBinCount);
+      analyserNode = analyser;
+      frequencyData = new Uint8Array(analyser.frequencyBinCount);
+      isConnected = true;
+      onsetDecay = initialOnsetDecay;
 
-      isConnectedRef.current = true;
-
-      // Start sending data to worker
       startAnalysisLoop();
     },
-    [fftSize, startAnalysisLoop]
+    [initialOnsetDecay]
   );
 
-  // Disconnect from audio source
   const disconnect = useCallback(() => {
     stopAnalysisLoop();
 
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
-      streamRef.current = null;
+    if (stream) {
+      stream.getTracks().forEach((track) => track.stop());
+      stream = null;
     }
-    if (audioContextRef.current) {
-      audioContextRef.current.close();
-      audioContextRef.current = null;
+    if (audioContext) {
+      audioContext.close();
+      audioContext = null;
     }
-    analyserRef.current = null;
-    frequencyDataRef.current = null;
-    isConnectedRef.current = false;
+    analyserNode = null;
+    frequencyData = null;
+    isConnected = false;
 
-    // Reset worker state
-    workerRef.current?.postMessage({ type: "reset" });
-
+    worker?.postMessage({ type: "reset" });
     analysisRef.current = { ...DEFAULT_ANALYSIS };
-  }, [stopAnalysisLoop]);
+  }, []);
 
-  // Get current analysis - just returns cached result, no computation
   const getAnalysis = useCallback((): AnalyzedAudio => {
     return analysisRef.current;
   }, []);
 
-  const getStream = useCallback(() => streamRef.current, []);
+  const getStream = useCallback(() => stream, []);
 
-  const isConnected = useCallback(() => isConnectedRef.current, []);
+  const isConnectedFn = useCallback(() => isConnected, []);
 
   return {
     connect,
     disconnect,
     getAnalysis,
     getStream,
-    isConnected,
-    setOnsetDecay,
+    isConnected: isConnectedFn,
+    setOnsetDecay: setOnsetDecayValue,
     analysisRef,
   };
 }

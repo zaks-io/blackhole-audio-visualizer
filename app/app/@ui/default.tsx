@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useMemo, useEffect } from "react";
-import { BottomControlBar } from "@/components/layout";
+import { BottomControlBar, TopToolbar } from "@/components/layout";
 import { PermissionDialog } from "@/components/PermissionDialog";
 import { MicPermissionDialog } from "@/components/MicPermissionDialog";
 import { AudioConnectOverlay } from "@/components/audio/AudioConnectOverlay";
@@ -78,10 +78,13 @@ export default function LiveModeUI() {
 
   return (
     <>
-      <BottomControlBar
+      <TopToolbar
         currentCameraMode={cameraMode.mode}
         onCameraModeChange={cameraMode.setMode}
         isCameraTransitioning={cameraMode.isTransitioning}
+      />
+
+      <BottomControlBar
         isAudioConnected={audio.isConnected}
         audioSourceType={audio.liveSourceType}
         canUseSystemAudio={audio.canUseSystemAudio}
@@ -92,7 +95,10 @@ export default function LiveModeUI() {
         onRecordToggle={handleRecordToggle}
       />
 
-      <AudioConnectOverlay isConnected={audio.isConnected} onConnect={audio.connectLive} />
+      {/* Hide when scene mode with no scene selected (showing centered selector) */}
+      {!(mode === "scene" && !sceneId) && (
+        <AudioConnectOverlay isConnected={audio.isConnected} onConnect={audio.connectLive} />
+      )}
 
       <PermissionDialog
         isOpen={audio.showPermissionDialog}

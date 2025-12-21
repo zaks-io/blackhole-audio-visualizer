@@ -1,21 +1,14 @@
 "use client";
 
 import { BottomControlBar } from "./BottomControlBar";
-import type { CameraMode } from "@/components/CameraSystem";
 import type { AudioSourceType } from "@/hooks/useAudioSource";
 
 interface UIOverlayProps {
-  // Camera props
-  currentCameraMode: CameraMode;
-  onCameraModeChange: (mode: CameraMode) => void;
-  isCameraTransitioning: boolean;
-  // Audio props
   isAudioConnected: boolean;
   audioSourceType: AudioSourceType | null;
   canUseSystemAudio: boolean;
   onAudioConnect: (sourceType: AudioSourceType) => void;
   onAudioDisconnect: () => void;
-  // Recording props
   isRecording: boolean;
   recordingDuration: number;
   recordingError: string | null;
@@ -23,9 +16,6 @@ interface UIOverlayProps {
 }
 
 export function UIOverlay({
-  currentCameraMode,
-  onCameraModeChange,
-  isCameraTransitioning,
   isAudioConnected,
   audioSourceType,
   canUseSystemAudio,
@@ -40,9 +30,6 @@ export function UIOverlay({
     <>
       {/* Bottom Control Bar */}
       <BottomControlBar
-        currentCameraMode={currentCameraMode}
-        onCameraModeChange={onCameraModeChange}
-        isCameraTransitioning={isCameraTransitioning}
         isAudioConnected={isAudioConnected}
         audioSourceType={audioSourceType}
         canUseSystemAudio={canUseSystemAudio}

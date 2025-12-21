@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import { useAudioSource, type AudioSourceType } from "./useAudioSource";
 import { useAudioElementAnalyzer } from "./useAudioElementAnalyzer";
+import { useAudioConnectionState } from "./useAudioConnectionState";
 import { useViewerMode } from "./useViewerMode";
 import type { AnalyzedAudio } from "./useAudioAnalyzer";
 
@@ -39,6 +40,10 @@ export function useUnifiedAudio(config: UnifiedAudioConfig): UnifiedAudioReturn 
   const mode = useViewerMode((s) => s.mode);
   const previousModeRef = useRef(mode);
 
+  // Use Zustand for reactive connection state
+  const liveConnected = useAudioConnectionState((s) => s.liveConnected);
+  const sceneConnected = useAudioConnectionState((s) => s.sceneConnected);
+
   // Live audio source
   const liveAudio = useAudioSource();
 
@@ -49,12 +54,12 @@ export function useUnifiedAudio(config: UnifiedAudioConfig): UnifiedAudioReturn 
   useEffect(() => {
     if (previousModeRef.current !== mode) {
       // Switching modes - disconnect previous source
-      if (previousModeRef.current === "live" && liveAudio.isConnected) {
+      if (previousModeRef.current === "live" && liveConnected) {
         liveAudio.disconnect();
       }
       previousModeRef.current = mode;
     }
-  }, [mode, liveAudio]);
+  }, [mode, liveAudio, liveConnected]);
 
   // Unified getAnalysis that returns data from the active source
   const getAnalysis = useCallback(
@@ -67,8 +72,8 @@ export function useUnifiedAudio(config: UnifiedAudioConfig): UnifiedAudioReturn 
     [mode, sceneAudio, liveAudio]
   );
 
-  // Unified isConnected
-  const isConnected = mode === "scene" ? sceneAudio.isConnected() : liveAudio.isConnected;
+  // Unified isConnected - use reactive Zustand state
+  const isConnected = mode === "scene" ? sceneConnected : liveConnected;
 
   // Unified recording stream
   const getRecordingStream = useCallback((): MediaStream | null => {
