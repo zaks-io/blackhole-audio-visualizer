@@ -97,8 +97,16 @@ export const createPlaylistForScene = internalMutation({
     name: v.string(),
     presetIds: v.array(v.id("presets")),
     waitDurations: v.array(v.number()),
+    cameraPresets: v.optional(
+      v.array(
+        v.object({
+          mode: v.string(),
+          duration: v.optional(v.number()),
+        })
+      )
+    ),
   },
-  handler: async (ctx, { userId, name, presetIds, waitDurations }) => {
+  handler: async (ctx, { userId, name, presetIds, waitDurations, cameraPresets }) => {
     const items = presetIds.map((presetId, i) => ({
       presetId,
       waitDuration: waitDurations[i],
@@ -108,6 +116,7 @@ export const createPlaylistForScene = internalMutation({
       userId,
       name,
       items,
+      cameraPresets,
       shuffle: false,
       defaultWaitDuration: 5,
       isPublic: false,

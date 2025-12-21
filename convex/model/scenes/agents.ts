@@ -263,7 +263,7 @@ const playlistOutputSchema = z.object({
       sectionName: z.string(),
       colorPalette: z.string(),
       parameters: z.array(presetParameterSchema),
-      cameraMode: z.string().optional(),
+      cameraMode: z.string(),
     })
   ),
 });
@@ -348,7 +348,13 @@ Negative (avoid): ${args.compositionPlan.negative_global_styles.join(", ")}
       presetIds.push(presetId);
     }
 
-    // Create playlist with wait durations based on section timing
+    // Build camera presets from generated data
+    const cameraPresets = generatedPresets.map((p) => ({
+      mode: p.cameraMode,
+      duration: (p.endTimeMs - p.startTimeMs) / 1000,
+    }));
+
+    // Create playlist with wait durations and camera presets
     const playlistId: Id<"playlists"> = await ctx.runMutation(
       internal.model.scenes.public.createPlaylistForScene,
       {
@@ -356,6 +362,7 @@ Negative (avoid): ${args.compositionPlan.negative_global_styles.join(", ")}
         name: `${args.songTitle} Visualization`,
         presetIds,
         waitDurations: generatedPresets.map((p) => (p.endTimeMs - p.startTimeMs) / 1000),
+        cameraPresets,
       }
     );
 
