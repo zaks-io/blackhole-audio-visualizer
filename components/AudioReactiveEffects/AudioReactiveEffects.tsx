@@ -2,7 +2,7 @@
 
 import { useRef, useCallback } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Bloom, ChromaticAberration } from "@react-three/postprocessing";
+import { Bloom, ChromaticAberration, Vignette } from "@react-three/postprocessing";
 import { BlendFunction } from "postprocessing";
 import { Vector2 } from "three";
 import { useVisualizationControls } from "@/hooks/useVisualizationControls";
@@ -43,6 +43,8 @@ class EnvelopeFollower {
 let bloomInstance: any = null;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let chromaticInstance: any = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let vignetteInstance: any = null;
 
 export function AudioReactiveEffects({ getAnalysis, isAudioConnected }: AudioReactiveEffectsProps) {
   const controls = useVisualizationControls();
@@ -69,7 +71,17 @@ export function AudioReactiveEffects({ getAnalysis, isAudioConnected }: AudioRea
     chromaticInstance = effect;
   }, []);
 
+  const vignetteRefCallback = useCallback((effect: unknown) => {
+    vignetteInstance = effect;
+  }, []);
+
   useFrame(() => {
+    // Vignette - always update from controls (before any early returns)
+    if (vignetteInstance) {
+      vignetteInstance.offset = controls.vignetteOffset;
+      vignetteInstance.darkness = controls.vignetteEnabled ? controls.vignetteDarkness : 0;
+    }
+
     const bloomBase = controls.bloomBaseIntensity;
     const bloomReactivity = controls.bloomAudioReactivity;
     const chromaticReactivity = controls.chromaticAudioReactivity;
@@ -147,6 +159,7 @@ export function AudioReactiveEffects({ getAnalysis, isAudioConnected }: AudioRea
         radialModulation={true}
         modulationOffset={0.15}
       />
+      <Vignette ref={vignetteRefCallback} offset={0.5} darkness={0.5} />
     </>
   );
 }
