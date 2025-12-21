@@ -47,4 +47,4 @@ Particles spawn at configurable emitter positions around the black hole. GPU sha
 - Beat-reactive repulsion force
 - Respawn when crossing event horizon
 
-All physics params exposed via Leva controls in `BlackHoleSimulation.tsx`.
+All physics params exposed via controls in `BlackHoleSimulation.tsx`.

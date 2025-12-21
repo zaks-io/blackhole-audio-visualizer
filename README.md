@@ -8,7 +8,7 @@ Real-time music visualization featuring a GPU-accelerated black hole particle si
 - **Audio Reactive**: Real-time frequency analysis and beat detection using Meyda.js
 - **Multiple Audio Sources**: Microphone input (web & desktop) or system audio capture (desktop only)
 - **Color Palettes**: Multiple color schemes with beat-reactive palette transitions
-- **Customizable Physics**: Gravity, orbit decay, ISCO effects, and more via Leva controls
+- **Customizable Physics**: Gravity, orbit decay, ISCO effects, and more via controls
 - **Camera Modes**: Multiple camera presets with smooth GSAP transitions
 - **Video Recording**: Export visualizations as video files
 - **Cross Platform**: Runs as a web app or native desktop app
@@ -64,7 +64,6 @@ Built apps are output to the `release/` directory.
 - [React Three Fiber](https://docs.pmnd.rs/react-three-fiber) - Three.js React renderer
 - [Three.js](https://threejs.org) - WebGL graphics
 - [Meyda](https://meyda.js.org) - Audio feature extraction
-- [Leva](https://github.com/pmndrs/leva) - GUI controls
 - [GSAP](https://greensock.com/gsap) - Animation library
 - [Electron](https://www.electronjs.org) - Desktop app framework
 - [electron-audio-loopback](https://github.com/nickcoutsos/electron-audio-loopback) - System audio capture
