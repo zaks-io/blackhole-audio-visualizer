@@ -63,7 +63,6 @@ export const createRelease = mutation({
       version: args.version,
       isLatest: args.isLatest,
       uploadedBy: user._id,
-      createdAt: Date.now(),
       downloadCount: 0,
     });
 

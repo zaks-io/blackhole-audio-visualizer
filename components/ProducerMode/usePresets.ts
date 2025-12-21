@@ -55,7 +55,6 @@ export const usePresets = create<PresetsState>()(
           name,
           colorPalette: vizState.colorPalette,
           parameters,
-          createdAt: Date.now(),
         };
 
         set((state) => ({

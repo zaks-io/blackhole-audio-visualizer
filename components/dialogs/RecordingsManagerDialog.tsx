@@ -239,7 +239,7 @@ export function RecordingsManagerDialog({ children }: RecordingsManagerDialogPro
                           {formatFileSize(recording.fileSize)}
                           {recording.duration !== undefined &&
                             ` · ${formatDuration(recording.duration)}`}
-                          {` · ${formatDate(recording.createdAt)}`}
+                          {` · ${formatDate(recording._creationTime)}`}
                           {` · ${recording.downloadCount ?? 0} downloads`}
                         </p>
                       </div>

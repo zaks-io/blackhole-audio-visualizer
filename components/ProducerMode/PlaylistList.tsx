@@ -51,7 +51,7 @@ export function PlaylistList({ onSelect }: PlaylistListProps) {
     await deletePlaylist(playlistId);
   };
 
-  const sortedPlaylists = [...playlists].sort((a, b) => b.createdAt - a.createdAt);
+  const sortedPlaylists = [...playlists].sort((a, b) => b.updatedAt - a.updatedAt);
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">

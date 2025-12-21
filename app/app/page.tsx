@@ -9,6 +9,7 @@ import { FPSMeter } from "@/components/debug/FPSMeter";
 import { FPSTracker } from "@/hooks/useFPSMonitor";
 import { UIOverlay, ControlSidebar } from "@/components/layout";
 import { ProducerModePanel } from "@/components/ProducerMode";
+import { SceneEditorPanel } from "@/components/scenes";
 import { PermissionDialog } from "@/components/PermissionDialog";
 import { MicPermissionDialog } from "@/components/MicPermissionDialog";
 import { AudioConnectOverlay } from "@/components/audio/AudioConnectOverlay";
@@ -140,7 +141,7 @@ export default function Home() {
   }, [isRecording, startRecording, stopRecording, getStream]);
 
   return (
-    <div className="w-screen h-dvh grid grid-cols-[auto_1fr_auto]">
+    <div className="w-screen h-dvh grid grid-cols-[auto_1fr_auto_auto]">
       {/* Producer Mode Panel - pushes content from left */}
       <ProducerModePanel />
 
@@ -217,6 +218,9 @@ export default function Home() {
 
         {fpsVisible && <FPSMeter />}
       </div>
+
+      {/* Scene Editor Panel - right side */}
+      <SceneEditorPanel />
 
       {/* Control Sidebar - pushes content from right */}
       {devControlsVisible && <ControlSidebar analysisRef={analysisRef} />}

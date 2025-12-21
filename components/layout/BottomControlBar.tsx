@@ -7,6 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { CameraControls } from "@/components/camera";
 import { PlaylistControls } from "@/components/playlist";
+import { SceneControls } from "@/components/scenes";
 import { AudioSourceButton } from "@/components/audio";
 import { RecordButton } from "@/components/recording";
 import { HelpModal, SettingsMenu } from "@/components/dialogs";
@@ -117,6 +118,9 @@ export function BottomControlBar({
 
           {/* Playlist Controls */}
           <PlaylistControls compact />
+
+          {/* Scene Controls - Admin only */}
+          {isAdmin && <SceneControls compact />}
 
           <Separator orientation="vertical" className="h-6 mx-1 sm:mx-2" />
 

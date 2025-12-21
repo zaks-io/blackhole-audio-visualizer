@@ -325,7 +325,7 @@ interface ReleaseItemProps {
     platform: "windows" | "macos";
     version: string;
     isLatest: boolean;
-    createdAt: number;
+    _creationTime: number;
     downloadCount: number;
   };
   copiedId: string | null;
@@ -364,7 +364,7 @@ function ReleaseItem({
             </div>
             <p className="text-xs text-muted-foreground">
               v{release.version}
-              {` · ${formatDate(release.createdAt)}`}
+              {` · ${formatDate(release._creationTime)}`}
               {` · ${release.downloadCount ?? 0} downloads`}
             </p>
           </div>

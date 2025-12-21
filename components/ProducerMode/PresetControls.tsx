@@ -58,7 +58,7 @@ type UnifiedPreset = {
   colorPalette: string;
   parameters: PresetParameter[];
   isPublic: boolean;
-  createdAt: number;
+  updatedAt?: number;
 };
 
 function buildParametersFromState(): PresetParameter[] {
@@ -113,23 +113,20 @@ export function PresetControls() {
         colorPalette: p.colorPalette,
         parameters: p.parameters,
         isPublic: p.isPublic,
-        createdAt: p.createdAt,
+        updatedAt: p.updatedAt,
       }))
-      .sort((a, b) => b.createdAt - a.createdAt);
+      .sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0));
   }, [convexPresets.presets]);
 
   const localPresetsList: UnifiedPreset[] = useMemo(() => {
-    return localPresets.presets
-      .map((p) => ({
-        id: p.id,
-        source: "local" as const,
-        name: p.name,
-        colorPalette: p.colorPalette,
-        parameters: p.parameters,
-        isPublic: false,
-        createdAt: p.createdAt,
-      }))
-      .sort((a, b) => b.createdAt - a.createdAt);
+    return localPresets.presets.map((p) => ({
+      id: p.id,
+      source: "local" as const,
+      name: p.name,
+      colorPalette: p.colorPalette,
+      parameters: p.parameters,
+      isPublic: false,
+    }));
   }, [localPresets.presets]);
 
   const unifiedPresets: UnifiedPreset[] = useMemo(() => {
@@ -336,7 +333,6 @@ export function PresetControls() {
           name: preset.name,
           colorPalette: preset.colorPalette,
           parameters: preset.parameters,
-          createdAt: preset.createdAt,
         });
       }
     } else {
@@ -417,7 +413,6 @@ export function PresetControls() {
                   name: selectedPreset.name,
                   colorPalette: selectedPreset.colorPalette,
                   parameters: selectedPreset.parameters,
-                  createdAt: selectedPreset.createdAt,
                 });
               }
             }}

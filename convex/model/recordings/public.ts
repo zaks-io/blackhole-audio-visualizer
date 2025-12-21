@@ -51,7 +51,6 @@ export const createRecording = mutation({
       fileSize: args.fileSize,
       duration: args.duration,
       uploadedBy: user._id,
-      createdAt: Date.now(),
       downloadCount: 0,
     });
 
@@ -88,11 +87,7 @@ export const getRecordings = query({
       return [];
     }
 
-    const recordings = await ctx.db
-      .query("recordings")
-      .withIndex("by_created")
-      .order("desc")
-      .collect();
+    const recordings = await ctx.db.query("recordings").order("desc").collect();
 
     const recordingsWithUrls = await Promise.all(
       recordings.map(async (recording) => ({

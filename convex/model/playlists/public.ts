@@ -88,7 +88,6 @@ export const createPlaylist = mutation({
       throw new Error("User not found");
     }
 
-    const now = Date.now();
     const playlistId = await ctx.db.insert("playlists", {
       userId: user._id,
       name: args.name,
@@ -96,8 +95,7 @@ export const createPlaylist = mutation({
       shuffle: false,
       defaultWaitDuration: 10,
       isPublic: args.isPublic,
-      createdAt: now,
-      updatedAt: now,
+      updatedAt: Date.now(),
     });
 
     return { playlistId };

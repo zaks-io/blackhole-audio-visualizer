@@ -75,7 +75,6 @@ export interface Preset {
   name: string;
   colorPalette: string;
   parameters: PresetParameter[];
-  createdAt: number;
 }
 
 // Convex types (using string for IDs to match Convex's Id type at runtime)
@@ -86,7 +85,6 @@ export interface ConvexPreset {
   colorPalette: string;
   parameters: PresetParameter[];
   isPublic: boolean;
-  createdAt: number;
   updatedAt: number;
 }
 
@@ -110,7 +108,6 @@ export interface Playlist {
   shuffle: boolean;
   defaultWaitDuration: number;
   isPublic: boolean;
-  createdAt: number;
   updatedAt: number;
 }
 

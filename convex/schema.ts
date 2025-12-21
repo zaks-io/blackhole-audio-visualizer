@@ -23,7 +23,6 @@ export default defineSchema({
       })
     ),
     isPublic: v.boolean(),
-    createdAt: v.number(),
     updatedAt: v.number(),
   })
     .index("by_user", ["userId"])
@@ -50,7 +49,6 @@ export default defineSchema({
     shuffle: v.boolean(),
     defaultWaitDuration: v.number(),
     isPublic: v.boolean(),
-    createdAt: v.number(),
     updatedAt: v.number(),
   })
     .index("by_user", ["userId"])
@@ -64,9 +62,8 @@ export default defineSchema({
     fileSize: v.number(),
     duration: v.optional(v.number()),
     uploadedBy: v.id("users"),
-    createdAt: v.number(),
     downloadCount: v.number(),
-  }).index("by_created", ["createdAt"]),
+  }),
 
   releases: defineTable({
     storageId: v.id("_storage"),
@@ -75,10 +72,63 @@ export default defineSchema({
     version: v.string(),
     isLatest: v.boolean(),
     uploadedBy: v.id("users"),
-    createdAt: v.number(),
     downloadCount: v.number(),
   })
     .index("by_platform", ["platform"])
     .index("by_platform_latest", ["platform", "isLatest"])
     .index("by_platform_version", ["platform", "version"]),
+
+  compositions: defineTable({
+    positive_global_styles: v.array(v.string()),
+    negative_global_styles: v.array(v.string()),
+    sections: v.array(
+      v.object({
+        section_name: v.string(),
+        positive_local_styles: v.array(v.string()),
+        negative_local_styles: v.array(v.string()),
+        duration_ms: v.number(),
+        lines: v.array(v.string()),
+      })
+    ),
+  }),
+
+  generatedSongs: defineTable({
+    userId: v.id("users"),
+    name: v.string(),
+    storageId: v.optional(v.id("_storage")),
+    durationMs: v.optional(v.number()),
+    compositionId: v.optional(v.id("compositions")),
+    status: v.union(
+      v.literal("ready"),
+      v.literal("generating"),
+      v.literal("completed"),
+      v.literal("failed")
+    ),
+    error: v.optional(v.string()),
+    threadId: v.string(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_thread", ["threadId"])
+    .index("by_status", ["status"]),
+
+  scenes: defineTable({
+    userId: v.id("users"),
+    name: v.string(),
+    description: v.optional(v.string()),
+    songId: v.id("generatedSongs"),
+    playlistId: v.id("playlists"),
+    isPublic: v.boolean(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_public", ["isPublic"])
+    .index("by_playlist", ["playlistId"])
+    .index("by_song", ["songId"]),
+
+  sceneConversations: defineTable({
+    sceneId: v.optional(v.id("scenes")), // Optional because thread may exist before scene is saved
+    threadId: v.string(), // Convex Agent SDK thread ID
+    title: v.optional(v.string()),
+  })
+    .index("by_scene", ["sceneId"])
+    .index("by_thread", ["threadId"]),
 });

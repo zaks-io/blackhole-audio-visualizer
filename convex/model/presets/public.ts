@@ -92,15 +92,13 @@ export const createPreset = mutation({
       throw new Error("User not found");
     }
 
-    const now = Date.now();
     const presetId = await ctx.db.insert("presets", {
       userId: user._id,
       name: args.name,
       colorPalette: args.colorPalette,
       parameters: args.parameters,
       isPublic: args.isPublic,
-      createdAt: now,
-      updatedAt: now,
+      updatedAt: Date.now(),
     });
 
     return { presetId };

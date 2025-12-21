@@ -38,7 +38,7 @@ export function PresetPicker({ open, onOpenChange, onSelect, excludeIds }: Prese
       }
     }
 
-    return result.sort((a, b) => b.createdAt - a.createdAt);
+    return result.sort((a, b) => b.updatedAt - a.updatedAt);
   }, [presets, publicPresets, excludeIds]);
 
   return (

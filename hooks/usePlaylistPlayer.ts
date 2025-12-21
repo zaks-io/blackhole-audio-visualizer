@@ -32,7 +32,6 @@ function convexPresetToPreset(preset: ConvexPreset): Preset {
     name: preset.name,
     colorPalette: preset.colorPalette,
     parameters: preset.parameters,
-    createdAt: preset.createdAt,
   };
 }
 
