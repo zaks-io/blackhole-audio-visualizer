@@ -284,9 +284,9 @@ export const createSceneThread = action({
     await requireAdmin(ctx);
 
     // Create a new thread using the agent
-    const { threadId } = await sceneAgent.createThread(ctx, {
+    const { threadId } = (await sceneAgent.createThread(ctx, {
       title: "New Scene",
-    });
+    })) as { threadId: string };
 
     // Create a scene conversation record to track this thread
     await ctx.runMutation(internal.model.scenes.public.createConversationRecord, {

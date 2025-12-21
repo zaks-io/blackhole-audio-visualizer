@@ -1,9 +1,9 @@
 import { Agent, createTool } from "@convex-dev/agent";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
-import { generateObject } from "ai";
+import { generateObject, type GenerateObjectResult } from "ai";
 import { components, internal } from "../../_generated/api";
 import { z } from "zod";
-import type { Id } from "../../_generated/dataModel";
+import type { Id, Doc } from "../../_generated/dataModel";
 
 if (!process.env.OPENROUTER_API_KEY) {
   throw new Error("OPENROUTER_API_KEY is not set");
@@ -371,19 +371,39 @@ const playlistOutputSchema = z.object({
   ),
 });
 
+type PlaylistOutput = z.infer<typeof playlistOutputSchema>;
+type GeneratedPreset = PlaylistOutput["presets"][number];
+
+type SectionWithTiming = Doc<"compositions">["sections"][number] & {
+  startTimeMs: number;
+  endTimeMs: number;
+};
+
 // Tool: Generate visualization playlist using generateObject
 const generateVisualizationPlaylist = createTool({
   description:
     "Generate and save a visualization playlist synced to the song composition. Call this after the composition plan is finalized to create the visual experience. This will automatically create presets and a playlist in the database.",
   args: z.object({
-    compositionPlan: compositionPlanSchema,
-    songTitle: z.string(),
+    songId: z.string().describe("The ID of the song to generate a visualization playlist for"),
   }),
   handler: async (ctx, args) => {
+    const song: Doc<"generatedSongs"> | null = await ctx.runQuery(
+      internal.model.scenes.public.getSongInternal,
+      { songId: args.songId as Id<"generatedSongs"> }
+    );
+    if (!song) return { action: "error", error: "Song not found" };
+    if (song.status !== "ready") return { action: "error", error: "Song is not in ready status" };
+    if (!song.compositionId) return { action: "error", error: "Song has no composition" };
+    const composition: Doc<"compositions"> | null = await ctx.runQuery(
+      internal.model.scenes.public.getCompositionInternal,
+      { compositionId: song.compositionId }
+    );
+    if (!composition) return { action: "error", error: "Composition not found" };
+
     // Calculate section timings
     let currentTime = 0;
-    const sectionsWithTiming = args.compositionPlan.sections.map((section) => {
-      const sectionInfo = {
+    const sectionsWithTiming: SectionWithTiming[] = composition.sections.map((section) => {
+      const sectionInfo: SectionWithTiming = {
         ...section,
         startTimeMs: currentTime,
         endTimeMs: currentTime + section.duration_ms,
@@ -392,14 +412,14 @@ const generateVisualizationPlaylist = createTool({
       return sectionInfo;
     });
 
-    const prompt = `Create a visualization playlist for the song "${args.songTitle}".
+    const prompt: string = `Create a visualization playlist for the song "${song.name}".
 
 ## Song Structure
 ${JSON.stringify(sectionsWithTiming, null, 2)}
 
 ## Global Styles
-Positive: ${args.compositionPlan.positive_global_styles.join(", ")}
-Negative (avoid): ${args.compositionPlan.negative_global_styles.join(", ")}
+Positive: ${composition.positive_global_styles.join(", ")}
+Negative (avoid): ${composition.negative_global_styles.join(", ")}
 
 ## Instructions
 1. Create a preset every 10 to 20 seconds aligned with the song structure for the ENTIRE song duration.
@@ -410,14 +430,14 @@ Negative (avoid): ${args.compositionPlan.negative_global_styles.join(", ")}
   - Keep intros/outros calmer and more atmospheric`;
 
     // Use generateObject with Gemini 3 Pro for structured output
-    const result = await generateObject({
+    const result: GenerateObjectResult<PlaylistOutput> = await generateObject({
       model: openrouter.chat("google/gemini-3-pro-preview"),
       schema: playlistOutputSchema,
       system: VISUALIZATION_INSTRUCTIONS,
       prompt,
     });
 
-    const generatedPresets = result.object.presets;
+    const generatedPresets: GeneratedPreset[] = result.object.presets;
 
     // Get user ID from context
     const identity = await ctx.auth.getUserIdentity();
@@ -464,7 +484,7 @@ Negative (avoid): ${args.compositionPlan.negative_global_styles.join(", ")}
       internal.model.scenes.public.createPlaylistForScene,
       {
         userId: user._id,
-        name: `${args.songTitle} Visualization`,
+        name: `${song.name} Visualization`,
         presetIds,
         waitDurations: generatedPresets.map((p) => (p.endTimeMs - p.startTimeMs) / 1000),
         cameraPresets,
