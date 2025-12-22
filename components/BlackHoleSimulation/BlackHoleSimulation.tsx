@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useMemo } from "react";
 import { Environment } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { useShallow } from "zustand/shallow";
