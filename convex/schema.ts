@@ -56,7 +56,17 @@ export default defineSchema({
     .index("by_public", ["isPublic"]),
 
   recordings: defineTable({
-    storageId: v.id("_storage"),
+    r2SourceKey: v.string(),
+    r2HlsPath: v.optional(v.string()),
+    transcodingStatus: v.union(
+      v.literal("pending"),
+      v.literal("processing"),
+      v.literal("completed"),
+      v.literal("failed")
+    ),
+    coconutJobId: v.optional(v.string()),
+    transcodingError: v.optional(v.string()),
+    webhookToken: v.optional(v.string()),
     name: v.string(),
     description: v.optional(v.string()),
     mimeType: v.string(),
@@ -64,7 +74,7 @@ export default defineSchema({
     duration: v.optional(v.number()),
     uploadedBy: v.id("users"),
     downloadCount: v.number(),
-  }),
+  }).index("by_webhook_token", ["webhookToken"]),
 
   releases: defineTable({
     storageId: v.id("_storage"),

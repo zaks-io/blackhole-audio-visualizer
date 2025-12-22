@@ -1,7 +1,17 @@
 "use client";
 
 import { useState, useRef, type ReactNode } from "react";
-import { Upload, Copy, Check, Trash2, Video, ExternalLink, X, Loader2 } from "lucide-react";
+import {
+  Upload,
+  Copy,
+  Check,
+  Trash2,
+  Video,
+  ExternalLink,
+  X,
+  Loader2,
+  RotateCcw,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -21,6 +31,21 @@ interface RecordingsManagerDialogProps {
   children: ReactNode;
 }
 
+function StatusBadge({ status }: { status: string }) {
+  const statusConfig: Record<string, { label: string; className: string }> = {
+    pending: { label: "Pending", className: "bg-yellow-500/20 text-yellow-500" },
+    processing: { label: "Processing", className: "bg-blue-500/20 text-blue-500" },
+    completed: { label: "Ready", className: "bg-green-500/20 text-green-500" },
+    failed: { label: "Failed", className: "bg-red-500/20 text-red-500" },
+  };
+
+  const config = statusConfig[status] ?? statusConfig.pending;
+
+  return (
+    <span className={cn("px-2 py-0.5 rounded-full text-xs", config.className)}>{config.label}</span>
+  );
+}
+
 export function RecordingsManagerDialog({ children }: RecordingsManagerDialogProps) {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -28,9 +53,11 @@ export function RecordingsManagerDialog({ children }: RecordingsManagerDialogPro
   const [duration, setDuration] = useState<number | undefined>();
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [retryingId, setRetryingId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const { recordings, isLoading, uploadRecording, deleteRecording } = useConvexRecordings();
+  const { recordings, isLoading, uploadRecording, deleteRecording, retryTranscoding } =
+    useConvexRecordings();
 
   const handleCopyUrl = async (id: string, url: string) => {
     await navigator.clipboard.writeText(url);
@@ -41,6 +68,17 @@ export function RecordingsManagerDialog({ children }: RecordingsManagerDialogPro
   const handleDelete = async (id: string) => {
     if (confirm("Delete this recording? This cannot be undone.")) {
       await deleteRecording(id);
+    }
+  };
+
+  const handleRetry = async (id: string) => {
+    setRetryingId(id);
+    try {
+      await retryTranscoding(id);
+    } catch (error) {
+      console.error("Retry failed:", error);
+    } finally {
+      setRetryingId(null);
     }
   };
 
@@ -121,9 +159,7 @@ export function RecordingsManagerDialog({ children }: RecordingsManagerDialogPro
   };
 
   const getShareableUrl = (recordingId: string): string => {
-    const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL ?? "";
-    const siteUrl = convexUrl.replace(".cloud", ".site");
-    return `${siteUrl}/recording/${recordingId}`;
+    return `${window.location.origin}/watch/${recordingId}`;
   };
 
   return (
@@ -140,7 +176,7 @@ export function RecordingsManagerDialog({ children }: RecordingsManagerDialogPro
           <input
             ref={fileInputRef}
             type="file"
-            accept="video/mp4,video/webm,video/quicktime"
+            accept="video/*"
             onChange={handleFileChange}
             className="hidden"
           />
@@ -234,14 +270,20 @@ export function RecordingsManagerDialog({ children }: RecordingsManagerDialogPro
                     <div className="flex items-center gap-2 min-w-0">
                       <Video className="h-4 w-4 text-muted-foreground shrink-0" />
                       <div className="min-w-0">
-                        <p className="font-medium text-sm truncate">{recording.name}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-sm truncate">{recording.name}</p>
+                          <StatusBadge status={recording.transcodingStatus} />
+                        </div>
                         <p className="text-xs text-muted-foreground">
                           {formatFileSize(recording.fileSize)}
                           {recording.duration !== undefined &&
                             ` · ${formatDuration(recording.duration)}`}
                           {` · ${formatDate(recording._creationTime)}`}
-                          {` · ${recording.downloadCount ?? 0} downloads`}
+                          {` · ${recording.downloadCount ?? 0} views`}
                         </p>
+                        {recording.transcodingStatus === "failed" && recording.transcodingError && (
+                          <p className="text-xs text-red-500 mt-1">{recording.transcodingError}</p>
+                        )}
                       </div>
                     </div>
                     <Button
@@ -255,34 +297,68 @@ export function RecordingsManagerDialog({ children }: RecordingsManagerDialogPro
                   </div>
 
                   <div className="flex gap-2 pl-6">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-7 text-xs gap-1.5"
-                      onClick={() => handleCopyUrl(recording._id, getShareableUrl(recording._id))}
-                    >
-                      {copiedId === recording._id ? (
-                        <>
-                          <Check className="h-3 w-3" />
-                          Copied!
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="h-3 w-3" />
-                          Copy Link
-                        </>
-                      )}
-                    </Button>
-                    <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5" asChild>
-                      <a
-                        href={getShareableUrl(recording._id)}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                    {recording.transcodingStatus === "completed" && (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-xs gap-1.5"
+                          onClick={() =>
+                            handleCopyUrl(recording._id, getShareableUrl(recording._id))
+                          }
+                        >
+                          {copiedId === recording._id ? (
+                            <>
+                              <Check className="h-3 w-3" />
+                              Copied!
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="h-3 w-3" />
+                              Copy Link
+                            </>
+                          )}
+                        </Button>
+                        <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5" asChild>
+                          <a
+                            href={getShareableUrl(recording._id)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <ExternalLink className="h-3 w-3" />
+                            Open
+                          </a>
+                        </Button>
+                      </>
+                    )}
+                    {recording.transcodingStatus === "failed" && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs gap-1.5"
+                        onClick={() => handleRetry(recording._id)}
+                        disabled={retryingId === recording._id}
                       >
-                        <ExternalLink className="h-3 w-3" />
-                        Open
-                      </a>
-                    </Button>
+                        {retryingId === recording._id ? (
+                          <>
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                            Retrying...
+                          </>
+                        ) : (
+                          <>
+                            <RotateCcw className="h-3 w-3" />
+                            Retry
+                          </>
+                        )}
+                      </Button>
+                    )}
+                    {(recording.transcodingStatus === "pending" ||
+                      recording.transcodingStatus === "processing") && (
+                      <span className="text-xs text-muted-foreground flex items-center gap-1.5">
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                        {recording.transcodingStatus === "pending" ? "Waiting..." : "Processing..."}
+                      </span>
+                    )}
                   </div>
                 </div>
               ))}

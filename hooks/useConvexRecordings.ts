@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useAction } from "convex/react";
 import { useConvexAuth } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -13,9 +13,13 @@ export function useConvexRecordings() {
     isAuthenticated ? {} : "skip"
   );
 
-  const generateUploadUrlMutation = useMutation(api.model.recordings.public.generateUploadUrl);
-  const createRecordingMutation = useMutation(api.model.recordings.public.createRecording);
-  const deleteRecordingMutation = useMutation(api.model.recordings.public.deleteRecording);
+  const createPendingRecordingMutation = useMutation(
+    api.model.recordings.public.createPendingRecording
+  );
+  const generateR2UploadUrlAction = useAction(api.model.recordings.public.generateR2UploadUrl);
+  const submitTranscodingJobAction = useAction(api.model.recordings.public.submitTranscodingJob);
+  const deleteRecordingAction = useAction(api.model.recordings.public.deleteRecording);
+  const retryTranscodingJobAction = useAction(api.model.recordings.public.retryTranscodingJob);
 
   const uploadRecording = async (
     file: File,
@@ -24,9 +28,20 @@ export function useConvexRecordings() {
     duration?: number,
     onProgress?: (percent: number) => void
   ) => {
-    const uploadUrl = await generateUploadUrlMutation();
+    const { recordingId } = await createPendingRecordingMutation({
+      name,
+      description,
+      mimeType: file.type,
+      fileSize: file.size,
+      duration,
+    });
 
-    const { storageId } = await new Promise<{ storageId: string }>((resolve, reject) => {
+    const { uploadUrl } = await generateR2UploadUrlAction({
+      recordingId,
+      contentType: file.type,
+    });
+
+    await new Promise<void>((resolve, reject) => {
       const xhr = new XMLHttpRequest();
 
       xhr.upload.onprogress = (event) => {
@@ -38,33 +53,32 @@ export function useConvexRecordings() {
 
       xhr.onload = () => {
         if (xhr.status >= 200 && xhr.status < 300) {
-          resolve(JSON.parse(xhr.responseText));
+          resolve();
         } else {
-          reject(new Error("Failed to upload file"));
+          reject(new Error("Failed to upload file to R2"));
         }
       };
 
-      xhr.onerror = () => reject(new Error("Failed to upload file"));
+      xhr.onerror = () => reject(new Error("Failed to upload file to R2"));
 
-      xhr.open("POST", uploadUrl);
+      xhr.open("PUT", uploadUrl);
       xhr.setRequestHeader("Content-Type", file.type);
       xhr.send(file);
     });
 
-    const result = await createRecordingMutation({
-      storageId: storageId as Id<"_storage">,
-      name,
-      description,
-      mimeType: file.type,
-      fileSize: file.size,
-      duration,
-    });
+    await submitTranscodingJobAction({ recordingId });
 
-    return result;
+    return { recordingId };
   };
 
   const deleteRecording = async (recordingId: string) => {
-    return deleteRecordingMutation({
+    return deleteRecordingAction({
+      recordingId: recordingId as Id<"recordings">,
+    });
+  };
+
+  const retryTranscoding = async (recordingId: string) => {
+    return retryTranscodingJobAction({
       recordingId: recordingId as Id<"recordings">,
     });
   };
@@ -75,5 +89,6 @@ export function useConvexRecordings() {
     isAuthenticated,
     uploadRecording,
     deleteRecording,
+    retryTranscoding,
   };
 }

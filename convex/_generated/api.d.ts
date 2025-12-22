@@ -9,9 +9,11 @@
  */
 
 import type * as http from "../http.js";
+import type * as lib_r2 from "../lib/r2.js";
 import type * as model_generatedSongs_internal from "../model/generatedSongs/internal.js";
 import type * as model_playlists_public from "../model/playlists/public.js";
 import type * as model_presets_public from "../model/presets/public.js";
+import type * as model_recordings_internal from "../model/recordings/internal.js";
 import type * as model_recordings_public from "../model/recordings/public.js";
 import type * as model_releases_public from "../model/releases/public.js";
 import type * as model_scenes_agents from "../model/scenes/agents.js";
@@ -25,9 +27,11 @@ import type { ApiFromModules, FilterApi, FunctionReference } from "convex/server
 
 declare const fullApi: ApiFromModules<{
   http: typeof http;
+  "lib/r2": typeof lib_r2;
   "model/generatedSongs/internal": typeof model_generatedSongs_internal;
   "model/playlists/public": typeof model_playlists_public;
   "model/presets/public": typeof model_presets_public;
+  "model/recordings/internal": typeof model_recordings_internal;
   "model/recordings/public": typeof model_recordings_public;
   "model/releases/public": typeof model_releases_public;
   "model/scenes/agents": typeof model_scenes_agents;
