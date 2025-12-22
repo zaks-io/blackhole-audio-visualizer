@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useEffect } from "react";
+import { useRef, useEffect } from "react";
 import { Environment } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { useShallow } from "zustand/shallow";
@@ -58,6 +58,7 @@ export function BlackHoleSimulation({
   // Only subscribe to values that affect the render output
   const emitterControls = useVisualizationControls(
     useShallow((s) => ({
+      // Only need values for helper geometry or conditional rendering
       emitRadius: s.emitRadius,
       emitterCount: s.emitterCount,
       emitterAngle: s.emitterAngle,
@@ -66,28 +67,8 @@ export function BlackHoleSimulation({
     }))
   );
 
-  const particleControls = useVisualizationControls(
-    useShallow((s) => ({
-      textureSize: s.textureSize,
-      pointSize: s.pointSize,
-      brightness: s.brightness,
-      alpha: s.alpha,
-      maxDistance: s.maxDistance,
-      gravity: s.gravity,
-      timeScale: s.timeScale,
-      eventHorizonRadius: s.eventHorizonRadius,
-      softening: s.softening,
-      orbitDecay: s.orbitDecay,
-      spawnRate: s.spawnRate,
-      inwardAngle: s.inwardAngle,
-      iscoRatio: s.iscoRatio,
-      beatPulse: s.beatPulse,
-      iscoStrength: s.iscoStrength,
-      emitterSpread: s.emitterSpread,
-      amplitude: s.amplitude,
-      beatRepulsion: s.beatRepulsion,
-    }))
-  );
+  // Used for keys to force re-mount on major changes
+  const textureSize = useVisualizationControls((s) => s.textureSize);
 
   const skyboxControls = useVisualizationControls(
     useShallow((s) => ({
@@ -180,24 +161,6 @@ export function BlackHoleSimulation({
     };
   };
 
-  const emitterPositions = useMemo(() => {
-    const positions: [number, number, number][] = [];
-    for (let i = 0; i < emitterControls.emitterCount; i++) {
-      const baseAngle = (i * Math.PI * 2) / emitterControls.emitterCount;
-      const angle = baseAngle + emitterControls.emitterAngle;
-      const x = emitterControls.emitRadius * Math.cos(angle);
-      const z = emitterControls.emitRadius * Math.sin(angle);
-      const y = Math.sin(angle) * emitterControls.emitterTilt;
-      positions.push([x, y, z]);
-    }
-    return positions;
-  }, [
-    emitterControls.emitRadius,
-    emitterControls.emitterCount,
-    emitterControls.emitterAngle,
-    emitterControls.emitterTilt,
-  ]);
-
   const skyboxPath = SKYBOX_OPTIONS[skyboxControls.skybox] || "";
 
   const isProceduralStars = skyboxControls.skybox === "Procedural Stars";
@@ -218,48 +181,23 @@ export function BlackHoleSimulation({
       )}
 
       <ParticleSystem
-        key={particleControls.textureSize}
-        textureSize={particleControls.textureSize}
-        pointSize={particleControls.pointSize}
-        brightness={particleControls.brightness}
-        alpha={particleControls.alpha}
-        maxDistance={particleControls.maxDistance}
+        key={textureSize}
         allColors={colorMode.allColors}
         paletteOffset={colorMode.paletteOffset}
-        gravitationalParameter={particleControls.gravity}
-        timeScale={particleControls.timeScale}
-        eventHorizonRadius={particleControls.eventHorizonRadius}
-        softening={particleControls.softening}
-        orbitDecay={particleControls.orbitDecay}
-        emissionRadius={emitterControls.emitRadius}
-        emitterCount={emitterControls.emitterCount}
-        emitterAngle={emitterControls.emitterAngle}
-        emitterTilt={emitterControls.emitterTilt}
-        spawnRate={particleControls.spawnRate}
-        inwardAngle={particleControls.inwardAngle}
-        iscoRadius={particleControls.eventHorizonRadius * particleControls.iscoRatio}
-        beatPulse={particleControls.beatPulse}
-        iscoStrength={particleControls.iscoStrength}
-        emitterSpread={particleControls.emitterSpread}
-        audioAmplitude={particleControls.amplitude}
-        beatRepulsion={particleControls.beatRepulsion}
         getAudioData={getAudioData}
         audioEnabled={isAudioConnected}
       />
-      <BlackHole
-        eventHorizonRadius={particleControls.eventHorizonRadius}
-        beatIntensityRef={beatIntensityRef}
-        beatPulse={particleControls.beatPulse}
-      />
+      <BlackHole beatIntensityRef={beatIntensityRef} />
 
-      {/* Emitter position indicators */}
-      {emitterControls.showEmitters &&
-        emitterPositions.map((pos, i) => (
-          <mesh key={i} position={pos}>
-            <sphereGeometry args={[0.5, 16, 16]} />
-            <meshBasicMaterial color="#00ff00" />
-          </mesh>
-        ))}
+      {/* Emitter position indicators - only calculated when shown */}
+      {emitterControls.showEmitters && (
+        <EmitterHelpers
+          count={emitterControls.emitterCount}
+          radius={emitterControls.emitRadius}
+          angle={emitterControls.emitterAngle}
+          tilt={emitterControls.emitterTilt}
+        />
+      )}
 
       <CameraSystem
         mode={cameraMode.mode}
@@ -267,6 +205,43 @@ export function BlackHoleSimulation({
         onTransitionComplete={cameraMode.onTransitionComplete}
         timelineRef={cameraMode.timelineRef}
       />
+    </>
+  );
+}
+
+// Separate component for helpers to avoid re-calculating positions in main component
+function EmitterHelpers({
+  count,
+  radius,
+  angle,
+  tilt,
+}: {
+  count: number;
+  radius: number;
+  angle: number;
+  tilt: number;
+}) {
+  const positions = useMemo(() => {
+    const pos: [number, number, number][] = [];
+    for (let i = 0; i < count; i++) {
+      const baseAngle = (i * Math.PI * 2) / count;
+      const a = baseAngle + angle;
+      const x = radius * Math.cos(a);
+      const z = radius * Math.sin(a);
+      const y = Math.sin(a) * tilt;
+      pos.push([x, y, z]);
+    }
+    return pos;
+  }, [count, radius, angle, tilt]);
+
+  return (
+    <>
+      {positions.map((pos, i) => (
+        <mesh key={i} position={pos}>
+          <sphereGeometry args={[0.5, 16, 16]} />
+          <meshBasicMaterial color="#00ff00" />
+        </mesh>
+      ))}
     </>
   );
 }
