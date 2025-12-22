@@ -127,6 +127,37 @@ export const createPlaylistForScene = internalMutation({
   },
 });
 
+export const getPlaylistPresets = query({
+  args: { playlistId: v.id("playlists") },
+  handler: async (ctx, { playlistId }) => {
+    const playlist = await ctx.db.get(playlistId);
+    if (!playlist) return null;
+
+    // Check access: public playlist or owned by current user
+    if (!playlist.isPublic) {
+      const identity = await ctx.auth.getUserIdentity();
+      if (!identity) return null;
+
+      const user = await ctx.db
+        .query("users")
+        .withIndex("by_token_identifier", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
+        .first();
+
+      if (!user || playlist.userId !== user._id) return null;
+    }
+
+    // Fetch all presets in the playlist
+    const presets = await Promise.all(
+      playlist.items.map(async (item) => {
+        const preset = await ctx.db.get(item.presetId);
+        return preset;
+      })
+    );
+
+    return presets.filter(Boolean);
+  },
+});
+
 export const saveComposition = internalMutation({
   args: {
     compositionPlan: compositionPlanValidator,

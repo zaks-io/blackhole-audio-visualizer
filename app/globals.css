@@ -257,3 +257,18 @@ body {
     box-shadow: 0 0 50px oklch(0.78 0.15 195 / 60%);
   }
 }
+
+/* Subtle pulse for tool results in active state */
+@keyframes pulse-subtle {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 2s ease-in-out infinite;
+}

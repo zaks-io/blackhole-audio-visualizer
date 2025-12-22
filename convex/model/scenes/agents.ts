@@ -464,7 +464,8 @@ Negative (avoid): ${composition.negative_global_styles.join(", ")}
     return {
       playlistId: playlistId as string,
       presetCount: presetIds.length,
-      presets: generatedPresets.map((p) => ({
+      presets: generatedPresets.map((p, i) => ({
+        presetId: presetIds[i] as string,
         name: p.name,
         sectionName: p.sectionName,
         colorPalette: p.colorPalette,
