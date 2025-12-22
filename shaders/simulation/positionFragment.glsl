@@ -1,3 +1,5 @@
+#define MAX_BLACK_HOLES 4
+
 uniform float uTime;
 uniform float uDeltaTime;
 uniform float uGM;
@@ -9,13 +11,17 @@ uniform float uEmitterAngle;
 uniform float uEmitterTilt;
 uniform float uParticlesPerSecond;
 uniform float uTotalParticles;
-uniform float uOrbitDecay;
 uniform float uLifetimeMax;
 uniform bool uDoDrift;
 uniform sampler2D uBandOnsetsTexture;
 uniform float uBandCount;
 uniform float uAudioAmplitude;
 uniform float uSpawnBurst;
+
+// Multi-black hole uniforms
+uniform vec3 uBlackHolePos[MAX_BLACK_HOLES];
+uniform float uBlackHoleMass[MAX_BLACK_HOLES];
+uniform int uBlackHoleCount;
 
 // 1D hash that explicitly breaks grid correlation by combining x and y
 float hash(vec2 p) {
@@ -82,27 +88,38 @@ void main() {
             pos = vec3(spawnX, y, spawnZ);
             lifetime = 1.0;
         }
-    } else if (r < uEventHorizon || (uLifetimeMax > 0.0 && lifetime > uLifetimeMax)) {
-        // HIT CENTER or MAX LIFETIME: recycle to emitter queue
-        float recycleRand = hash2(uv, uTime + 500.0);
-        if (uParticlesPerSecond <= 0.0) {
-            lifetime = 0.0;  // Instant respawn
-        } else {
-            lifetime = -recycleRand;  // 0 to -1 second queue position
+    } else {
+        // Check event horizon against ALL black holes
+        bool shouldRecycle = false;
+        for (int i = 0; i < MAX_BLACK_HOLES; i++) {
+            if (i >= uBlackHoleCount) break;
+            float dist = length(pos - uBlackHolePos[i]);
+            if (dist < uEventHorizon) {
+                shouldRecycle = true;
+                break;
+            }
         }
-        pos = vec3(0.0, 0.0, 0.0);  // Reset position for recycled particles
-    } else if (uDoDrift) {
-        // DRIFT: update position using velocity
-        pos = pos + vel * uDeltaTime;
 
-        // Age the particle
-        lifetime += uDeltaTime;
+        // Also recycle if max lifetime exceeded
+        if (uLifetimeMax > 0.0 && lifetime > uLifetimeMax) {
+            shouldRecycle = true;
+        }
 
-        // Orbit decay scales with age - older particles fall in faster
-        if (uOrbitDecay > 0.0) {
-            vec3 r_hat = normalize(pos);
-            float ageDecay = uOrbitDecay * lifetime;
-            pos -= r_hat * ageDecay * uDeltaTime;
+        if (shouldRecycle) {
+            // HIT CENTER or MAX LIFETIME: recycle to emitter queue
+            float recycleRand = hash2(uv, uTime + 500.0);
+            if (uParticlesPerSecond <= 0.0) {
+                lifetime = 0.0;  // Instant respawn
+            } else {
+                lifetime = -recycleRand;  // 0 to -1 second queue position
+            }
+            pos = vec3(0.0, 0.0, 0.0);  // Reset position for recycled particles
+        } else if (uDoDrift) {
+            // DRIFT: update position using velocity
+            pos = pos + vel * uDeltaTime;
+
+            // Age the particle
+            lifetime += uDeltaTime;
         }
     }
 

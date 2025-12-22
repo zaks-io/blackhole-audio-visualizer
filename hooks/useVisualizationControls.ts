@@ -6,6 +6,11 @@ export interface VisualizationControlsState {
   eventHorizonRadius: number;
   iscoRatio: number;
   beatPulse: number;
+  blackHoleCount: number;
+  orbitRadius: number;
+  orbitSpeed: number;
+  blackHoleMassMin: number;
+  blackHoleMassMax: number;
 
   // Particles
   textureSize: number;
@@ -77,6 +82,11 @@ export const pathToKey: Record<string, keyof VisualizationControlsState> = {
   "Black Hole.eventHorizonRadius": "eventHorizonRadius",
   "Black Hole.iscoRatio": "iscoRatio",
   "Black Hole.beatPulse": "beatPulse",
+  "Black Hole.blackHoleCount": "blackHoleCount",
+  "Black Hole.orbitRadius": "orbitRadius",
+  "Black Hole.orbitSpeed": "orbitSpeed",
+  "Black Hole.blackHoleMassMin": "blackHoleMassMin",
+  "Black Hole.blackHoleMassMax": "blackHoleMassMax",
   "Particles.textureSize": "textureSize",
   "Particles.pointSize": "pointSize",
   "Particles.brightness": "brightness",
@@ -125,6 +135,11 @@ const DEFAULT_STATE: VisualizationControlsState = {
   eventHorizonRadius: 5,
   iscoRatio: 3.0,
   beatPulse: 2,
+  blackHoleCount: 1,
+  orbitRadius: 15,
+  orbitSpeed: 0.3,
+  blackHoleMassMin: 0.3,
+  blackHoleMassMax: 1.0,
 
   // Particles defaults
   textureSize: 512,

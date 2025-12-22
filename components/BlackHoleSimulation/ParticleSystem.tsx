@@ -20,11 +20,18 @@ interface ParticleAudioData {
   spawnBurst: number;
 }
 
+interface BlackHoleData {
+  positions: THREE.Vector3[];
+  masses: number[];
+  count: number;
+}
+
 interface ParticleSystemProps {
   allColors?: string[];
   paletteOffset?: number;
   getAudioData: () => ParticleAudioData;
   audioEnabled: boolean;
+  getBlackHoleData: () => BlackHoleData;
 }
 
 export function ParticleSystem({
@@ -32,6 +39,7 @@ export function ParticleSystem({
   paletteOffset = 0,
   getAudioData,
   audioEnabled,
+  getBlackHoleData,
 }: ParticleSystemProps) {
   // Read texture size only on mount - changing it requires full rebuild
   const textureSize = useVisualizationControls.getState().textureSize || DEFAULT_TEXTURE_SIZE;
@@ -64,6 +72,7 @@ export function ParticleSystem({
     setLifetimeGracePeriod,
     setLifetimeMax,
     setLifetimeGravityMultiplier,
+    setBlackHoles,
   } = useGPUCompute(textureSize);
 
   const materialRef = useRef<THREE.ShaderMaterial>(null);
@@ -110,6 +119,15 @@ export function ParticleSystem({
       uMaxDistance: { value: initialControls.maxDistance },
       uEventHorizon: { value: initialControls.eventHorizonRadius },
       uISCORadius: { value: initialControls.eventHorizonRadius * initialControls.iscoRatio },
+      uBlackHolePos: {
+        value: [
+          new THREE.Vector3(0, 0, 0),
+          new THREE.Vector3(0, 0, 0),
+          new THREE.Vector3(0, 0, 0),
+          new THREE.Vector3(0, 0, 0),
+        ],
+      },
+      uBlackHoleCount: { value: 1 },
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [colorArray]
@@ -164,6 +182,22 @@ export function ParticleSystem({
     setLifetimeGracePeriod(state.lifetimeGracePeriod);
     setLifetimeMax(state.lifetimeMax);
     setLifetimeGravityMultiplier(state.lifetimeGravityMultiplier);
+
+    // Update black hole positions and masses
+    const blackHoleData = getBlackHoleData();
+    setBlackHoles(blackHoleData.positions, blackHoleData.masses, blackHoleData.count);
+
+    // Update render shader uniforms for black hole positions
+    if (materialRef.current) {
+      for (let i = 0; i < 4; i++) {
+        if (i < blackHoleData.count) {
+          materialRef.current.uniforms.uBlackHolePos.value[i].copy(blackHoleData.positions[i]);
+        } else {
+          materialRef.current.uniforms.uBlackHolePos.value[i].set(0, 0, 0);
+        }
+      }
+      materialRef.current.uniforms.uBlackHoleCount.value = blackHoleData.count;
+    }
 
     if (audioEnabled) {
       const audioData = getAudioData();

@@ -4,6 +4,7 @@ import { useRef, useEffect, useMemo } from "react";
 import { Environment } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { useShallow } from "zustand/shallow";
+import * as THREE from "three";
 import { ParticleSystem } from "./ParticleSystem";
 import { BlackHole } from "./BlackHole";
 import { CameraSystem } from "@/components/CameraSystem";
@@ -94,6 +95,16 @@ export function BlackHoleSimulation({
 
   const beatIntensityRef = useRef(0);
 
+  // Black hole positions and masses for N-body system (for GPU compute)
+  const blackHoleDataRef = useRef({
+    positions: [new THREE.Vector3(0, 0, 0)],
+    masses: [100000],
+    count: 1,
+  });
+
+  // Subscribe to blackHoleCount for reactive rendering of BlackHole components
+  const blackHoleCount = useVisualizationControls((s) => s.blackHoleCount);
+
   // Envelope followers for particle system audio signals
   // HFC boost: 50ms attack, 150ms decay (for velocity boost)
   // Spawn burst: instant attack, 100ms decay (for bass-triggered spawn bursts)
@@ -103,14 +114,70 @@ export function BlackHoleSimulation({
   const spawnDecayCoef = useRef(Math.exp(-1 / (0.1 * 60))); // 100ms decay at 60fps
 
   useFrame((state) => {
+    // Use getState() to avoid subscriptions for runtime-only values
+    const store = useVisualizationControls.getState();
+
+    // Calculate black hole positions based on orbit parameters
+    const {
+      blackHoleCount: bhCount,
+      orbitRadius,
+      orbitSpeed,
+      gravity,
+      blackHoleMassMin,
+      blackHoleMassMax,
+    } = store;
+    const elapsed = state.clock.elapsedTime;
+
+    const positions: THREE.Vector3[] = [];
+    const masses: number[] = [];
+
+    if (bhCount === 1) {
+      // Single black hole at origin
+      positions.push(new THREE.Vector3(0, 0, 0));
+      masses.push(gravity * blackHoleMassMax);
+    } else {
+      // Multi-body: distribute around center of mass in circular orbit
+      const angleStep = (2 * Math.PI) / bhCount;
+      const totalMass = gravity;
+
+      // Calculate average mass ratio for barycenter adjustment
+      let totalMassRatio = 0;
+      for (let i = 0; i < bhCount; i++) {
+        const ti = i / (bhCount - 1);
+        totalMassRatio += blackHoleMassMax - ti * (blackHoleMassMax - blackHoleMassMin);
+      }
+      const avgMassRatio = totalMassRatio / bhCount;
+
+      for (let i = 0; i < bhCount; i++) {
+        const angle = elapsed * orbitSpeed + i * angleStep;
+        // Interpolate mass from max to min based on index
+        const t = i / (bhCount - 1);
+        const massRatio = blackHoleMassMax - t * (blackHoleMassMax - blackHoleMassMin);
+        const mass = totalMass * massRatio;
+        // Orbit radius inversely proportional to mass (heavier = closer to center)
+        const r = orbitRadius * (avgMassRatio / massRatio);
+
+        const x = Math.cos(angle) * r;
+        const z = Math.sin(angle) * r;
+
+        positions.push(new THREE.Vector3(x, 0, z));
+        masses.push(mass);
+      }
+    }
+
+    // Update ref for GPU compute
+    blackHoleDataRef.current = {
+      positions,
+      masses,
+      count: bhCount,
+    };
+
     if (isAudioConnected) {
-      // Use getState() to avoid subscriptions for runtime-only values
-      const store = useVisualizationControls.getState();
       const analysis = getAnalysis();
       // Use bass peak detection for beat intensity, or fall back to band onsets
       const bassBeat = analysis.peaks.bass ? 1 : 0;
       const onsetBeat = Math.max(analysis.bandOnsets[0] ?? 0, analysis.bandOnsets[1] ?? 0);
-      const beat = Math.max(bassBeat * 0.8, onsetBeat) * store.audioGain;
+      const beat = Math.max(bassBeat * 0.8, onsetBeat) * (store.audioGain ?? 1);
       beatIntensityRef.current = Math.min(beat, 1.5);
 
       // HFC boost - envelope follow the raw HFC with attack/decay
@@ -186,8 +253,11 @@ export function BlackHoleSimulation({
         paletteOffset={colorMode.paletteOffset}
         getAudioData={getAudioData}
         audioEnabled={isAudioConnected}
+        getBlackHoleData={() => blackHoleDataRef.current}
       />
-      <BlackHole beatIntensityRef={beatIntensityRef} />
+      {Array.from({ length: blackHoleCount }, (_, i) => (
+        <BlackHole key={i} beatIntensityRef={beatIntensityRef} index={i} />
+      ))}
 
       {/* Emitter position indicators - only calculated when shown */}
       {emitterControls.showEmitters && (

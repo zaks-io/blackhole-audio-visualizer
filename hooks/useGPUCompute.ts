@@ -98,13 +98,26 @@ export function useGPUCompute(textureSize: number = DEFAULT_TEXTURE_SIZE) {
     positionVariable.material.uniforms.uEmitterTilt = { value: 0.0 };
     positionVariable.material.uniforms.uParticlesPerSecond = { value: 5000 };
     positionVariable.material.uniforms.uTotalParticles = { value: textureSize * textureSize };
-    positionVariable.material.uniforms.uOrbitDecay = { value: 2.0 };
     positionVariable.material.uniforms.uLifetimeMax = { value: 60.0 };
     positionVariable.material.uniforms.uDoDrift = { value: false };
     positionVariable.material.uniforms.uBandOnsetsTexture = { value: textures.bandOnsetsTexture };
     positionVariable.material.uniforms.uBandCount = { value: 2.0 };
     positionVariable.material.uniforms.uAudioAmplitude = { value: 1.0 };
     positionVariable.material.uniforms.uSpawnBurst = { value: 1.0 };
+
+    // Multi-black hole uniforms for position shader
+    positionVariable.material.uniforms.uBlackHolePos = {
+      value: [
+        new THREE.Vector3(0, 0, 0),
+        new THREE.Vector3(0, 0, 0),
+        new THREE.Vector3(0, 0, 0),
+        new THREE.Vector3(0, 0, 0),
+      ],
+    };
+    positionVariable.material.uniforms.uBlackHoleMass = {
+      value: [DEFAULT_GM, DEFAULT_GM * 0.5, DEFAULT_GM * 0.3, DEFAULT_GM * 0.2],
+    };
+    positionVariable.material.uniforms.uBlackHoleCount = { value: 1 };
 
     // Store ref to band onsets texture for updates
     bandOnsetsTextureRef.current = textures.bandOnsetsTexture;
@@ -129,6 +142,21 @@ export function useGPUCompute(textureSize: number = DEFAULT_TEXTURE_SIZE) {
     velocityVariable.material.uniforms.uLifetimeGracePeriod = { value: 30.0 };
     velocityVariable.material.uniforms.uLifetimeMax = { value: 60.0 };
     velocityVariable.material.uniforms.uLifetimeGravityMultiplier = { value: 3.0 };
+    velocityVariable.material.uniforms.uOrbitDecay = { value: 2.0 };
+
+    // Multi-black hole uniforms for velocity shader
+    velocityVariable.material.uniforms.uBlackHolePos = {
+      value: [
+        new THREE.Vector3(0, 0, 0),
+        new THREE.Vector3(0, 0, 0),
+        new THREE.Vector3(0, 0, 0),
+        new THREE.Vector3(0, 0, 0),
+      ],
+    };
+    velocityVariable.material.uniforms.uBlackHoleMass = {
+      value: [DEFAULT_GM, DEFAULT_GM * 0.5, DEFAULT_GM * 0.3, DEFAULT_GM * 0.2],
+    };
+    velocityVariable.material.uniforms.uBlackHoleCount = { value: 1 };
 
     // Set dependencies: position and velocity both depend on each other
     gpuCompute.setVariableDependencies(positionVariable, [positionVariable, velocityVariable]);
@@ -246,8 +274,8 @@ export function useGPUCompute(textureSize: number = DEFAULT_TEXTURE_SIZE) {
   }, []);
 
   const setOrbitDecay = useCallback((value: number) => {
-    if (positionVariableRef.current) {
-      positionVariableRef.current.material.uniforms.uOrbitDecay.value = value;
+    if (velocityVariableRef.current) {
+      velocityVariableRef.current.material.uniforms.uOrbitDecay.value = value;
     }
   }, []);
 
@@ -368,6 +396,31 @@ export function useGPUCompute(textureSize: number = DEFAULT_TEXTURE_SIZE) {
     }
   }, []);
 
+  const setBlackHoles = useCallback(
+    (positions: THREE.Vector3[], masses: number[], count: number) => {
+      // Pad arrays to MAX_BLACK_HOLES (4)
+      const paddedPos = [...positions];
+      const paddedMass = [...masses];
+      while (paddedPos.length < 4) paddedPos.push(new THREE.Vector3(0, 0, 0));
+      while (paddedMass.length < 4) paddedMass.push(0);
+
+      // Update position shader uniforms
+      if (positionVariableRef.current) {
+        positionVariableRef.current.material.uniforms.uBlackHolePos.value = paddedPos;
+        positionVariableRef.current.material.uniforms.uBlackHoleMass.value = paddedMass;
+        positionVariableRef.current.material.uniforms.uBlackHoleCount.value = count;
+      }
+
+      // Update velocity shader uniforms
+      if (velocityVariableRef.current) {
+        velocityVariableRef.current.material.uniforms.uBlackHolePos.value = paddedPos;
+        velocityVariableRef.current.material.uniforms.uBlackHoleMass.value = paddedMass;
+        velocityVariableRef.current.material.uniforms.uBlackHoleCount.value = count;
+      }
+    },
+    []
+  );
+
   return {
     getPositionTexture,
     getVelocityTexture,
@@ -395,5 +448,6 @@ export function useGPUCompute(textureSize: number = DEFAULT_TEXTURE_SIZE) {
     setLifetimeGracePeriod,
     setLifetimeMax,
     setLifetimeGravityMultiplier,
+    setBlackHoles,
   };
 }

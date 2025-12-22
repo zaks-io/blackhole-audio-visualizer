@@ -19,6 +19,23 @@ export function VisualizationControls() {
   return (
     <div className="space-y-1">
       <ControlSection title="Black Hole" id="black-hole">
+        <SliderControl controlKey="blackHoleCount" label="Count" min={1} max={4} step={1} />
+        <SliderControl controlKey="orbitRadius" label="Orbit Radius" min={5} max={50} step={1} />
+        <SliderControl controlKey="orbitSpeed" label="Orbit Speed" min={0} max={2} step={0.1} />
+        <SliderControl
+          controlKey="blackHoleMassMin"
+          label="Mass Min"
+          min={0.1}
+          max={1.0}
+          step={0.1}
+        />
+        <SliderControl
+          controlKey="blackHoleMassMax"
+          label="Mass Max"
+          min={0.1}
+          max={1.0}
+          step={0.1}
+        />
         <SliderControl
           controlKey="eventHorizonRadius"
           label="Event Horizon"

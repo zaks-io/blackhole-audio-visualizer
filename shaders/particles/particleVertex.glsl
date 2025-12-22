@@ -1,6 +1,10 @@
+#define MAX_BLACK_HOLES 4
+
 uniform sampler2D texturePosition;
 uniform sampler2D textureVelocity;
 uniform float uPointSize;
+uniform vec3 uBlackHolePos[MAX_BLACK_HOLES];
+uniform int uBlackHoleCount;
 
 attribute vec2 reference;
 
@@ -17,7 +21,16 @@ void main() {
     float colorIndex = velData.w;
 
     vPosition = pos;
-    vDistance = length(pos);
+
+    // Calculate distance to nearest black hole
+    float nearestDist = 99999.0;
+    for (int i = 0; i < MAX_BLACK_HOLES; i++) {
+        if (i >= uBlackHoleCount) break;
+        float d = length(pos - uBlackHolePos[i]);
+        nearestDist = min(nearestDist, d);
+    }
+    vDistance = nearestDist;
+
     vColorIndex = colorIndex;
 
     vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
