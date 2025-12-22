@@ -14,6 +14,9 @@ uniform float uBeatRepulsion;
 uniform float uPaletteOffset;
 uniform bool uDoKick;
 uniform float uHFCBoost;
+uniform float uLifetimeGracePeriod;
+uniform float uLifetimeMax;
+uniform float uLifetimeGravityMultiplier;
 
 // 1D hash that explicitly breaks grid correlation by combining x and y
 float hash(vec2 p) {
@@ -99,6 +102,11 @@ void main() {
 
             // Newtonian gravity: a = -GM/r²
             float accel = uGM / (r_soft * r_soft);
+
+            // Lifetime decay: particles get heavier after grace period
+            float decayProgress = smoothstep(uLifetimeGracePeriod, uLifetimeMax, lifetime);
+            float gravityMultiplier = 1.0 + (uLifetimeGravityMultiplier - 1.0) * decayProgress;
+            accel *= gravityMultiplier;
 
             // Half-step kick
             vel -= r_hat * accel * uDeltaTime * 0.5;

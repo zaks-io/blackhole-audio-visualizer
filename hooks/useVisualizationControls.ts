@@ -21,6 +21,9 @@ export interface VisualizationControlsState {
   softening: number;
   orbitDecay: number;
   iscoStrength: number;
+  lifetimeGracePeriod: number;
+  lifetimeMax: number;
+  lifetimeGravityMultiplier: number;
 
   // Emitters
   emitRadius: number;
@@ -86,6 +89,9 @@ export const pathToKey: Record<string, keyof VisualizationControlsState> = {
   "Physics.orbitDecay": "orbitDecay",
   "Physics.iscoStrength": "iscoStrength",
   "Physics.iscoRatio": "iscoRatio",
+  "Physics.lifetimeGracePeriod": "lifetimeGracePeriod",
+  "Physics.lifetimeMax": "lifetimeMax",
+  "Physics.lifetimeGravityMultiplier": "lifetimeGravityMultiplier",
   "Emitters.emitRadius": "emitRadius",
   "Emitters.emitterCount": "emitterCount",
   "Emitters.emitterAngle": "emitterAngle",
@@ -134,6 +140,9 @@ const DEFAULT_STATE: VisualizationControlsState = {
   softening: 1.0,
   orbitDecay: 1,
   iscoStrength: 0.5,
+  lifetimeGracePeriod: 30,
+  lifetimeMax: 60,
+  lifetimeGravityMultiplier: 3.0,
 
   // Emitters defaults
   emitRadius: 200,

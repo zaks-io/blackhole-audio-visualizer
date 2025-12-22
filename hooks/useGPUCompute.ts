@@ -99,6 +99,7 @@ export function useGPUCompute(textureSize: number = DEFAULT_TEXTURE_SIZE) {
     positionVariable.material.uniforms.uParticlesPerSecond = { value: 5000 };
     positionVariable.material.uniforms.uTotalParticles = { value: textureSize * textureSize };
     positionVariable.material.uniforms.uOrbitDecay = { value: 2.0 };
+    positionVariable.material.uniforms.uLifetimeMax = { value: 60.0 };
     positionVariable.material.uniforms.uDoDrift = { value: false };
     positionVariable.material.uniforms.uBandOnsetsTexture = { value: textures.bandOnsetsTexture };
     positionVariable.material.uniforms.uBandCount = { value: 2.0 };
@@ -125,6 +126,9 @@ export function useGPUCompute(textureSize: number = DEFAULT_TEXTURE_SIZE) {
     velocityVariable.material.uniforms.uPaletteOffset = { value: 0.0 };
     velocityVariable.material.uniforms.uDoKick = { value: false };
     velocityVariable.material.uniforms.uHFCBoost = { value: 0.0 };
+    velocityVariable.material.uniforms.uLifetimeGracePeriod = { value: 30.0 };
+    velocityVariable.material.uniforms.uLifetimeMax = { value: 60.0 };
+    velocityVariable.material.uniforms.uLifetimeGravityMultiplier = { value: 3.0 };
 
     // Set dependencies: position and velocity both depend on each other
     gpuCompute.setVariableDependencies(positionVariable, [positionVariable, velocityVariable]);
@@ -343,6 +347,27 @@ export function useGPUCompute(textureSize: number = DEFAULT_TEXTURE_SIZE) {
     }
   }, []);
 
+  const setLifetimeGracePeriod = useCallback((value: number) => {
+    if (velocityVariableRef.current) {
+      velocityVariableRef.current.material.uniforms.uLifetimeGracePeriod.value = value;
+    }
+  }, []);
+
+  const setLifetimeMax = useCallback((value: number) => {
+    if (positionVariableRef.current) {
+      positionVariableRef.current.material.uniforms.uLifetimeMax.value = value;
+    }
+    if (velocityVariableRef.current) {
+      velocityVariableRef.current.material.uniforms.uLifetimeMax.value = value;
+    }
+  }, []);
+
+  const setLifetimeGravityMultiplier = useCallback((value: number) => {
+    if (velocityVariableRef.current) {
+      velocityVariableRef.current.material.uniforms.uLifetimeGravityMultiplier.value = value;
+    }
+  }, []);
+
   return {
     getPositionTexture,
     getVelocityTexture,
@@ -367,5 +392,8 @@ export function useGPUCompute(textureSize: number = DEFAULT_TEXTURE_SIZE) {
     setPaletteOffset,
     setHFCBoost,
     setSpawnBurst,
+    setLifetimeGracePeriod,
+    setLifetimeMax,
+    setLifetimeGravityMultiplier,
   };
 }

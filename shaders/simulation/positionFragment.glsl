@@ -10,6 +10,7 @@ uniform float uEmitterTilt;
 uniform float uParticlesPerSecond;
 uniform float uTotalParticles;
 uniform float uOrbitDecay;
+uniform float uLifetimeMax;
 uniform bool uDoDrift;
 uniform sampler2D uBandOnsetsTexture;
 uniform float uBandCount;
@@ -81,14 +82,15 @@ void main() {
             pos = vec3(spawnX, y, spawnZ);
             lifetime = 1.0;
         }
-    } else if (r < uEventHorizon) {
-        // HIT CENTER: recycle to emitter queue
+    } else if (r < uEventHorizon || (uLifetimeMax > 0.0 && lifetime > uLifetimeMax)) {
+        // HIT CENTER or MAX LIFETIME: recycle to emitter queue
         float recycleRand = hash2(uv, uTime + 500.0);
         if (uParticlesPerSecond <= 0.0) {
             lifetime = 0.0;  // Instant respawn
         } else {
             lifetime = -recycleRand;  // 0 to -1 second queue position
         }
+        pos = vec3(0.0, 0.0, 0.0);  // Reset position for recycled particles
     } else if (uDoDrift) {
         // DRIFT: update position using velocity
         pos = pos + vel * uDeltaTime;

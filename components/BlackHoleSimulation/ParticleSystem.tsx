@@ -61,6 +61,9 @@ export function ParticleSystem({
     setPaletteOffset,
     setHFCBoost,
     setSpawnBurst,
+    setLifetimeGracePeriod,
+    setLifetimeMax,
+    setLifetimeGravityMultiplier,
   } = useGPUCompute(textureSize);
 
   const materialRef = useRef<THREE.ShaderMaterial>(null);
@@ -158,6 +161,9 @@ export function ParticleSystem({
     setEmitterSpread(state.emitterSpread);
     setAudioAmplitude(state.amplitude);
     setBeatRepulsion(state.beatRepulsion);
+    setLifetimeGracePeriod(state.lifetimeGracePeriod);
+    setLifetimeMax(state.lifetimeMax);
+    setLifetimeGravityMultiplier(state.lifetimeGravityMultiplier);
 
     if (audioEnabled) {
       const audioData = getAudioData();

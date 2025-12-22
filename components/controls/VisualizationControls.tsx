@@ -57,6 +57,21 @@ export function VisualizationControls() {
           max={1.0}
           step={0.05}
         />
+        <SliderControl
+          controlKey="lifetimeGracePeriod"
+          label="Lifetime Grace"
+          min={5}
+          max={60}
+          step={5}
+        />
+        <SliderControl controlKey="lifetimeMax" label="Lifetime Max" min={30} max={120} step={5} />
+        <SliderControl
+          controlKey="lifetimeGravityMultiplier"
+          label="Gravity Boost"
+          min={1.0}
+          max={10.0}
+          step={0.5}
+        />
       </ControlSection>
 
       <ControlSection title="Emitters" id="emitters">
