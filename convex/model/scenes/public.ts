@@ -869,6 +869,26 @@ export const getSongById = query({
   },
 });
 
+export const getSongsByThread = query({
+  args: { threadId: v.string() },
+  handler: async (ctx, { threadId }) => {
+    await requireAdmin(ctx);
+
+    const songs = await ctx.db
+      .query("generatedSongs")
+      .withIndex("by_thread", (q) => q.eq("threadId", threadId))
+      .order("desc")
+      .collect();
+
+    return Promise.all(
+      songs.map(async (song) => ({
+        ...song,
+        audioUrl: song.storageId ? await ctx.storage.getUrl(song.storageId) : null,
+      }))
+    );
+  },
+});
+
 export const getMySongs = query({
   args: {},
   handler: async (ctx) => {
