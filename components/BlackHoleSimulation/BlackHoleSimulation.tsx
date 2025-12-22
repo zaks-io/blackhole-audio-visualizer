@@ -224,10 +224,14 @@ export function BlackHoleSimulation({
     if (isAudioConnected) {
       const analysis = getAnalysis();
       // Use bass peak detection for beat intensity, or fall back to band onsets
+      // Clamp onsets to prevent audio glitch spikes before gain multiplication
       const bassBeat = analysis.peaks.bass ? 1 : 0;
-      const onsetBeat = Math.max(analysis.bandOnsets[0] ?? 0, analysis.bandOnsets[1] ?? 0);
+      const onsetBeat = Math.min(
+        Math.max(analysis.bandOnsets[0] ?? 0, analysis.bandOnsets[1] ?? 0),
+        1.0
+      );
       const beat = Math.max(bassBeat * 0.8, onsetBeat) * (store.audioGain ?? 1);
-      beatIntensityRef.current = Math.min(beat, 1.5);
+      beatIntensityRef.current = Math.min(beat, 0.75);
 
       // HFC boost - envelope follow the raw HFC with attack/decay
       const hfcTarget = analysis.raw.hfc;
@@ -264,9 +268,10 @@ export function BlackHoleSimulation({
     const store = useVisualizationControls.getState();
     const analysis = getAnalysis();
     // Apply gain to all band onsets (reuse buffer to avoid GC)
+    // Clamp individual onsets before gain to prevent spikes
     const scaledOnsets = scaledOnsetsRef.current;
     for (let i = 0; i < analysis.bandOnsets.length; i++) {
-      scaledOnsets[i] = analysis.bandOnsets[i] * store.audioGain;
+      scaledOnsets[i] = Math.min(analysis.bandOnsets[i], 1.0) * store.audioGain;
     }
     return {
       bandEnergies: analysis.bandEnergies,
@@ -274,6 +279,7 @@ export function BlackHoleSimulation({
       bandCount: analysis.bandCount,
       hfcBoost: (hfcBoostRef.current * store.hfcVelocityBoost) / 0.3, // Normalize to control range
       spawnBurst: spawnBurstRef.current,
+      beatIntensity: beatIntensityRef.current, // Synchronized beat for particles
     };
   };
 

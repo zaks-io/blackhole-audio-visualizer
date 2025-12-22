@@ -67,7 +67,8 @@ export class SimpleEnvelope {
    * Update with new input. Takes max of input and decayed previous value.
    */
   process(input: number): number {
-    this.value = Math.max(input, this.value * this.decay);
+    const clampedInput = Math.min(input, 1.0);
+    this.value = Math.max(clampedInput, this.value * this.decay);
     return this.value;
   }
 

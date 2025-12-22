@@ -18,6 +18,7 @@ interface ParticleAudioData {
   bandCount: number;
   hfcBoost: number;
   spawnBurst: number;
+  beatIntensity: number;
 }
 
 interface BlackHoleData {
@@ -490,7 +491,8 @@ export function ParticleSystem({
     if (audioEnabled) {
       const audioData = getAudioData();
       setBandOnsets(audioData.bandOnsets, audioData.bandCount);
-      const beat = Math.max(audioData.bandOnsets[0] ?? 0, audioData.bandOnsets[1] ?? 0);
+      // Use synchronized beat from BlackHoleSimulation (already clamped)
+      const beat = audioData.beatIntensity ?? 0;
       setBeatIntensity(beat);
       // Only re-send beatPulse-driven ISCO radius if the pulse changes or beat changes.
       // Beat changes every frame, so this is still per-frame when audio is enabled.
