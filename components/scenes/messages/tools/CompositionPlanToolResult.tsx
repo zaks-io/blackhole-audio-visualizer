@@ -65,15 +65,17 @@ export function CompositionPlanToolResult({
         )}
       </div>
 
-      {plan.positive_global_styles.length > 0 && (
+      {(plan.positive_global_styles?.length ?? 0) > 0 && (
         <div className="flex flex-wrap gap-1">
           {plan.positive_global_styles.slice(0, 3).map((style, i) => (
             <span key={i} className="px-1.5 py-0.5 text-xs bg-primary/20 text-primary rounded">
               {style}
             </span>
           ))}
-          {plan.positive_global_styles.length > 3 && (
-            <span className="text-xs text-zinc-500">+{plan.positive_global_styles.length - 3}</span>
+          {(plan.positive_global_styles?.length ?? 0) > 3 && (
+            <span className="text-xs text-zinc-500">
+              +{(plan.positive_global_styles?.length ?? 0) - 3}
+            </span>
           )}
         </div>
       )}
