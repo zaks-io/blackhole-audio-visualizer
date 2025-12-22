@@ -18,6 +18,7 @@ import { useUIMessages } from "@convex-dev/agent/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { AssistantMessage } from "./messages/AssistantMessage";
+import { ThreadAudioPlayer } from "./ThreadAudioPlayer";
 
 export function SceneEditorPanel({ sceneId }: { sceneId?: string }) {
   const {
@@ -177,6 +178,9 @@ export function SceneEditorPanel({ sceneId }: { sceneId?: string }) {
 
           <div ref={messagesEndRef} />
         </div>
+
+        {/* Persistent Audio Player */}
+        <ThreadAudioPlayer threadId={chatThreadId} />
 
         {/* Input */}
         <div className="p-4 border-t border-white/5">

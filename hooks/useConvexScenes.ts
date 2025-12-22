@@ -204,3 +204,21 @@ export function useMySongs() {
     isLoading: authLoading || (isAuthenticated && songs === undefined),
   };
 }
+
+export function useThreadSongs(threadId: string | null) {
+  const songs = useQuery(
+    api.model.scenes.public.getSongsByThread,
+    threadId ? { threadId } : "skip"
+  );
+
+  const completedSongs = (songs ?? []).filter(
+    (s): s is GeneratedSong & { audioUrl: string } =>
+      s.status === "completed" && typeof s.audioUrl === "string"
+  );
+
+  return {
+    songs: songs ?? [],
+    isLoading: threadId !== null && songs === undefined,
+    completedSongs,
+  };
+}
