@@ -11,6 +11,7 @@ import {
   X,
   Loader2,
   RotateCcw,
+  Download,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -330,6 +331,14 @@ export function RecordingsManagerDialog({ children }: RecordingsManagerDialogPro
                           </a>
                         </Button>
                       </>
+                    )}
+                    {recording.sourceUrl && (
+                      <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5" asChild>
+                        <a href={recording.sourceUrl} download>
+                          <Download className="h-3 w-3" />
+                          Download Original
+                        </a>
+                      </Button>
                     )}
                     {recording.transcodingStatus === "failed" && (
                       <Button
