@@ -126,7 +126,7 @@ const DEFAULT_STATE: VisualizationControlsState = {
   brightness: 1.5,
   alpha: 0.8,
   maxDistance: 60,
-  colorPalette: "neon" as ColorPaletteId,
+  colorPalette: "grayscale" as ColorPaletteId,
 
   // Physics defaults
   gravity: 100000,
