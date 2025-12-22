@@ -1,6 +1,6 @@
 "use client";
 
-import { SlidersHorizontal, ChevronRight } from "lucide-react";
+import { SlidersHorizontal, ChevronRight, Film } from "lucide-react";
 import { MobileOverflowMenu } from "./MobileOverflowMenu";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -11,6 +11,7 @@ import { RecordButton } from "@/components/recording";
 import { HelpModal, SettingsMenu } from "@/components/dialogs";
 import { UserMenu } from "@/components/auth/UserMenu";
 import { useProducerMode } from "@/components/ProducerMode";
+import { useSceneControls } from "@/components/scenes/useSceneControls";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useUIState } from "@/hooks/useUIState";
 import { cn } from "@/lib/utils";
@@ -42,6 +43,7 @@ export function BottomControlBar({
     toggleOpen: toggleProducerMode,
     setOpen: setProducerModeOpen,
   } = useProducerMode();
+  const { isSceneEditorOpen, openSceneEditor, closeSceneEditor } = useSceneControls();
   const isAdmin = useIsAdmin();
   const { controlBarCollapsed, setControlBarCollapsed, setDevControlsVisible } = useUIState();
 
@@ -93,6 +95,32 @@ export function BottomControlBar({
               </Tooltip>
             </TooltipProvider>
           </div>
+
+          {/* Scene Editor Toggle - Admin only, Desktop only */}
+          {isAdmin && (
+            <div className="hidden md:block">
+              <TooltipProvider delayDuration={300}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => (isSceneEditorOpen ? closeSceneEditor() : openSceneEditor())}
+                      className={cn(
+                        "h-10 w-10 rounded-full",
+                        isSceneEditorOpen && "bg-primary/20 text-primary"
+                      )}
+                    >
+                      <Film className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="text-xs">
+                    Scene Editor
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+          )}
 
           <Separator orientation="vertical" className="hidden md:block h-6 mx-1 sm:mx-2" />
 
