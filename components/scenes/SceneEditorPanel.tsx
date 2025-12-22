@@ -41,11 +41,16 @@ export function SceneEditorPanel({ sceneId }: { sceneId?: string }) {
 
   const [inputValue, setInputValue] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const prevMessageCountRef = useRef(0);
 
   const isStreaming = !!(chatThreadId && messages?.some((m) => m.status === "streaming"));
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "instant" });
+    const currentCount = messages?.length ?? 0;
+    if (currentCount > prevMessageCountRef.current) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "instant" });
+    }
+    prevMessageCountRef.current = currentCount;
   }, [messages]);
 
   const handleSendMessage = async () => {

@@ -18,6 +18,7 @@ import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useSceneControls } from "@/components/scenes/useSceneControls";
 import { useSceneRecording } from "@/hooks/useSceneRecording";
 import { useConvexScenes, type SceneWithDetails } from "@/hooks/useConvexScenes";
+import { useAudioPlayerStore } from "@/hooks/useAudioPlayerStore";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { useUnifiedPlayer } from "@/hooks/useUnifiedPlayer";
@@ -44,6 +45,7 @@ function ScenePlayerControlsComponent({
   const { openSceneEditor, closeSceneEditor, isSceneEditorOpen } = useSceneControls();
   const isAdmin = useIsAdmin();
   const { triggerTranscription } = useConvexScenes();
+  const globalAudioPause = useAudioPlayerStore((s) => s.pause);
   const transcription = useQuery(
     api.model.transcriptions.public.getBySong,
     scene.song?._id ? { songId: scene.song._id } : "skip"
@@ -87,8 +89,9 @@ function ScenePlayerControlsComponent({
       resume();
     } else {
       pause();
+      globalAudioPause();
     }
-  }, [isPlaying, isPaused, play, pause, resume]);
+  }, [isPlaying, isPaused, play, pause, resume, globalAudioPause]);
 
   const handleSeek = useCallback(
     (time: number) => {
