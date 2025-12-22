@@ -5,6 +5,7 @@ import { Play, Mic } from "lucide-react";
 import { isElectron } from "@/lib/platform";
 import { usePlaylistControls } from "@/components/playlist";
 import type { AudioSourceType } from "@/hooks/useAudioSource";
+import { useFPSStore } from "@/hooks/useFPSMonitor";
 
 const subscribe = () => () => {};
 const getSnapshot = () => isElectron();
@@ -19,6 +20,7 @@ export function AudioConnectOverlay({ isConnected, onConnect }: AudioConnectOver
   // useSyncExternalStore handles hydration mismatch by using getServerSnapshot on server
   const isElectronApp = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   const { selectedPlaylistId, triggerPlay } = usePlaylistControls();
+  const resetSpikes = useFPSStore((s) => s.resetSpikes);
 
   if (isConnected) return null;
 
@@ -26,6 +28,9 @@ export function AudioConnectOverlay({ isConnected, onConnect }: AudioConnectOver
   const sourceType: AudioSourceType = isElectronApp ? "system" : "microphone";
 
   const handleClick = () => {
+    // Starting audio often causes a one-time hitch (permissions + graph warmup).
+    // Reset so the overlay doesn't permanently pin the max with that initialization frame.
+    resetSpikes();
     onConnect(sourceType);
     if (selectedPlaylistId) {
       triggerPlay();

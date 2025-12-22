@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useMemo } from "react";
+import { useRef, useMemo, useEffect } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { useGPUCompute } from "@/hooks/useGPUCompute";
@@ -130,13 +130,36 @@ export function ParticleSystem({
   }, [particleCount, textureSize]);
 
   // Create color array for shader (all palettes)
-  const colorArray = useMemo(() => {
-    const colors: THREE.Color[] = [];
-    for (let i = 0; i < allColors.length; i++) {
-      colors.push(new THREE.Color(allColors[i]));
+  const colorLUT = useMemo(() => {
+    // Keep this stable; update the underlying data when the palette changes.
+    const size = allColors.length;
+    // Use byte texture to reduce upload cost and avoid float-texture compatibility issues in the render path.
+    const data = new Uint8Array(size * 4);
+    const tmp = new THREE.Color();
+    for (let i = 0; i < size; i++) {
+      tmp.set(allColors[i]);
+      data[i * 4 + 0] = Math.max(0, Math.min(255, Math.round(tmp.r * 255)));
+      data[i * 4 + 1] = Math.max(0, Math.min(255, Math.round(tmp.g * 255)));
+      data[i * 4 + 2] = Math.max(0, Math.min(255, Math.round(tmp.b * 255)));
+      data[i * 4 + 3] = 255;
     }
-    return colors;
-  }, [allColors]);
+
+    const tex = new THREE.DataTexture(data, size, 1, THREE.RGBAFormat, THREE.UnsignedByteType);
+    tex.needsUpdate = true;
+    tex.magFilter = THREE.NearestFilter;
+    tex.minFilter = THREE.NearestFilter;
+    tex.wrapS = THREE.ClampToEdgeWrapping;
+    tex.wrapT = THREE.ClampToEdgeWrapping;
+
+    return { tex, data, size, tmp };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      colorLUT.tex.dispose();
+    };
+  }, [colorLUT]);
 
   // Get initial values for uniforms to prevent flicker
   const initialControls = useVisualizationControls.getState();
@@ -148,7 +171,8 @@ export function ParticleSystem({
       uPointSize: { value: initialControls.pointSize },
       uBrightness: { value: initialControls.brightness },
       uAlpha: { value: initialControls.alpha },
-      uEmitterColors: { value: colorArray },
+      uColorLUT: { value: colorLUT.tex },
+      uColorLUTSize: { value: colorLUT.size },
       uMaxDistance: { value: initialControls.maxDistance },
       uEventHorizon: { value: initialControls.eventHorizonRadius },
       uISCORadius: { value: initialControls.eventHorizonRadius * initialControls.iscoRatio },
@@ -163,7 +187,7 @@ export function ParticleSystem({
       uBlackHoleCount: { value: 1 },
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [colorArray]
+    [colorLUT]
   );
 
   useFrame(() => {
@@ -224,12 +248,22 @@ export function ParticleSystem({
         }
       }
 
-      // Only update colors if palette actually changed (check first color)
+      // Only update LUT if palette actually changed (check first color)
       const firstColor = allColors[0];
       if (prevFirstColorRef.current !== firstColor) {
         prevFirstColorRef.current = firstColor;
-        for (let i = 0; i < allColors.length; i++) {
-          materialRef.current.uniforms.uEmitterColors.value[i].set(allColors[i]);
+
+        // Update in-place to avoid reallocations / uniform array churn.
+        const size = colorLUT.size;
+        if (allColors.length === size) {
+          for (let i = 0; i < size; i++) {
+            colorLUT.tmp.set(allColors[i]);
+            colorLUT.data[i * 4 + 0] = Math.max(0, Math.min(255, Math.round(colorLUT.tmp.r * 255)));
+            colorLUT.data[i * 4 + 1] = Math.max(0, Math.min(255, Math.round(colorLUT.tmp.g * 255)));
+            colorLUT.data[i * 4 + 2] = Math.max(0, Math.min(255, Math.round(colorLUT.tmp.b * 255)));
+            colorLUT.data[i * 4 + 3] = 255;
+          }
+          colorLUT.tex.needsUpdate = true;
         }
       }
     }

@@ -2,6 +2,8 @@
 
 uniform sampler2D texturePosition;
 uniform sampler2D textureVelocity;
+uniform sampler2D uColorLUT;
+uniform float uColorLUTSize;
 uniform float uPointSize;
 uniform vec3 uBlackHolePos[MAX_BLACK_HOLES];
 uniform int uBlackHoleCount;
@@ -10,7 +12,7 @@ attribute vec2 reference;
 
 varying float vDistance;
 varying vec3 vPosition;
-varying float vColorIndex;
+varying vec3 vColor;
 
 void main() {
     vec4 posData = texture2D(texturePosition, reference);
@@ -31,7 +33,10 @@ void main() {
     }
     vDistance = nearestDist;
 
-    vColorIndex = colorIndex;
+    // Sample a 1D color LUT in the vertex shader to avoid large uniform arrays
+    float idx = clamp(floor(colorIndex + 0.5), 0.0, max(uColorLUTSize - 1.0, 0.0));
+    float u = (idx + 0.5) / max(uColorLUTSize, 1.0);
+    vColor = texture2D(uColorLUT, vec2(u, 0.5)).rgb;
 
     vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
     gl_Position = projectionMatrix * mvPosition;

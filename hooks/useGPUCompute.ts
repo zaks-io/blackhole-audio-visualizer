@@ -27,6 +27,7 @@ export function useGPUCompute(textureSize: number = DEFAULT_TEXTURE_SIZE) {
   const velocityVariableRef = useRef<Variable | null>(null);
   const timeScaleRef = useRef(0.5);
   const bandOnsetsTextureRef = useRef<THREE.DataTexture | null>(null);
+  const bandOnsetsDirtyRef = useRef(false);
   // Stable buffers for black hole uniforms (avoid per-frame allocations).
   const blackHolePosRef = useRef<THREE.Vector3[] | null>(null);
   const blackHoleMassRef = useRef<number[] | null>(null);
@@ -35,14 +36,21 @@ export function useGPUCompute(textureSize: number = DEFAULT_TEXTURE_SIZE) {
     const initialPosition = createInitialPositionTexture(textureSize, EMISSION_RADIUS);
     const initialVelocity = createInitialVelocityTexture(textureSize, initialPosition, DEFAULT_GM);
 
-    // Create band onsets texture (1 x MAX_BANDS, RGBA float, only R channel used)
-    const bandOnsetsData = new Float32Array(MAX_BANDS * 4);
+    // Create band onsets texture (1 x MAX_BANDS, RGBA u8, only R channel used).
+    // Using bytes reduces upload cost and avoids float-texture quirks in the render loop.
+    const bandOnsetsData = new Uint8Array(MAX_BANDS * 4);
+    for (let i = 0; i < MAX_BANDS; i++) {
+      bandOnsetsData[i * 4 + 0] = 0;
+      bandOnsetsData[i * 4 + 1] = 0;
+      bandOnsetsData[i * 4 + 2] = 0;
+      bandOnsetsData[i * 4 + 3] = 255;
+    }
     const bandOnsetsTexture = new THREE.DataTexture(
       bandOnsetsData,
       MAX_BANDS,
       1,
       THREE.RGBAFormat,
-      THREE.FloatType
+      THREE.UnsignedByteType
     );
     bandOnsetsTexture.needsUpdate = true;
 
@@ -106,6 +114,8 @@ export function useGPUCompute(textureSize: number = DEFAULT_TEXTURE_SIZE) {
     positionVariable.material.uniforms.uLifetimeMax = { value: 60.0 };
     positionVariable.material.uniforms.uDoDrift = { value: false };
     positionVariable.material.uniforms.uBandOnsetsTexture = { value: textures.bandOnsetsTexture };
+    // Byte texture returns normalized [0..1] in shader; rescale to original onset range.
+    positionVariable.material.uniforms.uBandOnsetMax = { value: 10.0 };
     positionVariable.material.uniforms.uBandCount = { value: 2.0 };
     positionVariable.material.uniforms.uAudioAmplitude = { value: 1.0 };
     positionVariable.material.uniforms.uSpawnBurst = { value: 1.0 };
@@ -272,6 +282,12 @@ export function useGPUCompute(textureSize: number = DEFAULT_TEXTURE_SIZE) {
     velocityVariableRef.current.material.uniforms.uTime.value = scaledTime;
     velocityVariableRef.current.material.uniforms.uDeltaTime.value = scaledDelta;
 
+    // If audio data changed, upload the band-onsets texture once per frame at most.
+    if (bandOnsetsDirtyRef.current && bandOnsetsTextureRef.current) {
+      bandOnsetsTextureRef.current.needsUpdate = true;
+      bandOnsetsDirtyRef.current = false;
+    }
+
     // KICK-DRIFT-KICK (Leapfrog) Integration:
 
     // Pass 1: First KICK (half-step velocity update)
@@ -407,20 +423,48 @@ export function useGPUCompute(textureSize: number = DEFAULT_TEXTURE_SIZE) {
 
   const setBandOnsets = useCallback((onsets: Float32Array, count: number) => {
     if (!bandOnsetsTextureRef.current) return;
-    const data = bandOnsetsTextureRef.current.image.data as Float32Array;
+    const data = bandOnsetsTextureRef.current.image.data as Uint8Array;
     // Floor count to handle fractional values from GSAP tweens
     // Fractional indices corrupt texture by writing to wrong channel offsets
     const intCount = Math.floor(count);
+
+    // Quantize onsets to bytes to reduce upload churn.
+    // Expected onset range is ~[0..10] (clamped) -> [0..255].
+    const maxOnset = 10;
+
+    let changed = false;
     // Update active bands with onset values, sanitizing to prevent NaN/Infinity
     for (let i = 0; i < intCount && i < MAX_BANDS; i++) {
       const val = onsets[i];
-      data[i * 4] = Number.isFinite(val) ? Math.min(val, 10) : 0;
+      const clamped = Number.isFinite(val) ? Math.max(0, Math.min(val, maxOnset)) : 0;
+      const next = Math.round((clamped / maxOnset) * 255);
+      const idx = i * 4;
+      if (data[idx] !== next) {
+        data[idx] = next;
+        changed = true;
+      }
+      if (data[idx + 3] !== 255) {
+        data[idx + 3] = 255;
+        changed = true;
+      }
     }
     // Zero out unused bands to prevent stale values from persisting
     for (let i = intCount; i < MAX_BANDS; i++) {
-      data[i * 4] = 0;
+      const idx = i * 4;
+      if (data[idx] !== 0) {
+        data[idx] = 0;
+        changed = true;
+      }
+      if (data[idx + 3] !== 255) {
+        data[idx + 3] = 255;
+        changed = true;
+      }
     }
-    bandOnsetsTextureRef.current.needsUpdate = true;
+
+    if (changed) {
+      // Defer the actual GPU upload to the next compute tick so repeated calls in one frame coalesce.
+      bandOnsetsDirtyRef.current = true;
+    }
   }, []);
 
   const setAudioAmplitude = useCallback((value: number) => {

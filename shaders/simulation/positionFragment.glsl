@@ -14,6 +14,7 @@ uniform float uTotalParticles;
 uniform float uLifetimeMax;
 uniform bool uDoDrift;
 uniform sampler2D uBandOnsetsTexture;
+uniform float uBandOnsetMax;
 uniform float uBandCount;
 uniform float uAudioAmplitude;
 uniform float uSpawnBurst;
@@ -44,17 +45,18 @@ void main() {
     float lifetime = posData.w;
     vec3 vel = velData.xyz;
 
-    float r = length(pos);
-
     if (lifetime < 0.0) {
-        // WAITING: count up toward 0
-        if (uParticlesPerSecond <= 0.0) {
-            // Instant spawn mode
-            lifetime = 0.0;
-        } else {
-            // Rate = particlesPerSecond / totalParticles per second
-            lifetime += uDeltaTime * (uParticlesPerSecond / uTotalParticles) * uSpawnBurst;
+        // PASS 1: keep queued particles unchanged to avoid bunching spawns into the same frame.
+        // PASS 2 (drift pass): advance the spawn queue with a doubled dt to preserve overall spawn rate.
+        if (!uDoDrift) {
+            gl_FragColor = vec4(pos, lifetime);
+            return;
         }
+
+        // WAITING: count up toward 0
+        float dt = uDeltaTime * 2.0;
+        // Rate = particlesPerSecond / totalParticles per second
+        lifetime += dt * (uParticlesPerSecond / uTotalParticles) * uSpawnBurst;
 
         if (lifetime >= 0.0) {
             // Pick which emitter this particle spawns from
@@ -72,7 +74,7 @@ void main() {
             // Sample this emitter's band onset from texture
             // Texture is 1D (36 x 1), sample at center of texel
             float bandU = (emitterIndex + 0.5) / 36.0;
-            float bandOnset = texture2D(uBandOnsetsTexture, vec2(bandU, 0.5)).r;
+            float bandOnset = texture2D(uBandOnsetsTexture, vec2(bandU, 0.5)).r * uBandOnsetMax;
 
             // Beat-reactive Y offset - oscillates based on this band's onset
             float audioEnergy = bandOnset * 15.0;
@@ -88,6 +90,9 @@ void main() {
             pos = vec3(spawnX, y, spawnZ);
             lifetime = 1.0;
         }
+    } else if (!uDoDrift) {
+        // PASS 1 (no drift): keep alive particles unchanged.
+        // Recycling checks are safe to run on the drift pass, since positions only change there.
     } else {
         // Check event horizon against ALL black holes
         bool shouldRecycle = false;

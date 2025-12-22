@@ -48,17 +48,15 @@ void main() {
     vec3 vel = velData.xyz;
     float colorIndex = velData.w;
 
-    float r = length(pos);
-
-    // Compute emitter index consistently with position shader (same hash seed)
-    float emitterIndex = floor(hash2(uv, 100.0) * uEmitterCount);
-
     if (lifetime < 0.0) {
+        // Compute emitter index consistently with position shader (same hash seed)
+        float emitterIndex = floor(hash2(uv, 100.0) * uEmitterCount);
+
         // WAITING: compute color index based on current palette
         colorIndex = mod(emitterIndex, 8.0) + uPaletteOffset;
         gl_FragColor = vec4(0.0, 0.0, 0.0, colorIndex);
         return;
-    } else if (length(vel) < 0.1) {
+    } else if (dot(vel, vel) < 0.01) {
         // JUST SPAWNED: set orbital velocity with inward angle
         // Find nearest black hole for orbital velocity calculation
         float nearestDist = 99999.0;
