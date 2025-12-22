@@ -259,12 +259,9 @@ Given a song's composition plan with sections, moods, and timing, create synchro
 
 ### Black Hole
 - "Black Hole.eventHorizonRadius": 0.5-20, default 5 (central sphere size)
-- "Black Hole.beatPulse": 0-2, default 2 (pulsation on beat)
 
 ### Particles
 - "Particles.pointSize": 0.1-20, default 1.0 (particle size)
-- "Particles.brightness": 0.5-3, default 1.5
-- "Particles.alpha": 0.2-1, default 0.8 (opacity)
 
 ### Physics
 - "Physics.gravity": 1000-1000000, default 100000 (pull strength - higher needs more orbitDecay)
@@ -275,20 +272,17 @@ Given a song's composition plan with sections, moods, and timing, create synchro
 - "Emitters.emitterCount": 1-36, default 12 (particle sources)
 - "Emitters.emitterSpread": 0-1, default 0 (less is better, 0=clean lines 0.1=fuzzy, >0.3 creates noise clouds) 
 - "Emitters.emitRadius": 5-200, default 200 (spawn distance from center)
-- "Emitters.spawnRate": 0.1-1, default 0.3 (particles per frame)
 
 ### Audio Reactivity
-- "Audio.amplitude": 0-20, default 10 (wave emission height)
+- "Audio.amplitude": 0-30, default 10 (wave emission height)
 - "Audio.audioGain": 0-3, default 2 (input amplification)
 - "Audio.beatRepulsion": 0-100, default 20 (beat push force from center)
 
-### Post-FX
-- "Post-FX.bloomBaseIntensity": 0-2, default 0.1 (glow intensity)
-- "Post-FX.bloomAudioReactivity": 0-1, default 1 (glow audio response)
-
 ## COLOR PALETTES
 
-**Original**: cool, warm, neon, sunset, ocean, grayscale
+Each pallete has 8 colors except for grayscale which is basically white.
+
+**Default**: cool, warm, neon, sunset, ocean, grayscale
 
 **Cosmic & Space**: nebula-dreams, aurora-borealis, cosmic-twilight, solar-flare, lunar-eclipse, galactic-core, starfield
 
@@ -311,31 +305,7 @@ none, power1.inOut, power2.inOut, power3.inOut, power4.inOut, back.inOut, elasti
 
 ## SECTION GUIDELINES
 
-Be creative.
-
-**Intros/Outros** (low energy):
-- Small black hole, few particles, wide camera
-- Calm palettes: ocean, grayscale, cool, deep-ocean, forest-mist, midnight-blue, pastel-dreams
-- Low beatRepulsion, moderate orbitDecay
-
-**Verses** (medium energy):
-- Moderate particles/gravity
-- Palette matches mood (atmospheric: nebula-dreams, cosmic-twilight; nature: bioluminescence, tropical-reef; soft: cotton-candy, rose-gold)
-- orbit or circle camera
-
-**Choruses** (HIGH energy):
-- Large black hole, many particles
-- Bright palettes: neon, warm, sunset, synthwave-horizon, cyberpunk-city, solar-flare, electric-arcade
-- High beatRepulsion, closeup, orbit camera
-- Dramatic parameter changes
-
-**Bridges** (experimental):
-- Unusual combinations, contrast with chorus
-- Try: vaporwave, galactic-core, lunar-eclipse, lavender-haze
-
-**Transitions**: 2-5s duration, power2.inOut or power3.inOut, match musical energy
-
-Create 1 preset every 10-20 seconds, aligned with song structure.
+Be creative. Create 1 preset every 10-20 seconds, aligned with song structure and lyrics. Presets must cover the entire song duration and should be distinct from each other.
 
 ### SECTION IDEAS
 
@@ -410,6 +380,7 @@ const generateVisualizationPlaylist = createTool({
       currentTime += section.duration_ms;
       return sectionInfo;
     });
+    const totalDurationMs = currentTime;
 
     const prompt: string = `Create a visualization playlist for the song "${song.name}".
 
@@ -430,7 +401,7 @@ Negative (avoid): ${composition.negative_global_styles.join(", ")}
 
     // Use generateObject with Gemini 3 Pro for structured output
     const result: GenerateObjectResult<PlaylistOutput> = await generateObject({
-      model: openrouter.chat("google/gemini-3-pro-preview"),
+      model: openrouter.chat("google/gemini-3-flash-preview"),
       schema: playlistOutputSchema,
       system: VISUALIZATION_INSTRUCTIONS,
       prompt,
