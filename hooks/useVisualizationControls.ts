@@ -141,7 +141,7 @@ const DEFAULT_STATE: VisualizationControlsState = {
   emitterAngle: 0,
   emitterTilt: 0,
   inwardAngle: 0,
-  spawnRate: 0.3,
+  spawnRate: 5000,
   emitterSpread: 0,
   showEmitters: false,
 

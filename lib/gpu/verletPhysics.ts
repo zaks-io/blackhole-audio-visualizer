@@ -25,10 +25,8 @@ export function createInitialPositionTexture(
     data[i4 + 1] = 0;
     data[i4 + 2] = 0;
 
-    // Fully random spawn times - spreads particles evenly over initial period
-    // spawnRate in shader controls how fast this counts down
-    // Ensure minimum negative value so no particle starts at (0,0,0) visible
-    data[i4 + 3] = -(Math.random() * 59.0 + 1.0);
+    // Random spawn times in 0 to -1 range (1-second spread at rate)
+    data[i4 + 3] = -Math.random();
   }
 
   const texture = new THREE.DataTexture(

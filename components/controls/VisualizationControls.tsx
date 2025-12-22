@@ -65,7 +65,13 @@ export function VisualizationControls() {
         <SliderControl controlKey="emitterAngle" label="Angle" min={0} max={6.28} step={0.1} />
         <SliderControl controlKey="emitterTilt" label="Tilt" min={-30} max={30} step={1} />
         <SliderControl controlKey="inwardAngle" label="Inward Angle" min={-1} max={1} step={0.01} />
-        <SliderControl controlKey="spawnRate" label="Spawn Rate" min={0.1} max={10} step={0.1} />
+        <SliderControl
+          controlKey="spawnRate"
+          label="Particles/Sec"
+          min={1000}
+          max={100000}
+          step={1000}
+        />
         <SliderControl controlKey="emitterSpread" label="Spread" min={0} max={1.0} step={0.01} />
         <SwitchControl controlKey="showEmitters" label="Show Emitters" />
       </ControlSection>

@@ -96,7 +96,8 @@ export function useGPUCompute(textureSize: number = DEFAULT_TEXTURE_SIZE) {
     positionVariable.material.uniforms.uEmitterCount = { value: 2.0 };
     positionVariable.material.uniforms.uEmitterAngle = { value: 0.0 };
     positionVariable.material.uniforms.uEmitterTilt = { value: 0.0 };
-    positionVariable.material.uniforms.uSpawnRate = { value: 1.0 };
+    positionVariable.material.uniforms.uParticlesPerSecond = { value: 5000 };
+    positionVariable.material.uniforms.uTotalParticles = { value: textureSize * textureSize };
     positionVariable.material.uniforms.uOrbitDecay = { value: 2.0 };
     positionVariable.material.uniforms.uDoDrift = { value: false };
     positionVariable.material.uniforms.uBandOnsetsTexture = { value: textures.bandOnsetsTexture };
@@ -260,7 +261,7 @@ export function useGPUCompute(textureSize: number = DEFAULT_TEXTURE_SIZE) {
 
   const setSpawnRate = useCallback((value: number) => {
     if (positionVariableRef.current) {
-      positionVariableRef.current.material.uniforms.uSpawnRate.value = value;
+      positionVariableRef.current.material.uniforms.uParticlesPerSecond.value = value;
     }
   }, []);
 

@@ -7,7 +7,8 @@ uniform float uEmissionRadius;
 uniform float uEmitterCount;
 uniform float uEmitterAngle;
 uniform float uEmitterTilt;
-uniform float uSpawnRate;
+uniform float uParticlesPerSecond;
+uniform float uTotalParticles;
 uniform float uOrbitDecay;
 uniform bool uDoDrift;
 uniform sampler2D uBandOnsetsTexture;
@@ -39,8 +40,14 @@ void main() {
     float r = length(pos);
 
     if (lifetime < 0.0) {
-        // WAITING: count up toward 0 based on spawn rate (multiplied by burst on bass peaks)
-        lifetime += uDeltaTime * uSpawnRate * uSpawnBurst;
+        // WAITING: count up toward 0
+        if (uParticlesPerSecond <= 0.0) {
+            // Instant spawn mode
+            lifetime = 0.0;
+        } else {
+            // Rate = particlesPerSecond / totalParticles per second
+            lifetime += uDeltaTime * (uParticlesPerSecond / uTotalParticles) * uSpawnBurst;
+        }
 
         if (lifetime >= 0.0) {
             // Pick which emitter this particle spawns from
@@ -77,7 +84,11 @@ void main() {
     } else if (r < uEventHorizon) {
         // HIT CENTER: recycle to emitter queue
         float recycleRand = hash2(uv, uTime + 500.0);
-        lifetime = -(recycleRand * 0.9 + 0.1) * (1.0 / max(uSpawnRate, 0.01));
+        if (uParticlesPerSecond <= 0.0) {
+            lifetime = 0.0;  // Instant respawn
+        } else {
+            lifetime = -recycleRand;  // 0 to -1 second queue position
+        }
     } else if (uDoDrift) {
         // DRIFT: update position using velocity
         pos = pos + vel * uDeltaTime;
