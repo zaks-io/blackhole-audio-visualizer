@@ -31,7 +31,7 @@ export function usePlayPreset() {
     tweensRef.current = [];
     isPlayingRef.current = false;
     onCompleteRef.current = null;
-  }, [vizStore]);
+  }, []);
 
   const playPreset = useCallback(
     (preset: Preset, onComplete?: () => void) => {
@@ -55,6 +55,10 @@ export function usePlayPreset() {
 
         const state = { value: startValue, progress: 0 };
 
+        // Push to ref array BEFORE creating tween to handle synchronous onComplete (duration=0)
+        const ref: TweenRef = { path: param.path, tween: null! as gsap.core.Tween, state };
+        tweensRef.current.push(ref);
+
         const tween = gsap.to(state, {
           value: param.value,
           progress: 1,
@@ -67,17 +71,37 @@ export function usePlayPreset() {
             setIsTweening(param.path, false);
             setProgress(param.path, 0);
             tweensRef.current = tweensRef.current.filter((t) => t.path !== param.path);
+
             if (tweensRef.current.length === 0) {
               isPlayingRef.current = false;
               if (onCompleteRef.current) {
-                onCompleteRef.current();
-                onCompleteRef.current = null;
+                // Use queueMicrotask to avoid synchronous callback issues
+                queueMicrotask(() => {
+                  if (onCompleteRef.current) {
+                    onCompleteRef.current();
+                    onCompleteRef.current = null;
+                  }
+                });
               }
             }
           },
         });
 
-        tweensRef.current.push({ path: param.path, tween, state });
+        ref.tween = tween;
+      }
+
+      // If no tweens were started (e.g. all values matched), trigger completion immediately
+      if (tweensRef.current.length === 0) {
+        isPlayingRef.current = false;
+        if (onCompleteRef.current) {
+          // Use queueMicrotask to avoid synchronous callback issues
+          queueMicrotask(() => {
+            if (onCompleteRef.current) {
+              onCompleteRef.current();
+              onCompleteRef.current = null;
+            }
+          });
+        }
       }
     },
     [vizStore, stopAll, setTargetValue, setDuration, setEase, setIsTweening, setProgress]
