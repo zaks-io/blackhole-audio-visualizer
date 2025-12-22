@@ -5,6 +5,7 @@ import { CameraControls } from "@/components/camera";
 import { PlaylistControls } from "@/components/playlist";
 import { SceneSelector } from "@/components/scenes";
 import { useViewerMode } from "@/hooks/useViewerMode";
+import { useUIState } from "@/hooks/useUIState";
 import { cn } from "@/lib/utils";
 import type { CameraMode } from "@/components/CameraSystem";
 import type { SceneWithDetails } from "@/hooks/useConvexScenes";
@@ -24,6 +25,7 @@ export function TopToolbar({
 }: TopToolbarProps) {
   const mode = useViewerMode((s) => s.mode);
   const sceneId = useViewerMode((s) => s.sceneId);
+  const controlBarCollapsed = useUIState((s) => s.controlBarCollapsed);
 
   const showCenteredSceneSelector = mode === "scene" && !sceneId;
 
@@ -41,7 +43,13 @@ export function TopToolbar({
 
       {/* Top toolbar - hidden when showing centered selector */}
       {!showCenteredSceneSelector && (
-        <div className="fixed top-0 left-0 right-0 z-50 flex justify-center pt-6 pointer-events-none hidden sm:flex">
+        <div
+          className={cn(
+            "fixed top-0 left-0 right-0 z-50 flex justify-center pt-6 pointer-events-none hidden sm:flex",
+            "transition-all duration-300",
+            controlBarCollapsed && "-translate-y-full opacity-0"
+          )}
+        >
           <div
             className={cn(
               "glass-panel rounded-full px-4 py-2 flex items-center gap-2",
