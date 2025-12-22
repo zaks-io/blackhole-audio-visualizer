@@ -29,10 +29,10 @@ export function getSharedAudioContext(): AudioContext {
   return sharedAudioContext;
 }
 
-export function resumeAudioContext(): void {
+export async function resumeAudioContext(): Promise<void> {
   const ctx = getSharedAudioContext();
   if (ctx.state === "suspended") {
-    ctx.resume();
+    await ctx.resume();
   }
 }
 

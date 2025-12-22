@@ -98,13 +98,14 @@ export function useUnifiedPlayer(config: UnifiedPlayerConfig) {
     return sectionTimings[sectionTimings.length - 1].endTimeMs;
   }, [sectionTimings]);
 
-  // Preload audio element when URL is available
+  // Preload audio element when URL is available (don't connect analyzer yet)
   useEffect(() => {
     if (!audioUrl) return;
 
     if (!audioRef.current) {
       audioRef.current = new Audio();
-      setAudioElement(audioRef.current);
+      // Don't call setAudioElement here - wait until play() to connect analyzer
+      // This ensures AudioContext is created during user gesture
     }
     audioRef.current.crossOrigin = "anonymous";
     audioRef.current.preload = "auto";
@@ -259,11 +260,11 @@ export function useUnifiedPlayer(config: UnifiedPlayerConfig) {
     };
   }, [findSectionAtTime, getPresetForSection, playPreset, totalDurationMs, onCameraModeChange]);
 
-  const play = useCallback(() => {
+  const play = useCallback(async () => {
     if (!playlist || playlist.items.length === 0) return;
 
-    // Resume audio context synchronously during user gesture
-    resumeAudioContext();
+    // Resume audio context during user gesture (must await to ensure it's ready)
+    await resumeAudioContext();
 
     cleanup();
     loopEnabledRef.current = loopEnabled;
@@ -271,6 +272,9 @@ export function useUnifiedPlayer(config: UnifiedPlayerConfig) {
     if (audioUrl) {
       if (!audioRef.current) {
         audioRef.current = new Audio();
+      }
+      // Connect analyzer now (after AudioContext is resumed during user gesture)
+      if (!audioElement) {
         setAudioElement(audioRef.current);
       }
       audioRef.current.crossOrigin = "anonymous";
@@ -384,6 +388,7 @@ export function useUnifiedPlayer(config: UnifiedPlayerConfig) {
   }, [
     playlist,
     audioUrl,
+    audioElement,
     loopEnabled,
     cleanup,
     totalDurationMs,
