@@ -184,6 +184,36 @@ body {
   }
 }
 
+/* Subtitle display */
+@layer utilities {
+  .subtitle-word {
+    transition:
+      color 0.2s ease-out,
+      text-shadow 0.2s ease-out,
+      opacity 0.2s ease-out;
+  }
+  .subtitle-word-active {
+    color: white;
+    opacity: 1;
+    text-shadow: 0 0 12px oklch(0.78 0.15 195 / 60%);
+  }
+  .subtitle-word-upcoming {
+    color: oklch(1 0 0 / 60%);
+    opacity: 0.6;
+  }
+  .subtitle-word-past {
+    color: oklch(1 0 0 / 50%);
+    opacity: 0.5;
+    transition:
+      color 1.5s ease-out,
+      text-shadow 0.2s ease-out,
+      opacity 1.5s ease-out;
+  }
+  .subtitle-container {
+    mask-image: linear-gradient(to right, transparent, black 20%, black 80%, transparent);
+  }
+}
+
 /* Pulse animation for recording */
 @keyframes pulse-recording {
   0%,

@@ -8,6 +8,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { SceneTimeline } from "./SceneTimeline";
 import { TimeDisplay } from "./TimeDisplay";
 import { SceneInfoPanel } from "./SceneInfoPanel";
+import { SubtitleDisplay } from "./SubtitleDisplay";
 import { ModeToggle } from "@/components/layout/ModeToggle";
 import { useProducerMode } from "@/components/ProducerMode";
 import { SettingsMenu } from "@/components/dialogs";
@@ -121,6 +122,14 @@ function ScenePlayerControlsComponent({
 
   return (
     <TooltipProvider delayDuration={300}>
+      {/* Subtitle display */}
+      <SubtitleDisplay
+        transcription={transcription}
+        subscribeToTime={subscribeToTime}
+        getCurrentTime={getCurrentTime}
+        isVisible={!controlBarCollapsed}
+      />
+
       {/* Floating pill toolbar */}
       <div
         className={cn(

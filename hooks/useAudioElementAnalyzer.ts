@@ -19,6 +19,23 @@ const audioContextCache = new WeakMap<
   }
 >();
 
+// Shared AudioContext singleton for resuming during user gestures
+let sharedAudioContext: AudioContext | null = null;
+
+export function getSharedAudioContext(): AudioContext {
+  if (!sharedAudioContext) {
+    sharedAudioContext = new AudioContext();
+  }
+  return sharedAudioContext;
+}
+
+export function resumeAudioContext(): void {
+  const ctx = getSharedAudioContext();
+  if (ctx.state === "suspended") {
+    ctx.resume();
+  }
+}
+
 const DEFAULT_ANALYSIS: AnalyzedAudio = {
   energy: {
     overall: 0,
@@ -190,7 +207,7 @@ export function useAudioElementAnalyzer(
           analyser = cached.analyser;
         } else {
           // First time connecting this element - create and cache
-          audioContext = new AudioContext();
+          audioContext = getSharedAudioContext();
           const source = audioContext.createMediaElementSource(element);
           analyser = audioContext.createAnalyser();
           analyser.fftSize = fftSizeRef.current;

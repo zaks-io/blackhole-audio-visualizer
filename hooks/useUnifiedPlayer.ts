@@ -3,6 +3,7 @@
 import { useRef, useState, useCallback, useEffect, useMemo } from "react";
 import gsap from "gsap";
 import { usePlayPreset } from "@/components/ProducerMode/usePlayPreset";
+import { resumeAudioContext } from "./useAudioElementAnalyzer";
 import type { PlaylistWithPresets, ConvexPreset, Preset } from "@/components/ProducerMode/types";
 
 export interface SectionTiming {
@@ -260,6 +261,9 @@ export function useUnifiedPlayer(config: UnifiedPlayerConfig) {
 
   const play = useCallback(() => {
     if (!playlist || playlist.items.length === 0) return;
+
+    // Resume audio context synchronously during user gesture
+    resumeAudioContext();
 
     cleanup();
     loopEnabledRef.current = loopEnabled;
