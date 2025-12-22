@@ -7,14 +7,9 @@ import type { useUnifiedPlayer } from "./useUnifiedPlayer";
 interface UseSceneRecordingConfig {
   player: ReturnType<typeof useUnifiedPlayer>;
   getRecordingStream: () => MediaStream | null;
-  canvasRef: React.RefObject<HTMLDivElement | null>;
 }
 
-export function useSceneRecording({
-  player,
-  getRecordingStream,
-  canvasRef,
-}: UseSceneRecordingConfig) {
+export function useSceneRecording({ player, getRecordingStream }: UseSceneRecordingConfig) {
   const recording = useRecording();
   const isRecordingRef = useRef(false);
 
@@ -31,7 +26,7 @@ export function useSceneRecording({
   }, [player.state.status, recording]);
 
   const startRecording = useCallback(() => {
-    const canvas = canvasRef.current?.querySelector("canvas");
+    const canvas = document.querySelector("canvas");
     if (!canvas) {
       console.error("Canvas element not found");
       return;
@@ -57,7 +52,7 @@ export function useSceneRecording({
 
       recording.startRecording(canvas, audioStream);
     }, 100);
-  }, [canvasRef, getRecordingStream, player, recording]);
+  }, [getRecordingStream, player, recording]);
 
   const stopRecording = useCallback(() => {
     recording.stopRecording();

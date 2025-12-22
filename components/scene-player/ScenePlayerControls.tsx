@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, memo, type RefObject } from "react";
+import { useState, useCallback, memo } from "react";
 import { Play, Pause, Film, ChevronRight, SlidersHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -26,14 +26,12 @@ import { cn } from "@/lib/utils";
 interface ScenePlayerControlsProps {
   scene: SceneWithDetails;
   player: ReturnType<typeof useUnifiedPlayer>;
-  canvasRef: RefObject<HTMLDivElement | null>;
   getRecordingStream: () => MediaStream | null;
 }
 
 function ScenePlayerControlsComponent({
   scene,
   player,
-  canvasRef,
   getRecordingStream,
 }: ScenePlayerControlsProps) {
   const [isInfoOpen, setIsInfoOpen] = useState(false);
@@ -54,7 +52,6 @@ function ScenePlayerControlsComponent({
   const sceneRecording = useSceneRecording({
     player,
     getRecordingStream,
-    canvasRef,
   });
 
   const handleHideControls = useCallback(() => {

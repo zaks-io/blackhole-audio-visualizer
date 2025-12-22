@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useMemo, useEffect } from "react";
+import { useMemo, useEffect } from "react";
 import { ScenePlayerControls } from "@/components/scene-player/ScenePlayerControls";
 import { TopToolbar } from "@/components/layout";
 import { useCameraMode, type CameraMode } from "@/components/CameraSystem";
@@ -25,7 +25,6 @@ export function SceneModeUIClient({ sceneId, preloadedScene }: SceneModeUIClient
   }, [sceneId, setMode]);
 
   const cameraMode = useCameraMode();
-  const canvasContainerRef = useRef<HTMLDivElement>(null);
 
   const scene = usePreloadedQuery(preloadedScene);
 
@@ -58,13 +57,7 @@ export function SceneModeUIClient({ sceneId, preloadedScene }: SceneModeUIClient
   // No loading overlays - Canvas continues to show while scene loads
   if (!scene) {
     // Fallback UI to confirm SSR is working even if data is missing/private
-    return (
-      <div className="fixed bottom-10 left-0 right-0 text-center pointer-events-none z-50">
-        <span className="bg-black/50 text-white/50 px-4 py-2 rounded-full text-sm backdrop-blur-md">
-          Scene not found or private (Waiting for auth...)
-        </span>
-      </div>
-    );
+    return null;
   }
 
   return (
@@ -74,7 +67,6 @@ export function SceneModeUIClient({ sceneId, preloadedScene }: SceneModeUIClient
       <ScenePlayerControls
         scene={scene}
         player={scenePlayer}
-        canvasRef={canvasContainerRef}
         getRecordingStream={audio.getRecordingStream}
       />
     </>
