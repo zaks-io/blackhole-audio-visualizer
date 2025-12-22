@@ -14,6 +14,9 @@ export function FPSMeter() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fps = useFPSStore((s) => s.fps);
   const history = useFPSStore((s) => s.history);
+  const historyVersion = useFPSStore((s) => s.historyVersion);
+  const spikeCount = useFPSStore((s) => s.spikeCount);
+  const maxDeltaMs = useFPSStore((s) => s.maxDeltaMs);
   const producerPanelOpen = useProducerMode((s) => s.isOpen);
 
   useEffect(() => {
@@ -27,14 +30,18 @@ export function FPSMeter() {
 
     if (history.length < 2) return;
 
-    const max = Math.max(...history);
+    let max = 0;
+    for (let i = 0; i < history.length; i++) {
+      if (history[i] > max) max = history[i];
+    }
     const range = max || 1;
 
     ctx.beginPath();
     ctx.strokeStyle = WHITE;
     ctx.lineWidth = 1;
 
-    history.forEach((value, i) => {
+    for (let i = 0; i < history.length; i++) {
+      const value = history[i];
       const x = (i / (history.length - 1)) * CHART_WIDTH;
       const y = CHART_HEIGHT - (value / range) * (CHART_HEIGHT - 2) - 1;
 
@@ -43,10 +50,10 @@ export function FPSMeter() {
       } else {
         ctx.lineTo(x, y);
       }
-    });
+    }
 
     ctx.stroke();
-  }, [fps, history]);
+  }, [fps, historyVersion, history]);
 
   return (
     <div
@@ -57,9 +64,14 @@ export function FPSMeter() {
       )}
     >
       <canvas ref={canvasRef} width={CHART_WIDTH} height={CHART_HEIGHT} className="opacity-80" />
-      <span className="font-mono text-xs tabular-nums text-white/80" style={{ minWidth: "28px" }}>
-        {fps}
-      </span>
+      <div className="flex flex-col leading-none">
+        <span className="font-mono text-xs tabular-nums text-white/80" style={{ minWidth: "28px" }}>
+          {fps}
+        </span>
+        <span className="font-mono text-[10px] tabular-nums text-white/60">
+          spk {spikeCount} max {Math.round(maxDeltaMs)}ms
+        </span>
+      </div>
     </div>
   );
 }

@@ -58,7 +58,7 @@ export function AudioReactiveEffects({ getAnalysis, isAudioConnected }: AudioRea
     }))
   );
 
-  const { bassStrobeEnabled } = useUIState();
+  const bassStrobeEnabled = useUIState((s) => s.bassStrobeEnabled);
 
   // Envelope followers for smooth audio response
   const bloomEnvelope = useRef(new EnvelopeFollower(5, 200));

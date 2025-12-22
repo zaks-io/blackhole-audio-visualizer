@@ -96,11 +96,57 @@ export function BlackHoleSimulation({
   const beatIntensityRef = useRef(0);
 
   // Black hole positions and masses for N-body system (for GPU compute)
-  const blackHoleDataRef = useRef({
-    positions: [new THREE.Vector3(0, 0, 0)],
-    masses: [100000],
-    count: 1,
-  });
+  // Keep stable arrays/Vector3s and mutate in-place to avoid per-frame allocations / GC hiccups.
+  const blackHoleDataRef = useRef<{
+    positions: THREE.Vector3[];
+    masses: number[];
+    count: number;
+  } | null>(null);
+
+  // Initialize immediately from current store so the compute pipeline never sees a 0-mass frame.
+  if (!blackHoleDataRef.current) {
+    const initial = useVisualizationControls.getState();
+    const initialCount = Math.max(1, Math.min(Math.floor(initial.blackHoleCount), 4));
+    const positions = [
+      new THREE.Vector3(0, 0, 0),
+      new THREE.Vector3(0, 0, 0),
+      new THREE.Vector3(0, 0, 0),
+      new THREE.Vector3(0, 0, 0),
+    ];
+    const masses = [0, 0, 0, 0];
+
+    if (initialCount === 1) {
+      positions[0].set(0, 0, 0);
+      masses[0] = initial.gravity * initial.blackHoleMassMax;
+    } else {
+      const angleStep = (2 * Math.PI) / initialCount;
+      const totalMass = initial.gravity;
+      let totalMassRatio = 0;
+      for (let i = 0; i < initialCount; i++) {
+        const ti = i / (initialCount - 1);
+        totalMassRatio +=
+          initial.blackHoleMassMax - ti * (initial.blackHoleMassMax - initial.blackHoleMassMin);
+      }
+      const avgMassRatio = totalMassRatio / initialCount;
+      for (let i = 0; i < initialCount; i++) {
+        const angle = i * angleStep;
+        const t = i / (initialCount - 1);
+        const massRatio =
+          initial.blackHoleMassMax - t * (initial.blackHoleMassMax - initial.blackHoleMassMin);
+        const mass = totalMass * massRatio;
+        const r = initial.orbitRadius * (avgMassRatio / massRatio);
+        positions[i].set(Math.cos(angle) * r, 0, Math.sin(angle) * r);
+        masses[i] = mass;
+      }
+    }
+
+    for (let i = initialCount; i < 4; i++) {
+      positions[i].set(0, 0, 0);
+      masses[i] = 0;
+    }
+
+    blackHoleDataRef.current = { positions, masses, count: initialCount };
+  }
 
   // Subscribe to blackHoleCount for reactive rendering of BlackHole components
   const blackHoleCount = useVisualizationControls((s) => s.blackHoleCount);
@@ -128,30 +174,33 @@ export function BlackHoleSimulation({
     } = store;
     const elapsed = state.clock.elapsedTime;
 
-    const positions: THREE.Vector3[] = [];
-    const masses: number[] = [];
+    const bh = blackHoleDataRef.current!;
+    const positions = bh.positions;
+    const masses = bh.masses;
+    // Hard cap to shader/compute limit
+    const count = Math.max(1, Math.min(Math.floor(bhCount), 4));
 
-    if (bhCount === 1) {
+    if (count === 1) {
       // Single black hole at origin
-      positions.push(new THREE.Vector3(0, 0, 0));
-      masses.push(gravity * blackHoleMassMax);
+      positions[0].set(0, 0, 0);
+      masses[0] = gravity * blackHoleMassMax;
     } else {
       // Multi-body: distribute around center of mass in circular orbit
-      const angleStep = (2 * Math.PI) / bhCount;
+      const angleStep = (2 * Math.PI) / count;
       const totalMass = gravity;
 
       // Calculate average mass ratio for barycenter adjustment
       let totalMassRatio = 0;
-      for (let i = 0; i < bhCount; i++) {
-        const ti = i / (bhCount - 1);
+      for (let i = 0; i < count; i++) {
+        const ti = i / (count - 1);
         totalMassRatio += blackHoleMassMax - ti * (blackHoleMassMax - blackHoleMassMin);
       }
-      const avgMassRatio = totalMassRatio / bhCount;
+      const avgMassRatio = totalMassRatio / count;
 
-      for (let i = 0; i < bhCount; i++) {
+      for (let i = 0; i < count; i++) {
         const angle = elapsed * orbitSpeed + i * angleStep;
         // Interpolate mass from max to min based on index
-        const t = i / (bhCount - 1);
+        const t = i / (count - 1);
         const massRatio = blackHoleMassMax - t * (blackHoleMassMax - blackHoleMassMin);
         const mass = totalMass * massRatio;
         // Orbit radius inversely proportional to mass (heavier = closer to center)
@@ -160,17 +209,17 @@ export function BlackHoleSimulation({
         const x = Math.cos(angle) * r;
         const z = Math.sin(angle) * r;
 
-        positions.push(new THREE.Vector3(x, 0, z));
-        masses.push(mass);
+        positions[i].set(x, 0, z);
+        masses[i] = mass;
       }
     }
 
-    // Update ref for GPU compute
-    blackHoleDataRef.current = {
-      positions,
-      masses,
-      count: bhCount,
-    };
+    // Zero out unused slots to keep data stable and predictable
+    for (let i = count; i < 4; i++) {
+      positions[i].set(0, 0, 0);
+      masses[i] = 0;
+    }
+    bh.count = count;
 
     if (isAudioConnected) {
       const analysis = getAnalysis();
@@ -253,7 +302,7 @@ export function BlackHoleSimulation({
         paletteOffset={colorMode.paletteOffset}
         getAudioData={getAudioData}
         audioEnabled={isAudioConnected}
-        getBlackHoleData={() => blackHoleDataRef.current}
+        getBlackHoleData={() => blackHoleDataRef.current!}
       />
       {Array.from({ length: blackHoleCount }, (_, i) => (
         <BlackHole key={i} beatIntensityRef={beatIntensityRef} index={i} />

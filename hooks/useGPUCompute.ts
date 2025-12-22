@@ -13,6 +13,8 @@ import {
   createInitialPositionTexture,
   createInitialVelocityTexture,
 } from "@/lib/gpu/verletPhysics";
+import { useVisualizationControls } from "@/hooks/useVisualizationControls";
+import { PALETTE_OFFSETS } from "@/components/ColorModeSystem";
 import positionFragmentShader from "@/shaders/simulation/positionFragment.glsl";
 import velocityFragmentShader from "@/shaders/simulation/velocityFragment.glsl";
 
@@ -25,6 +27,9 @@ export function useGPUCompute(textureSize: number = DEFAULT_TEXTURE_SIZE) {
   const velocityVariableRef = useRef<Variable | null>(null);
   const timeScaleRef = useRef(0.5);
   const bandOnsetsTextureRef = useRef<THREE.DataTexture | null>(null);
+  // Stable buffers for black hole uniforms (avoid per-frame allocations).
+  const blackHolePosRef = useRef<THREE.Vector3[] | null>(null);
+  const blackHoleMassRef = useRef<number[] | null>(null);
 
   const textures = useMemo(() => {
     const initialPosition = createInitialPositionTexture(textureSize, EMISSION_RADIUS);
@@ -106,17 +111,17 @@ export function useGPUCompute(textureSize: number = DEFAULT_TEXTURE_SIZE) {
     positionVariable.material.uniforms.uSpawnBurst = { value: 1.0 };
 
     // Multi-black hole uniforms for position shader
-    positionVariable.material.uniforms.uBlackHolePos = {
-      value: [
-        new THREE.Vector3(0, 0, 0),
-        new THREE.Vector3(0, 0, 0),
-        new THREE.Vector3(0, 0, 0),
-        new THREE.Vector3(0, 0, 0),
-      ],
-    };
-    positionVariable.material.uniforms.uBlackHoleMass = {
-      value: [DEFAULT_GM, DEFAULT_GM * 0.5, DEFAULT_GM * 0.3, DEFAULT_GM * 0.2],
-    };
+    const bhPos = [
+      new THREE.Vector3(0, 0, 0),
+      new THREE.Vector3(0, 0, 0),
+      new THREE.Vector3(0, 0, 0),
+      new THREE.Vector3(0, 0, 0),
+    ];
+    const bhMass = [DEFAULT_GM, DEFAULT_GM * 0.5, DEFAULT_GM * 0.3, DEFAULT_GM * 0.2];
+    blackHolePosRef.current = bhPos;
+    blackHoleMassRef.current = bhMass;
+    positionVariable.material.uniforms.uBlackHolePos = { value: bhPos };
+    positionVariable.material.uniforms.uBlackHoleMass = { value: bhMass };
     positionVariable.material.uniforms.uBlackHoleCount = { value: 1 };
 
     // Store ref to band onsets texture for updates
@@ -133,7 +138,7 @@ export function useGPUCompute(textureSize: number = DEFAULT_TEXTURE_SIZE) {
     velocityVariable.material.uniforms.uInwardAngle = { value: 0.0 };
     velocityVariable.material.uniforms.uISCORadius = { value: 9.0 };
     velocityVariable.material.uniforms.uISCOStrength = { value: 0.5 };
-    velocityVariable.material.uniforms.uEmitterSpread = { value: 0.1 };
+    velocityVariable.material.uniforms.uEmitterSpread = { value: 0.0 };
     velocityVariable.material.uniforms.uBeatIntensity = { value: 0.0 };
     velocityVariable.material.uniforms.uBeatRepulsion = { value: 0.0 };
     velocityVariable.material.uniforms.uPaletteOffset = { value: 0.0 };
@@ -145,18 +150,83 @@ export function useGPUCompute(textureSize: number = DEFAULT_TEXTURE_SIZE) {
     velocityVariable.material.uniforms.uOrbitDecay = { value: 2.0 };
 
     // Multi-black hole uniforms for velocity shader
-    velocityVariable.material.uniforms.uBlackHolePos = {
-      value: [
-        new THREE.Vector3(0, 0, 0),
-        new THREE.Vector3(0, 0, 0),
-        new THREE.Vector3(0, 0, 0),
-        new THREE.Vector3(0, 0, 0),
-      ],
-    };
-    velocityVariable.material.uniforms.uBlackHoleMass = {
-      value: [DEFAULT_GM, DEFAULT_GM * 0.5, DEFAULT_GM * 0.3, DEFAULT_GM * 0.2],
-    };
+    velocityVariable.material.uniforms.uBlackHolePos = { value: bhPos };
+    velocityVariable.material.uniforms.uBlackHoleMass = { value: bhMass };
     velocityVariable.material.uniforms.uBlackHoleCount = { value: 1 };
+
+    // IMPORTANT: Initialize uniforms from the visualization store immediately.
+    // `useGPUCompute`'s `useFrame` runs before `ParticleSystem`'s `useFrame` (hook order),
+    // so defaults here can permanently affect spawn velocities/colors in the first compute tick.
+    const initial = useVisualizationControls.getState();
+    timeScaleRef.current = initial.timeScale;
+
+    // Core simulation params
+    positionVariable.material.uniforms.uGM.value = initial.gravity;
+    velocityVariable.material.uniforms.uGM.value = initial.gravity;
+    positionVariable.material.uniforms.uSoftening.value = initial.softening;
+    velocityVariable.material.uniforms.uSoftening.value = initial.softening;
+    positionVariable.material.uniforms.uEventHorizon.value = initial.eventHorizonRadius;
+    velocityVariable.material.uniforms.uEventHorizon.value = initial.eventHorizonRadius;
+
+    positionVariable.material.uniforms.uEmissionRadius.value = initial.emitRadius;
+    velocityVariable.material.uniforms.uEmissionRadius.value = initial.emitRadius;
+    positionVariable.material.uniforms.uEmitterCount.value = initial.emitterCount;
+    positionVariable.material.uniforms.uBandCount.value = initial.emitterCount;
+    velocityVariable.material.uniforms.uEmitterCount.value = initial.emitterCount;
+    positionVariable.material.uniforms.uEmitterAngle.value = initial.emitterAngle;
+    positionVariable.material.uniforms.uEmitterTilt.value = initial.emitterTilt;
+    velocityVariable.material.uniforms.uInwardAngle.value = initial.inwardAngle;
+    positionVariable.material.uniforms.uParticlesPerSecond.value = initial.spawnRate;
+    positionVariable.material.uniforms.uLifetimeMax.value = initial.lifetimeMax;
+
+    velocityVariable.material.uniforms.uLifetimeGracePeriod.value = initial.lifetimeGracePeriod;
+    velocityVariable.material.uniforms.uLifetimeMax.value = initial.lifetimeMax;
+    velocityVariable.material.uniforms.uLifetimeGravityMultiplier.value =
+      initial.lifetimeGravityMultiplier;
+    velocityVariable.material.uniforms.uOrbitDecay.value = initial.orbitDecay;
+
+    velocityVariable.material.uniforms.uISCORadius.value =
+      initial.eventHorizonRadius * initial.iscoRatio;
+    velocityVariable.material.uniforms.uISCOStrength.value = initial.iscoStrength;
+    velocityVariable.material.uniforms.uEmitterSpread.value = initial.emitterSpread;
+    velocityVariable.material.uniforms.uBeatRepulsion.value = initial.beatRepulsion;
+    positionVariable.material.uniforms.uAudioAmplitude.value = initial.amplitude;
+
+    // Palette offset must match the store's initial palette so colorIndex is correct on first spawn
+    velocityVariable.material.uniforms.uPaletteOffset.value = PALETTE_OFFSETS[initial.colorPalette];
+
+    // Initialize black holes consistently with `BlackHoleSimulation` at t=0
+    const bhCount = Math.max(1, Math.min(Math.floor(initial.blackHoleCount), 4));
+    if (bhCount === 1) {
+      bhPos[0].set(0, 0, 0);
+      bhMass[0] = initial.gravity * initial.blackHoleMassMax;
+    } else {
+      const angleStep = (2 * Math.PI) / bhCount;
+      const totalMass = initial.gravity;
+      let totalMassRatio = 0;
+      for (let i = 0; i < bhCount; i++) {
+        const ti = i / (bhCount - 1);
+        totalMassRatio +=
+          initial.blackHoleMassMax - ti * (initial.blackHoleMassMax - initial.blackHoleMassMin);
+      }
+      const avgMassRatio = totalMassRatio / bhCount;
+      for (let i = 0; i < bhCount; i++) {
+        const angle = i * angleStep;
+        const t = i / (bhCount - 1);
+        const massRatio =
+          initial.blackHoleMassMax - t * (initial.blackHoleMassMax - initial.blackHoleMassMin);
+        const mass = totalMass * massRatio;
+        const r = initial.orbitRadius * (avgMassRatio / massRatio);
+        bhPos[i].set(Math.cos(angle) * r, 0, Math.sin(angle) * r);
+        bhMass[i] = mass;
+      }
+    }
+    for (let i = bhCount; i < 4; i++) {
+      bhPos[i].set(0, 0, 0);
+      bhMass[i] = 0;
+    }
+    positionVariable.material.uniforms.uBlackHoleCount.value = bhCount;
+    velocityVariable.material.uniforms.uBlackHoleCount.value = bhCount;
 
     // Set dependencies: position and velocity both depend on each other
     gpuCompute.setVariableDependencies(positionVariable, [positionVariable, velocityVariable]);
@@ -183,6 +253,8 @@ export function useGPUCompute(textureSize: number = DEFAULT_TEXTURE_SIZE) {
       textures.initialVelocity.dispose();
       textures.bandOnsetsTexture.dispose();
       bandOnsetsTextureRef.current = null;
+      blackHolePosRef.current = null;
+      blackHoleMassRef.current = null;
     };
   }, [gl, textures]);
 
@@ -398,24 +470,31 @@ export function useGPUCompute(textureSize: number = DEFAULT_TEXTURE_SIZE) {
 
   const setBlackHoles = useCallback(
     (positions: THREE.Vector3[], masses: number[], count: number) => {
-      // Pad arrays to MAX_BLACK_HOLES (4)
-      const paddedPos = [...positions];
-      const paddedMass = [...masses];
-      while (paddedPos.length < 4) paddedPos.push(new THREE.Vector3(0, 0, 0));
-      while (paddedMass.length < 4) paddedMass.push(0);
+      const targetPos = blackHolePosRef.current;
+      const targetMass = blackHoleMassRef.current;
+      if (!targetPos || !targetMass) return;
 
-      // Update position shader uniforms
-      if (positionVariableRef.current) {
-        positionVariableRef.current.material.uniforms.uBlackHolePos.value = paddedPos;
-        positionVariableRef.current.material.uniforms.uBlackHoleMass.value = paddedMass;
-        positionVariableRef.current.material.uniforms.uBlackHoleCount.value = count;
+      const clampedCount = Math.max(1, Math.min(Math.floor(count), 4));
+      for (let i = 0; i < 4; i++) {
+        if (i < clampedCount) {
+          const p = positions[i];
+          if (p) {
+            targetPos[i].copy(p);
+          } else {
+            targetPos[i].set(0, 0, 0);
+          }
+          targetMass[i] = masses[i] ?? 0;
+        } else {
+          targetPos[i].set(0, 0, 0);
+          targetMass[i] = 0;
+        }
       }
 
-      // Update velocity shader uniforms
+      if (positionVariableRef.current) {
+        positionVariableRef.current.material.uniforms.uBlackHoleCount.value = clampedCount;
+      }
       if (velocityVariableRef.current) {
-        velocityVariableRef.current.material.uniforms.uBlackHolePos.value = paddedPos;
-        velocityVariableRef.current.material.uniforms.uBlackHoleMass.value = paddedMass;
-        velocityVariableRef.current.material.uniforms.uBlackHoleCount.value = count;
+        velocityVariableRef.current.material.uniforms.uBlackHoleCount.value = clampedCount;
       }
     },
     []

@@ -3,6 +3,7 @@
 import { useRef, useState, useEffect, useMemo } from "react";
 import { Canvas } from "@react-three/fiber";
 import { NoToneMapping, SRGBColorSpace } from "three";
+import { useShallow } from "zustand/shallow";
 import { PostProcessing } from "@/components/PostProcessing";
 import { BlackHoleSimulation } from "@/components/BlackHoleSimulation";
 import { FPSMeter } from "@/components/debug/FPSMeter";
@@ -40,7 +41,13 @@ export default function CanvasSlot() {
   const cameraMode = useCameraMode();
   const colorMode = useColorMode();
   const canvasContainerRef = useRef<HTMLDivElement>(null);
-  const { fpsVisible, devControlsVisible, resolution } = useUIState();
+  const { fpsVisible, devControlsVisible, resolution } = useUIState(
+    useShallow((s) => ({
+      fpsVisible: s.fpsVisible,
+      devControlsVisible: s.devControlsVisible,
+      resolution: s.resolution,
+    }))
+  );
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
 

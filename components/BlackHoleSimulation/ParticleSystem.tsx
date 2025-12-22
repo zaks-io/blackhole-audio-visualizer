@@ -77,6 +77,39 @@ export function ParticleSystem({
 
   const materialRef = useRef<THREE.ShaderMaterial>(null);
   const prevFirstColorRef = useRef<string>(allColors[0]);
+  const emptyOnsetsRef = useRef<Float32Array>(new Float32Array(36));
+  const prevControlsRef = useRef<{
+    paletteOffset: number;
+    gravity: number;
+    timeScale: number;
+    eventHorizonRadius: number;
+    softening: number;
+    orbitDecay: number;
+    emitRadius: number;
+    emitterCount: number;
+    emitterAngle: number;
+    emitterTilt: number;
+    spawnRate: number;
+    inwardAngle: number;
+    iscoStrength: number;
+    emitterSpread: number;
+    amplitude: number;
+    beatRepulsion: number;
+    lifetimeGracePeriod: number;
+    lifetimeMax: number;
+    lifetimeGravityMultiplier: number;
+  } | null>(null);
+  const prevAudioEnabledRef = useRef<boolean>(audioEnabled);
+  const prevDisabledEmitterCountRef = useRef<number>(-1);
+  const prevDisabledIscoRadiusRef = useRef<number | null>(null);
+  const prevRenderUniformsRef = useRef<{
+    pointSize: number;
+    brightness: number;
+    alpha: number;
+    maxDistance: number;
+    eventHorizonRadius: number;
+    iscoRadius: number;
+  } | null>(null);
 
   const { positions, references } = useMemo(() => {
     const pos = new Float32Array(particleCount * 3);
@@ -146,12 +179,50 @@ export function ParticleSystem({
       if (velTexture) {
         materialRef.current.uniforms.textureVelocity.value = velTexture;
       }
-      materialRef.current.uniforms.uPointSize.value = state.pointSize;
-      materialRef.current.uniforms.uBrightness.value = state.brightness;
-      materialRef.current.uniforms.uAlpha.value = state.alpha;
-      materialRef.current.uniforms.uMaxDistance.value = state.maxDistance;
-      materialRef.current.uniforms.uEventHorizon.value = state.eventHorizonRadius;
-      materialRef.current.uniforms.uISCORadius.value = iscoRadius;
+
+      // Dirty updates for numeric uniforms (avoid redundant uniform writes)
+      if (!prevRenderUniformsRef.current) {
+        prevRenderUniformsRef.current = {
+          pointSize: state.pointSize,
+          brightness: state.brightness,
+          alpha: state.alpha,
+          maxDistance: state.maxDistance,
+          eventHorizonRadius: state.eventHorizonRadius,
+          iscoRadius,
+        };
+        materialRef.current.uniforms.uPointSize.value = state.pointSize;
+        materialRef.current.uniforms.uBrightness.value = state.brightness;
+        materialRef.current.uniforms.uAlpha.value = state.alpha;
+        materialRef.current.uniforms.uMaxDistance.value = state.maxDistance;
+        materialRef.current.uniforms.uEventHorizon.value = state.eventHorizonRadius;
+        materialRef.current.uniforms.uISCORadius.value = iscoRadius;
+      } else {
+        const prevR = prevRenderUniformsRef.current;
+        if (prevR.pointSize !== state.pointSize) {
+          prevR.pointSize = state.pointSize;
+          materialRef.current.uniforms.uPointSize.value = state.pointSize;
+        }
+        if (prevR.brightness !== state.brightness) {
+          prevR.brightness = state.brightness;
+          materialRef.current.uniforms.uBrightness.value = state.brightness;
+        }
+        if (prevR.alpha !== state.alpha) {
+          prevR.alpha = state.alpha;
+          materialRef.current.uniforms.uAlpha.value = state.alpha;
+        }
+        if (prevR.maxDistance !== state.maxDistance) {
+          prevR.maxDistance = state.maxDistance;
+          materialRef.current.uniforms.uMaxDistance.value = state.maxDistance;
+        }
+        if (prevR.eventHorizonRadius !== state.eventHorizonRadius) {
+          prevR.eventHorizonRadius = state.eventHorizonRadius;
+          materialRef.current.uniforms.uEventHorizon.value = state.eventHorizonRadius;
+        }
+        if (prevR.iscoRadius !== iscoRadius) {
+          prevR.iscoRadius = iscoRadius;
+          materialRef.current.uniforms.uISCORadius.value = iscoRadius;
+        }
+      }
 
       // Only update colors if palette actually changed (check first color)
       const firstColor = allColors[0];
@@ -163,25 +234,128 @@ export function ParticleSystem({
       }
     }
 
-    setPaletteOffset(paletteOffset);
-    setGravitationalParameter(state.gravity);
-    setTimeScale(state.timeScale);
-    setEventHorizon(state.eventHorizonRadius);
-    setSoftening(state.softening);
-    setOrbitDecay(state.orbitDecay);
-    setEmissionRadius(state.emitRadius);
-    setEmitterCount(state.emitterCount);
-    setEmitterAngle(state.emitterAngle);
-    setEmitterTilt(state.emitterTilt);
-    setSpawnRate(state.spawnRate);
-    setInwardAngle(state.inwardAngle);
-    setISCOStrength(state.iscoStrength);
-    setEmitterSpread(state.emitterSpread);
-    setAudioAmplitude(state.amplitude);
-    setBeatRepulsion(state.beatRepulsion);
-    setLifetimeGracePeriod(state.lifetimeGracePeriod);
-    setLifetimeMax(state.lifetimeMax);
-    setLifetimeGravityMultiplier(state.lifetimeGravityMultiplier);
+    // Dirty updates: only touch GPU uniforms when values actually change
+    if (!prevControlsRef.current) {
+      prevControlsRef.current = {
+        paletteOffset,
+        gravity: state.gravity,
+        timeScale: state.timeScale,
+        eventHorizonRadius: state.eventHorizonRadius,
+        softening: state.softening,
+        orbitDecay: state.orbitDecay,
+        emitRadius: state.emitRadius,
+        emitterCount: state.emitterCount,
+        emitterAngle: state.emitterAngle,
+        emitterTilt: state.emitterTilt,
+        spawnRate: state.spawnRate,
+        inwardAngle: state.inwardAngle,
+        iscoStrength: state.iscoStrength,
+        emitterSpread: state.emitterSpread,
+        amplitude: state.amplitude,
+        beatRepulsion: state.beatRepulsion,
+        lifetimeGracePeriod: state.lifetimeGracePeriod,
+        lifetimeMax: state.lifetimeMax,
+        lifetimeGravityMultiplier: state.lifetimeGravityMultiplier,
+      };
+
+      setPaletteOffset(paletteOffset);
+      setGravitationalParameter(state.gravity);
+      setTimeScale(state.timeScale);
+      setEventHorizon(state.eventHorizonRadius);
+      setSoftening(state.softening);
+      setOrbitDecay(state.orbitDecay);
+      setEmissionRadius(state.emitRadius);
+      setEmitterCount(state.emitterCount);
+      setEmitterAngle(state.emitterAngle);
+      setEmitterTilt(state.emitterTilt);
+      setSpawnRate(state.spawnRate);
+      setInwardAngle(state.inwardAngle);
+      setISCOStrength(state.iscoStrength);
+      setEmitterSpread(state.emitterSpread);
+      setAudioAmplitude(state.amplitude);
+      setBeatRepulsion(state.beatRepulsion);
+      setLifetimeGracePeriod(state.lifetimeGracePeriod);
+      setLifetimeMax(state.lifetimeMax);
+      setLifetimeGravityMultiplier(state.lifetimeGravityMultiplier);
+    } else {
+      const prev = prevControlsRef.current;
+      if (prev.paletteOffset !== paletteOffset) {
+        prev.paletteOffset = paletteOffset;
+        setPaletteOffset(paletteOffset);
+      }
+      if (prev.gravity !== state.gravity) {
+        prev.gravity = state.gravity;
+        setGravitationalParameter(state.gravity);
+      }
+      if (prev.timeScale !== state.timeScale) {
+        prev.timeScale = state.timeScale;
+        setTimeScale(state.timeScale);
+      }
+      if (prev.eventHorizonRadius !== state.eventHorizonRadius) {
+        prev.eventHorizonRadius = state.eventHorizonRadius;
+        setEventHorizon(state.eventHorizonRadius);
+      }
+      if (prev.softening !== state.softening) {
+        prev.softening = state.softening;
+        setSoftening(state.softening);
+      }
+      if (prev.orbitDecay !== state.orbitDecay) {
+        prev.orbitDecay = state.orbitDecay;
+        setOrbitDecay(state.orbitDecay);
+      }
+      if (prev.emitRadius !== state.emitRadius) {
+        prev.emitRadius = state.emitRadius;
+        setEmissionRadius(state.emitRadius);
+      }
+      if (prev.emitterCount !== state.emitterCount) {
+        prev.emitterCount = state.emitterCount;
+        setEmitterCount(state.emitterCount);
+      }
+      if (prev.emitterAngle !== state.emitterAngle) {
+        prev.emitterAngle = state.emitterAngle;
+        setEmitterAngle(state.emitterAngle);
+      }
+      if (prev.emitterTilt !== state.emitterTilt) {
+        prev.emitterTilt = state.emitterTilt;
+        setEmitterTilt(state.emitterTilt);
+      }
+      if (prev.spawnRate !== state.spawnRate) {
+        prev.spawnRate = state.spawnRate;
+        setSpawnRate(state.spawnRate);
+      }
+      if (prev.inwardAngle !== state.inwardAngle) {
+        prev.inwardAngle = state.inwardAngle;
+        setInwardAngle(state.inwardAngle);
+      }
+      if (prev.iscoStrength !== state.iscoStrength) {
+        prev.iscoStrength = state.iscoStrength;
+        setISCOStrength(state.iscoStrength);
+      }
+      if (prev.emitterSpread !== state.emitterSpread) {
+        prev.emitterSpread = state.emitterSpread;
+        setEmitterSpread(state.emitterSpread);
+      }
+      if (prev.amplitude !== state.amplitude) {
+        prev.amplitude = state.amplitude;
+        setAudioAmplitude(state.amplitude);
+      }
+      if (prev.beatRepulsion !== state.beatRepulsion) {
+        prev.beatRepulsion = state.beatRepulsion;
+        setBeatRepulsion(state.beatRepulsion);
+      }
+      if (prev.lifetimeGracePeriod !== state.lifetimeGracePeriod) {
+        prev.lifetimeGracePeriod = state.lifetimeGracePeriod;
+        setLifetimeGracePeriod(state.lifetimeGracePeriod);
+      }
+      if (prev.lifetimeMax !== state.lifetimeMax) {
+        prev.lifetimeMax = state.lifetimeMax;
+        setLifetimeMax(state.lifetimeMax);
+      }
+      if (prev.lifetimeGravityMultiplier !== state.lifetimeGravityMultiplier) {
+        prev.lifetimeGravityMultiplier = state.lifetimeGravityMultiplier;
+        setLifetimeGravityMultiplier(state.lifetimeGravityMultiplier);
+      }
+    }
 
     // Update black hole positions and masses
     const blackHoleData = getBlackHoleData();
@@ -199,21 +373,41 @@ export function ParticleSystem({
       materialRef.current.uniforms.uBlackHoleCount.value = blackHoleData.count;
     }
 
+    const audioTransitioned = prevAudioEnabledRef.current !== audioEnabled;
+    if (audioTransitioned) {
+      prevAudioEnabledRef.current = audioEnabled;
+      // Ensure we refresh the disabled-band write when toggling off.
+      if (!audioEnabled) prevDisabledEmitterCountRef.current = -1;
+    }
+
     if (audioEnabled) {
       const audioData = getAudioData();
       setBandOnsets(audioData.bandOnsets, audioData.bandCount);
       const beat = Math.max(audioData.bandOnsets[0] ?? 0, audioData.bandOnsets[1] ?? 0);
       setBeatIntensity(beat);
+      // Only re-send beatPulse-driven ISCO radius if the pulse changes or beat changes.
+      // Beat changes every frame, so this is still per-frame when audio is enabled.
       setISCORadius(iscoRadius * (1 + beat * state.beatPulse));
       setHFCBoost(audioData.hfcBoost);
       setSpawnBurst(audioData.spawnBurst);
     } else {
-      const emptyOnsets = new Float32Array(36);
-      setBandOnsets(emptyOnsets, state.emitterCount);
-      setBeatIntensity(0);
-      setISCORadius(iscoRadius);
-      setHFCBoost(0);
-      setSpawnBurst(1);
+      // When audio is disabled, avoid spamming identical updates each frame.
+      // Only refresh when emitterCount changes (it affects how many bands are read).
+      if (prevDisabledEmitterCountRef.current !== state.emitterCount) {
+        prevDisabledEmitterCountRef.current = state.emitterCount;
+        setBandOnsets(emptyOnsetsRef.current, state.emitterCount);
+      }
+      // These are constant in disabled mode; only force on transition.
+      if (audioTransitioned) {
+        setBeatIntensity(0);
+        setHFCBoost(0);
+        setSpawnBurst(1);
+      }
+      // ISCO radius can change due to UI while disabled; update only when it changes.
+      if (prevDisabledIscoRadiusRef.current !== iscoRadius) {
+        prevDisabledIscoRadiusRef.current = iscoRadius;
+        setISCORadius(iscoRadius);
+      }
     }
   });
 
