@@ -47,6 +47,9 @@ export function ParticleSystem({
 
   const {
     getPositionTexture,
+    getPrevPositionTexture,
+    getPositionHistory1Texture,
+    getPositionHistory2Texture,
     getVelocityTexture,
     setGravitationalParameter,
     setTimeScale,
@@ -104,6 +107,8 @@ export function ParticleSystem({
   const prevDisabledIscoRadiusRef = useRef<number | null>(null);
   const prevRenderUniformsRef = useRef<{
     pointSize: number;
+    motionBlurTaper: number;
+    motionBlurFade: number;
     brightness: number;
     alpha: number;
     maxDistance: number;
@@ -111,22 +116,60 @@ export function ParticleSystem({
     iscoRadius: number;
   } | null>(null);
 
-  const { positions, references } = useMemo(() => {
-    const pos = new Float32Array(particleCount * 3);
-    const refs = new Float32Array(particleCount * 2);
+  const quadGeometry = useMemo(() => {
+    // Multi-segment trail: 4 rows x 2 columns = 8 vertices, 3 segments
+    // Row y positions map to Catmull-Rom spline parameter t: 0 (tail) to 1 (head)
+    const rows = 4;
+    const quadPositions = new Float32Array(rows * 2 * 3);
+    const quadUVs = new Float32Array(rows * 2 * 2);
 
-    for (let i = 0; i < particleCount; i++) {
-      pos[i * 3] = 0;
-      pos[i * 3 + 1] = 0;
-      pos[i * 3 + 2] = 0;
-
-      const x = ((i % textureSize) + 0.5) / textureSize;
-      const y = (Math.floor(i / textureSize) + 0.5) / textureSize;
-      refs[i * 2] = x;
-      refs[i * 2 + 1] = y;
+    for (let r = 0; r < rows; r++) {
+      const y = -0.5 + r / (rows - 1); // -0.5 to 0.5
+      const v = r / (rows - 1); // 0 to 1 for UV
+      // Left vertex
+      quadPositions[r * 6 + 0] = -0.5;
+      quadPositions[r * 6 + 1] = y;
+      quadPositions[r * 6 + 2] = 0;
+      quadUVs[r * 4 + 0] = 0;
+      quadUVs[r * 4 + 1] = v;
+      // Right vertex
+      quadPositions[r * 6 + 3] = 0.5;
+      quadPositions[r * 6 + 4] = y;
+      quadPositions[r * 6 + 5] = 0;
+      quadUVs[r * 4 + 2] = 1;
+      quadUVs[r * 4 + 3] = v;
     }
 
-    return { positions: pos, references: refs };
+    // Generate indices for 3 segments (6 triangles)
+    const indices = new Uint16Array((rows - 1) * 6);
+    for (let r = 0; r < rows - 1; r++) {
+      const baseVertex = r * 2;
+      const baseIndex = r * 6;
+      // First triangle
+      indices[baseIndex + 0] = baseVertex;
+      indices[baseIndex + 1] = baseVertex + 1;
+      indices[baseIndex + 2] = baseVertex + 3;
+      // Second triangle
+      indices[baseIndex + 3] = baseVertex;
+      indices[baseIndex + 4] = baseVertex + 3;
+      indices[baseIndex + 5] = baseVertex + 2;
+    }
+
+    const geo = new THREE.InstancedBufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(quadPositions, 3));
+    geo.setAttribute("uv", new THREE.BufferAttribute(quadUVs, 2));
+    geo.setIndex(new THREE.BufferAttribute(indices, 1));
+
+    // Instance attribute: texture lookup UVs (one per particle)
+    const refs = new Float32Array(particleCount * 2);
+    for (let i = 0; i < particleCount; i++) {
+      refs[i * 2] = ((i % textureSize) + 0.5) / textureSize;
+      refs[i * 2 + 1] = (Math.floor(i / textureSize) + 0.5) / textureSize;
+    }
+    geo.setAttribute("reference", new THREE.InstancedBufferAttribute(refs, 2));
+    geo.instanceCount = particleCount;
+
+    return geo;
   }, [particleCount, textureSize]);
 
   // Create color array for shader (all palettes)
@@ -158,8 +201,9 @@ export function ParticleSystem({
   useEffect(() => {
     return () => {
       colorLUT.tex.dispose();
+      quadGeometry.dispose();
     };
-  }, [colorLUT]);
+  }, [colorLUT, quadGeometry]);
 
   // Get initial values for uniforms to prevent flicker
   const initialControls = useVisualizationControls.getState();
@@ -167,8 +211,13 @@ export function ParticleSystem({
   const uniforms = useMemo(
     () => ({
       texturePosition: { value: null as THREE.Texture | null },
+      texturePrevPosition: { value: null as THREE.Texture | null },
+      textureHistory1: { value: null as THREE.Texture | null },
+      textureHistory2: { value: null as THREE.Texture | null },
       textureVelocity: { value: null as THREE.Texture | null },
-      uPointSize: { value: initialControls.pointSize },
+      uBaseSize: { value: initialControls.pointSize },
+      uMotionBlurTaper: { value: initialControls.motionBlurTaper },
+      uMotionBlurFade: { value: initialControls.motionBlurFade },
       uBrightness: { value: initialControls.brightness },
       uAlpha: { value: initialControls.alpha },
       uColorLUT: { value: colorLUT.tex },
@@ -196,9 +245,21 @@ export function ParticleSystem({
 
     if (materialRef.current) {
       const posTexture = getPositionTexture();
+      const prevPosTexture = getPrevPositionTexture();
+      const history1Texture = getPositionHistory1Texture();
+      const history2Texture = getPositionHistory2Texture();
       const velTexture = getVelocityTexture();
       if (posTexture) {
         materialRef.current.uniforms.texturePosition.value = posTexture;
+      }
+      if (prevPosTexture) {
+        materialRef.current.uniforms.texturePrevPosition.value = prevPosTexture;
+      }
+      if (history1Texture) {
+        materialRef.current.uniforms.textureHistory1.value = history1Texture;
+      }
+      if (history2Texture) {
+        materialRef.current.uniforms.textureHistory2.value = history2Texture;
       }
       if (velTexture) {
         materialRef.current.uniforms.textureVelocity.value = velTexture;
@@ -208,13 +269,17 @@ export function ParticleSystem({
       if (!prevRenderUniformsRef.current) {
         prevRenderUniformsRef.current = {
           pointSize: state.pointSize,
+          motionBlurTaper: state.motionBlurTaper,
+          motionBlurFade: state.motionBlurFade,
           brightness: state.brightness,
           alpha: state.alpha,
           maxDistance: state.maxDistance,
           eventHorizonRadius: state.eventHorizonRadius,
           iscoRadius,
         };
-        materialRef.current.uniforms.uPointSize.value = state.pointSize;
+        materialRef.current.uniforms.uBaseSize.value = state.pointSize;
+        materialRef.current.uniforms.uMotionBlurTaper.value = state.motionBlurTaper;
+        materialRef.current.uniforms.uMotionBlurFade.value = state.motionBlurFade;
         materialRef.current.uniforms.uBrightness.value = state.brightness;
         materialRef.current.uniforms.uAlpha.value = state.alpha;
         materialRef.current.uniforms.uMaxDistance.value = state.maxDistance;
@@ -224,7 +289,15 @@ export function ParticleSystem({
         const prevR = prevRenderUniformsRef.current;
         if (prevR.pointSize !== state.pointSize) {
           prevR.pointSize = state.pointSize;
-          materialRef.current.uniforms.uPointSize.value = state.pointSize;
+          materialRef.current.uniforms.uBaseSize.value = state.pointSize;
+        }
+        if (prevR.motionBlurTaper !== state.motionBlurTaper) {
+          prevR.motionBlurTaper = state.motionBlurTaper;
+          materialRef.current.uniforms.uMotionBlurTaper.value = state.motionBlurTaper;
+        }
+        if (prevR.motionBlurFade !== state.motionBlurFade) {
+          prevR.motionBlurFade = state.motionBlurFade;
+          materialRef.current.uniforms.uMotionBlurFade.value = state.motionBlurFade;
         }
         if (prevR.brightness !== state.brightness) {
           prevR.brightness = state.brightness;
@@ -446,11 +519,7 @@ export function ParticleSystem({
   });
 
   return (
-    <points frustumCulled={false}>
-      <bufferGeometry>
-        <bufferAttribute attach="attributes-position" args={[positions, 3]} />
-        <bufferAttribute attach="attributes-reference" args={[references, 2]} />
-      </bufferGeometry>
+    <mesh frustumCulled={false} geometry={quadGeometry}>
       <shaderMaterial
         ref={materialRef}
         vertexShader={particleVertexShader}
@@ -459,7 +528,8 @@ export function ParticleSystem({
         transparent
         depthWrite={false}
         blending={THREE.AdditiveBlending}
+        side={THREE.DoubleSide}
       />
-    </points>
+    </mesh>
   );
 }

@@ -19,6 +19,10 @@ export interface VisualizationControlsState {
   alpha: number;
   maxDistance: number;
   colorPalette: ColorPaletteId;
+  motionBlurScale: number;
+  motionBlurLength: number;
+  motionBlurTaper: number;
+  motionBlurFade: number;
 
   // Physics
   gravity: number;
@@ -93,6 +97,10 @@ export const pathToKey: Record<string, keyof VisualizationControlsState> = {
   "Particles.alpha": "alpha",
   "Particles.maxDistance": "maxDistance",
   "Particles.colorPalette": "colorPalette",
+  "Particles.motionBlurScale": "motionBlurScale",
+  "Particles.motionBlurLength": "motionBlurLength",
+  "Particles.motionBlurTaper": "motionBlurTaper",
+  "Particles.motionBlurFade": "motionBlurFade",
   "Physics.gravity": "gravity",
   "Physics.timeScale": "timeScale",
   "Physics.softening": "softening",
@@ -145,9 +153,13 @@ const DEFAULT_STATE: VisualizationControlsState = {
   textureSize: 512,
   pointSize: 1.0,
   brightness: 1.5,
-  alpha: 0.8,
+  alpha: 0.3,
   maxDistance: 60,
   colorPalette: "grayscale" as ColorPaletteId,
+  motionBlurScale: 0.5,
+  motionBlurLength: 8.0,
+  motionBlurTaper: 0.2,
+  motionBlurFade: 0.5,
 
   // Physics defaults
   gravity: 100000,

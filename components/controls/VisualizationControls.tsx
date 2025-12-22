@@ -60,6 +60,20 @@ export function VisualizationControls() {
         <SliderControl controlKey="alpha" label="Opacity" min={0.01} max={1.0} step={0.01} />
         <SliderControl controlKey="maxDistance" label="Max Distance" min={5} max={150} step={1} />
         <SelectControl controlKey="colorPalette" label="Color Palette" options={PALETTE_IDS} />
+        <SliderControl
+          controlKey="motionBlurTaper"
+          label="Motion Blur Taper"
+          min={0}
+          max={1}
+          step={0.05}
+        />
+        <SliderControl
+          controlKey="motionBlurFade"
+          label="Motion Blur Fade"
+          min={0}
+          max={2}
+          step={0.1}
+        />
       </ControlSection>
 
       <ControlSection title="Physics" id="physics">

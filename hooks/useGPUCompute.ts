@@ -17,6 +17,7 @@ import { useVisualizationControls } from "@/hooks/useVisualizationControls";
 import { PALETTE_OFFSETS } from "@/components/ColorModeSystem";
 import positionFragmentShader from "@/shaders/simulation/positionFragment.glsl";
 import velocityFragmentShader from "@/shaders/simulation/velocityFragment.glsl";
+import copyTextureShader from "@/shaders/simulation/copyTexture.glsl";
 
 const MAX_BANDS = 36;
 
@@ -31,6 +32,12 @@ export function useGPUCompute(textureSize: number = DEFAULT_TEXTURE_SIZE) {
   // Stable buffers for black hole uniforms (avoid per-frame allocations).
   const blackHolePosRef = useRef<THREE.Vector3[] | null>(null);
   const blackHoleMassRef = useRef<number[] | null>(null);
+  // Position history for motion blur trails (ring buffer: history2 <- history1 <- prev <- current)
+  const positionHistory1RTRef = useRef<THREE.WebGLRenderTarget | null>(null);
+  const positionHistory2RTRef = useRef<THREE.WebGLRenderTarget | null>(null);
+  const copyMaterialRef = useRef<THREE.ShaderMaterial | null>(null);
+  const copySceneRef = useRef<THREE.Scene | null>(null);
+  const copyCameraRef = useRef<THREE.Camera | null>(null);
 
   const textures = useMemo(() => {
     const initialPosition = createInitialPositionTexture(textureSize, EMISSION_RADIUS);
@@ -252,6 +259,42 @@ export function useGPUCompute(textureSize: number = DEFAULT_TEXTURE_SIZE) {
     positionVariableRef.current = positionVariable;
     velocityVariableRef.current = velocityVariable;
 
+    // Create position history render targets for motion blur trails
+    const rtOptions: THREE.RenderTargetOptions = {
+      wrapS: THREE.ClampToEdgeWrapping,
+      wrapT: THREE.ClampToEdgeWrapping,
+      minFilter: THREE.NearestFilter,
+      magFilter: THREE.NearestFilter,
+      format: THREE.RGBAFormat,
+      type: THREE.FloatType,
+      depthBuffer: false,
+    };
+    const history1RT = new THREE.WebGLRenderTarget(textureSize, textureSize, rtOptions);
+    const history2RT = new THREE.WebGLRenderTarget(textureSize, textureSize, rtOptions);
+    positionHistory1RTRef.current = history1RT;
+    positionHistory2RTRef.current = history2RT;
+
+    // Create copy material and scene for shifting history textures
+    const copyMaterial = new THREE.ShaderMaterial({
+      uniforms: {
+        tSource: { value: null },
+        resolution: { value: new THREE.Vector2(textureSize, textureSize) },
+      },
+      vertexShader: `void main() { gl_Position = vec4(position, 1.0); }`,
+      fragmentShader: copyTextureShader,
+      depthTest: false,
+      depthWrite: false,
+    });
+    copyMaterialRef.current = copyMaterial;
+
+    const copyScene = new THREE.Scene();
+    const copyPlane = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), copyMaterial);
+    copyScene.add(copyPlane);
+    copySceneRef.current = copyScene;
+
+    const copyCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+    copyCameraRef.current = copyCamera;
+
     return () => {
       // Dispose GPUComputationRenderer and its internal render targets
       gpuComputeRef.current?.dispose();
@@ -265,6 +308,16 @@ export function useGPUCompute(textureSize: number = DEFAULT_TEXTURE_SIZE) {
       bandOnsetsTextureRef.current = null;
       blackHolePosRef.current = null;
       blackHoleMassRef.current = null;
+
+      // Dispose history resources
+      positionHistory1RTRef.current?.dispose();
+      positionHistory2RTRef.current?.dispose();
+      copyMaterialRef.current?.dispose();
+      positionHistory1RTRef.current = null;
+      positionHistory2RTRef.current = null;
+      copyMaterialRef.current = null;
+      copySceneRef.current = null;
+      copyCameraRef.current = null;
     };
   }, [gl, textures]);
 
@@ -288,6 +341,32 @@ export function useGPUCompute(textureSize: number = DEFAULT_TEXTURE_SIZE) {
       bandOnsetsDirtyRef.current = false;
     }
 
+    // Shift position history ring buffer BEFORE physics compute
+    // Order: history2 <- history1, history1 <- prevPosition
+    const copyMaterial = copyMaterialRef.current;
+    const copyScene = copySceneRef.current;
+    const copyCamera = copyCameraRef.current;
+    const history1RT = positionHistory1RTRef.current;
+    const history2RT = positionHistory2RTRef.current;
+
+    if (copyMaterial && copyScene && copyCamera && history1RT && history2RT) {
+      // Copy history1 -> history2
+      copyMaterial.uniforms.tSource.value = history1RT.texture;
+      gl.setRenderTarget(history2RT);
+      gl.render(copyScene, copyCamera);
+
+      // Copy prevPosition (alternate RT) -> history1
+      const prevPosTexture = gpuComputeRef.current.getAlternateRenderTarget(
+        positionVariableRef.current
+      ).texture;
+      copyMaterial.uniforms.tSource.value = prevPosTexture;
+      gl.setRenderTarget(history1RT);
+      gl.render(copyScene, copyCamera);
+
+      // Reset render target
+      gl.setRenderTarget(null);
+    }
+
     // KICK-DRIFT-KICK (Leapfrog) Integration:
 
     // Pass 1: First KICK (half-step velocity update)
@@ -306,9 +385,22 @@ export function useGPUCompute(textureSize: number = DEFAULT_TEXTURE_SIZE) {
     return gpuComputeRef.current.getCurrentRenderTarget(positionVariableRef.current).texture;
   }, []);
 
+  const getPrevPositionTexture = useCallback((): THREE.Texture | null => {
+    if (!gpuComputeRef.current || !positionVariableRef.current) return null;
+    return gpuComputeRef.current.getAlternateRenderTarget(positionVariableRef.current).texture;
+  }, []);
+
   const getVelocityTexture = useCallback((): THREE.Texture | null => {
     if (!gpuComputeRef.current || !velocityVariableRef.current) return null;
     return gpuComputeRef.current.getCurrentRenderTarget(velocityVariableRef.current).texture;
+  }, []);
+
+  const getPositionHistory1Texture = useCallback((): THREE.Texture | null => {
+    return positionHistory1RTRef.current?.texture ?? null;
+  }, []);
+
+  const getPositionHistory2Texture = useCallback((): THREE.Texture | null => {
+    return positionHistory2RTRef.current?.texture ?? null;
   }, []);
 
   const setGravitationalParameter = useCallback((value: number) => {
@@ -546,6 +638,9 @@ export function useGPUCompute(textureSize: number = DEFAULT_TEXTURE_SIZE) {
 
   return {
     getPositionTexture,
+    getPrevPositionTexture,
+    getPositionHistory1Texture,
+    getPositionHistory2Texture,
     getVelocityTexture,
     setGravitationalParameter,
     setTimeScale,
