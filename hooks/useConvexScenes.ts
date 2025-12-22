@@ -27,7 +27,7 @@ export interface SceneWithDetails extends Scene {
       presetId: Id<"presets">;
       waitDuration?: number;
     }>;
-    presets: Array<Doc<"presets">>;
+    presets: Array<Doc<"presets"> | null>;
   } | null;
 }
 

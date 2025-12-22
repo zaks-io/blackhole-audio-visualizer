@@ -130,7 +130,7 @@ export function useUnifiedPlayer(config: UnifiedPlayerConfig) {
       if (!playlist) return null;
       const item = playlist.items[sectionIndex];
       if (!item) return null;
-      const preset = playlist.presets.find((p) => p._id === item.presetId);
+      const preset = playlist.presets.find((p) => p?._id === item.presetId);
       if (!preset) return null;
       return preset as unknown as ConvexPreset;
     },

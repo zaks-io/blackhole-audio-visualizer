@@ -51,7 +51,7 @@ export function usePlaylistPlayer(playlist: PlaylistWithPresets | null) {
       if (!playlist) return null;
       const item = playlist.items[itemIndex];
       if (!item) return null;
-      return playlist.presets.find((p) => p._id === item.presetId) ?? null;
+      return playlist.presets.find((p) => p?._id === item.presetId) ?? null;
     },
     [playlist]
   );

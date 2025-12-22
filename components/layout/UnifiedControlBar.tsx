@@ -1,6 +1,5 @@
 "use client";
 
-import { type RefObject } from "react";
 import { useViewerMode } from "@/hooks/useViewerMode";
 import { BottomControlBar } from "./BottomControlBar";
 import { ScenePlayerControls } from "@/components/scene-player/ScenePlayerControls";
@@ -22,7 +21,6 @@ interface LiveModeProps {
 interface SceneModeProps {
   scene: SceneWithDetails | null;
   player: ReturnType<typeof useUnifiedPlayer> | null;
-  canvasRef: RefObject<HTMLDivElement | null>;
   getRecordingStream: () => MediaStream | null;
 }
 
@@ -39,7 +37,6 @@ export function UnifiedControlBar({ liveProps, sceneProps }: UnifiedControlBarPr
       <ScenePlayerControls
         scene={sceneProps.scene}
         player={sceneProps.player}
-        canvasRef={sceneProps.canvasRef}
         getRecordingStream={sceneProps.getRecordingStream}
       />
     );

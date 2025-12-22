@@ -301,7 +301,7 @@ export function PlaylistEditor({ playlistId, onBack }: PlaylistEditorProps) {
             <SortableContext items={presetIds} strategy={verticalListSortingStrategy}>
               <div className="space-y-1">
                 {playlist.items.map((item, index) => {
-                  const preset = playlist.presets.find((p) => p._id === item.presetId);
+                  const preset = playlist.presets.find((p) => p?._id === item.presetId);
                   if (!preset) return null;
                   return (
                     <PlaylistPresetItem

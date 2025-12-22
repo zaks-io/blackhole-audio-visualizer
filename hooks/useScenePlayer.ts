@@ -62,7 +62,7 @@ export function useScenePlayer(scene: SceneWithDetails | null) {
       if (!scene?.playlist) return null;
       const item = scene.playlist.items[sectionIndex];
       if (!item) return null;
-      const preset = scene.playlist.presets.find((p) => p._id === item.presetId);
+      const preset = scene.playlist.presets.find((p) => p?._id === item.presetId);
       if (!preset) return null;
       // Cast DB preset to ConvexPreset type (ease is stored as string in DB)
       return preset as unknown as ConvexPreset;

@@ -114,7 +114,7 @@ export interface Playlist {
 }
 
 export interface PlaylistWithPresets extends Playlist {
-  presets: ConvexPreset[];
+  presets: (ConvexPreset | null)[];
 }
 
 export type PlaybackStatus = "idle" | "tweening" | "waiting";
