@@ -13,6 +13,7 @@ import {
   Repeat,
   Circle,
   Subtitles,
+  Info,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -43,6 +44,7 @@ const RESOLUTION_LABELS: Record<Resolution, string> = {
 };
 
 interface SettingsMenuProps {
+  onInfoClick?: () => void;
   loopEnabled?: boolean;
   onLoopToggle?: () => void;
   isRecording?: boolean;
@@ -54,6 +56,7 @@ interface SettingsMenuProps {
 }
 
 export function SettingsMenu({
+  onInfoClick,
   loopEnabled,
   onLoopToggle,
   isRecording,
@@ -87,6 +90,18 @@ export function SettingsMenu({
           <h4 className="font-medium text-sm">Settings</h4>
         </div>
         <DropdownMenuSeparator />
+        {onInfoClick && (
+          <button
+            onClick={onInfoClick}
+            className="flex items-center justify-between w-full text-left px-2 py-1.5 hover:bg-accent rounded-sm"
+          >
+            <div className="flex items-center gap-2">
+              <Info className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm">Scene Info</span>
+            </div>
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          </button>
+        )}
         {isAdmin && (
           <>
             <div className="flex items-center justify-between px-2 py-1.5">

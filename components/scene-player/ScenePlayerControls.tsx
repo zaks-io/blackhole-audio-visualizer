@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, memo, type RefObject } from "react";
-import { Play, Pause, Info, Film, ChevronRight, SlidersHorizontal, HelpCircle } from "lucide-react";
+import { Play, Pause, Film, ChevronRight, SlidersHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -238,28 +238,10 @@ function ScenePlayerControlsComponent({
             duration={duration}
           />
 
-          {/* Info button */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setIsInfoOpen(true)}
-                className="h-10 w-10 rounded-full"
-              >
-                <Info className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="top" className="text-xs">
-              Scene Info
-            </TooltipContent>
-          </Tooltip>
-
-          <Separator orientation="vertical" className="hidden sm:block h-6 mx-1 sm:mx-2" />
-
           {/* Settings - Desktop only */}
           <div className="hidden md:block">
             <SettingsMenu
+              onInfoClick={() => setIsInfoOpen(true)}
               loopEnabled={loopEnabled}
               onLoopToggle={handleToggleLoop}
               isRecording={sceneRecording.isRecording}
@@ -276,22 +258,6 @@ function ScenePlayerControlsComponent({
               }
             />
           </div>
-
-          {/* Help - Tablet+ (placeholder) */}
-          <div className="hidden sm:block">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full">
-                  <HelpCircle className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="top" className="text-xs">
-                Help
-              </TooltipContent>
-            </Tooltip>
-          </div>
-
-          <Separator orientation="vertical" className="hidden sm:block h-6 mx-1 sm:mx-2" />
 
           {/* User Menu - Tablet+ */}
           <div className="hidden sm:block">
