@@ -5,6 +5,7 @@ import { useFrame } from "@react-three/fiber";
 import { Bloom, ChromaticAberration, Vignette } from "@react-three/postprocessing";
 import { BlendFunction } from "postprocessing";
 import { Vector2 } from "three";
+import { useShallow } from "zustand/shallow";
 import { useVisualizationControls } from "@/hooks/useVisualizationControls";
 import { useUIState } from "@/hooks/useUIState";
 import type { AnalyzedAudio } from "@/hooks/useAudioAnalyzer";
@@ -47,7 +48,16 @@ let chromaticInstance: any = null;
 let vignetteInstance: any = null;
 
 export function AudioReactiveEffects({ getAnalysis, isAudioConnected }: AudioReactiveEffectsProps) {
-  const controls = useVisualizationControls();
+  // Only subscribe to toggle flags that affect the render output (conditionally rendering components)
+  // Continuous values are read directly from store in useFrame
+  const { bloomEnabled, chromaticEnabled, vignetteEnabled } = useVisualizationControls(
+    useShallow((s) => ({
+      bloomEnabled: s.bloomEnabled,
+      chromaticEnabled: s.chromaticEnabled,
+      vignetteEnabled: s.vignetteEnabled,
+    }))
+  );
+
   const { bassStrobeEnabled } = useUIState();
 
   // Envelope followers for smooth audio response
@@ -76,20 +86,22 @@ export function AudioReactiveEffects({ getAnalysis, isAudioConnected }: AudioRea
   }, []);
 
   useFrame(() => {
+    const state = useVisualizationControls.getState();
+
     // Vignette - always update from controls (before any early returns)
     if (vignetteInstance) {
-      vignetteInstance.offset = controls.vignetteOffset;
-      vignetteInstance.darkness = controls.vignetteEnabled ? controls.vignetteDarkness : 0;
+      vignetteInstance.offset = state.vignetteOffset;
+      vignetteInstance.darkness = vignetteEnabled ? state.vignetteDarkness : 0;
     }
 
-    const bloomBase = controls.bloomBaseIntensity;
-    const bloomReactivity = controls.bloomAudioReactivity;
-    const chromaticReactivity = controls.chromaticAudioReactivity;
+    const bloomBase = state.bloomBaseIntensity;
+    const bloomReactivity = state.bloomAudioReactivity;
+    const chromaticReactivity = state.chromaticAudioReactivity;
 
-    if (!isAudioConnected || !controls.bloomEnabled) {
+    if (!isAudioConnected || !bloomEnabled) {
       // Reset to defaults when not connected or disabled
       if (bloomInstance) {
-        bloomInstance.intensity = controls.bloomEnabled ? bloomBase : 0;
+        bloomInstance.intensity = bloomEnabled ? bloomBase : 0;
       }
       if (chromaticInstance) {
         chromaticOffset.current.set(0, 0);
@@ -124,7 +136,7 @@ export function AudioReactiveEffects({ getAnalysis, isAudioConnected }: AudioRea
     }
 
     // Chromatic aberration responds to HFC peaks with radial modulation
-    if (controls.chromaticEnabled && chromaticInstance) {
+    if (chromaticEnabled && chromaticInstance) {
       const hfcTarget = analysis.peaks.hfc ? 1 : 0;
       const hfcEnvValue = chromaticEnvelope.current.process(hfcTarget);
       const chromaticAmount = hfcEnvValue * chromaticPeak * chromaticReactivity;
@@ -142,11 +154,14 @@ export function AudioReactiveEffects({ getAnalysis, isAudioConnected }: AudioRea
     }
   });
 
+  // Get initial values for props to prevent flicker
+  const initialBloomIntensity = useVisualizationControls.getState().bloomBaseIntensity;
+
   return (
     <>
       <Bloom
         ref={bloomRefCallback}
-        intensity={controls.bloomEnabled ? controls.bloomBaseIntensity : 0}
+        intensity={bloomEnabled ? initialBloomIntensity : 0}
         luminanceThreshold={0.3}
         luminanceSmoothing={0.9}
         mipmapBlur

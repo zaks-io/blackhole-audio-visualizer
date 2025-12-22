@@ -8,6 +8,7 @@ import { DEFAULT_TEXTURE_SIZE } from "@/lib/gpu/verletPhysics";
 import particleVertexShader from "@/shaders/particles/particleVertex.glsl";
 import particleFragmentShader from "@/shaders/particles/particleFragment.glsl";
 import { getAllColors } from "@/components/ColorModeSystem";
+import { useVisualizationControls } from "@/hooks/useVisualizationControls";
 
 const DEFAULT_ALL_COLORS = getAllColors();
 
@@ -20,62 +21,20 @@ interface ParticleAudioData {
 }
 
 interface ParticleSystemProps {
-  textureSize?: number;
-  pointSize: number;
-  brightness: number;
-  alpha: number;
   allColors?: string[];
   paletteOffset?: number;
-  maxDistance: number;
-  gravitationalParameter: number;
-  timeScale: number;
-  eventHorizonRadius: number;
-  softening: number;
-  orbitDecay: number;
-  emissionRadius: number;
-  emitterCount: number;
-  emitterAngle: number;
-  emitterTilt: number;
-  spawnRate: number;
-  inwardAngle: number;
-  iscoRadius: number;
-  beatPulse: number;
-  iscoStrength: number;
-  emitterSpread: number;
-  audioAmplitude: number;
-  beatRepulsion: number;
   getAudioData: () => ParticleAudioData;
   audioEnabled: boolean;
 }
 
 export function ParticleSystem({
-  textureSize = DEFAULT_TEXTURE_SIZE,
-  pointSize,
-  brightness,
-  alpha,
   allColors = DEFAULT_ALL_COLORS,
   paletteOffset = 0,
-  maxDistance,
-  gravitationalParameter,
-  timeScale,
-  eventHorizonRadius,
-  softening,
-  orbitDecay,
-  emissionRadius,
-  emitterCount,
-  emitterAngle,
-  emitterTilt,
-  spawnRate,
-  inwardAngle,
-  iscoRadius,
-  beatPulse,
-  iscoStrength,
-  emitterSpread,
-  audioAmplitude,
-  beatRepulsion,
   getAudioData,
   audioEnabled,
 }: ParticleSystemProps) {
+  // Read texture size only on mount - changing it requires full rebuild
+  const textureSize = useVisualizationControls.getState().textureSize || DEFAULT_TEXTURE_SIZE;
   const particleCount = textureSize * textureSize;
 
   const {
@@ -103,6 +62,7 @@ export function ParticleSystem({
     setHFCBoost,
     setSpawnBurst,
   } = useGPUCompute(textureSize);
+
   const materialRef = useRef<THREE.ShaderMaterial>(null);
   const prevFirstColorRef = useRef<string>(allColors[0]);
 
@@ -133,23 +93,29 @@ export function ParticleSystem({
     return colors;
   }, [allColors]);
 
+  // Get initial values for uniforms to prevent flicker
+  const initialControls = useVisualizationControls.getState();
+
   const uniforms = useMemo(
     () => ({
       texturePosition: { value: null as THREE.Texture | null },
       textureVelocity: { value: null as THREE.Texture | null },
-      uPointSize: { value: pointSize },
-      uBrightness: { value: brightness },
-      uAlpha: { value: alpha },
+      uPointSize: { value: initialControls.pointSize },
+      uBrightness: { value: initialControls.brightness },
+      uAlpha: { value: initialControls.alpha },
       uEmitterColors: { value: colorArray },
-      uMaxDistance: { value: maxDistance },
-      uEventHorizon: { value: eventHorizonRadius },
-      uISCORadius: { value: iscoRadius },
+      uMaxDistance: { value: initialControls.maxDistance },
+      uEventHorizon: { value: initialControls.eventHorizonRadius },
+      uISCORadius: { value: initialControls.eventHorizonRadius * initialControls.iscoRatio },
     }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- Initial values only, updated in useFrame
-    []
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [colorArray]
   );
 
   useFrame(() => {
+    const state = useVisualizationControls.getState();
+    const iscoRadius = state.eventHorizonRadius * state.iscoRatio;
+
     if (materialRef.current) {
       const posTexture = getPositionTexture();
       const velTexture = getVelocityTexture();
@@ -159,11 +125,11 @@ export function ParticleSystem({
       if (velTexture) {
         materialRef.current.uniforms.textureVelocity.value = velTexture;
       }
-      materialRef.current.uniforms.uPointSize.value = pointSize;
-      materialRef.current.uniforms.uBrightness.value = brightness;
-      materialRef.current.uniforms.uAlpha.value = alpha;
-      materialRef.current.uniforms.uMaxDistance.value = maxDistance;
-      materialRef.current.uniforms.uEventHorizon.value = eventHorizonRadius;
+      materialRef.current.uniforms.uPointSize.value = state.pointSize;
+      materialRef.current.uniforms.uBrightness.value = state.brightness;
+      materialRef.current.uniforms.uAlpha.value = state.alpha;
+      materialRef.current.uniforms.uMaxDistance.value = state.maxDistance;
+      materialRef.current.uniforms.uEventHorizon.value = state.eventHorizonRadius;
       materialRef.current.uniforms.uISCORadius.value = iscoRadius;
 
       // Only update colors if palette actually changed (check first color)
@@ -175,34 +141,35 @@ export function ParticleSystem({
         }
       }
     }
+
     setPaletteOffset(paletteOffset);
-    setGravitationalParameter(gravitationalParameter);
-    setTimeScale(timeScale);
-    setEventHorizon(eventHorizonRadius);
-    setSoftening(softening);
-    setOrbitDecay(orbitDecay);
-    setEmissionRadius(emissionRadius);
-    setEmitterCount(emitterCount);
-    setEmitterAngle(emitterAngle);
-    setEmitterTilt(emitterTilt);
-    setSpawnRate(spawnRate);
-    setInwardAngle(inwardAngle);
-    setISCOStrength(iscoStrength);
-    setEmitterSpread(emitterSpread);
-    setAudioAmplitude(audioAmplitude);
-    setBeatRepulsion(beatRepulsion);
+    setGravitationalParameter(state.gravity);
+    setTimeScale(state.timeScale);
+    setEventHorizon(state.eventHorizonRadius);
+    setSoftening(state.softening);
+    setOrbitDecay(state.orbitDecay);
+    setEmissionRadius(state.emitRadius);
+    setEmitterCount(state.emitterCount);
+    setEmitterAngle(state.emitterAngle);
+    setEmitterTilt(state.emitterTilt);
+    setSpawnRate(state.spawnRate);
+    setInwardAngle(state.inwardAngle);
+    setISCOStrength(state.iscoStrength);
+    setEmitterSpread(state.emitterSpread);
+    setAudioAmplitude(state.amplitude);
+    setBeatRepulsion(state.beatRepulsion);
 
     if (audioEnabled) {
       const audioData = getAudioData();
       setBandOnsets(audioData.bandOnsets, audioData.bandCount);
       const beat = Math.max(audioData.bandOnsets[0] ?? 0, audioData.bandOnsets[1] ?? 0);
       setBeatIntensity(beat);
-      setISCORadius(iscoRadius * (1 + beat * beatPulse));
+      setISCORadius(iscoRadius * (1 + beat * state.beatPulse));
       setHFCBoost(audioData.hfcBoost);
       setSpawnBurst(audioData.spawnBurst);
     } else {
       const emptyOnsets = new Float32Array(36);
-      setBandOnsets(emptyOnsets, emitterCount);
+      setBandOnsets(emptyOnsets, state.emitterCount);
       setBeatIntensity(0);
       setISCORadius(iscoRadius);
       setHFCBoost(0);
