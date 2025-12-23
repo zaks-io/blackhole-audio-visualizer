@@ -83,6 +83,12 @@ export default function CanvasSlot() {
     sceneAudioElement: scenePlayer.audioElement,
   });
 
+  // Treat paused scene playback as "audio inactive" so analysis-driven visuals settle to silence.
+  const isAudioActive =
+    mode === "scene"
+      ? audio.isConnected && scenePlayer.state.isPlaying && !scenePlayer.state.isPaused
+      : audio.isConnected;
+
   // Resolution configuration
   const resolutionConfig = useMemo(
     () => (resolution !== "auto" ? RESOLUTIONS[resolution] : null),
@@ -167,7 +173,7 @@ export default function CanvasSlot() {
           >
             <BlackHoleSimulation
               getAnalysis={audio.getAnalysis}
-              isAudioConnected={audio.isConnected}
+              isAudioConnected={isAudioActive}
               setOnsetDecay={audio.setOnsetDecay}
               cameraMode={cameraMode}
               colorMode={colorMode}
@@ -175,10 +181,7 @@ export default function CanvasSlot() {
               perfFlags={perfFlags}
             />
             {!perfFlags.noPostFX && (
-              <PostProcessing
-                getAnalysis={audio.getAnalysis}
-                isAudioConnected={audio.isConnected}
-              />
+              <PostProcessing getAnalysis={audio.getAnalysis} isAudioConnected={isAudioActive} />
             )}
             <FPSTracker />
           </Canvas>

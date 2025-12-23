@@ -37,6 +37,16 @@ float hash2(vec2 p, float seed) {
     return fract(sin(n) * 43758.5453);
 }
 
+// Always-on launch decorrelation (independent of uEmitterSpread).
+// Kept modest to preserve the overall spoke aesthetic while breaking phase-locked streak banding.
+const float BASE_LAUNCH_ANGLE_JITTER = 0.04;   // radians
+const float BASE_LAUNCH_ELEV_JITTER  = 0.02;   // radians
+const float BASE_LAUNCH_SPEED_JITTER = 0.06;   // multiplier range ~ +/-3%
+const float BASE_LAUNCH_RADIAL_JITTER = 0.03;  // multiplier of orbitalSpeed
+// Always-on micro-turbulence applied during KICK (affects all alive particles, not just spawns).
+// This is intentionally very small; it should break persistent banding without destroying the spoke aesthetic.
+const float BASE_KICK_TURBULENCE = 0.35; // acceleration-ish magnitude (scaled by dt)
+
 void main() {
     vec2 uv = gl_FragCoord.xy / resolution.xy;
 
@@ -80,6 +90,10 @@ void main() {
         vec3 r_hat = normalize(toCenter);
         vec3 tangent = normalize(cross(up, r_hat));
 
+        // Emitter index (matches position shader) so our time seeding is lane-aware
+        float emitterIndex = floor(hash2(uv, 100.0) * uEmitterCount);
+        float timeSeed = uTime * 19.0 + emitterIndex * 7.0;
+
         // Generate random values with different seeds
         float rand1 = hash2(uv, 1.0);
         float rand2 = hash2(uv, 2.0);
@@ -91,12 +105,18 @@ void main() {
         float baseElevJitter = (hash2(uv, uTime + 100.0) - 0.5) * 0.05 * uEmitterSpread;
         float baseSpeedJitter = (hash2(uv, uTime + 200.0) - 0.5) * 0.2 * uEmitterSpread;
 
+        // Always-on micro-jitter (time-varying) to break phase locking even when uEmitterSpread = 0
+        float microAngleJitter = (hash2(uv, 10000.0 + timeSeed) - 0.5) * BASE_LAUNCH_ANGLE_JITTER;
+        float microElevJitter  = (hash2(uv, 11000.0 + timeSeed) - 0.5) * BASE_LAUNCH_ELEV_JITTER;
+        float microSpeedJitter = (hash2(uv, 12000.0 + timeSeed) - 0.5) * BASE_LAUNCH_SPEED_JITTER;
+        float microRadialJitter = (hash2(uv, 13000.0 + timeSeed) - 0.5) * BASE_LAUNCH_RADIAL_JITTER;
+
         // Horizontal jitter - vary launch angle in orbital plane
-        float angleJitter = baseAngleJitter + (rand1 - 0.5) * uEmitterSpread;
+        float angleJitter = baseAngleJitter + (rand1 - 0.5) * uEmitterSpread + microAngleJitter;
         vec3 jitteredTangent = tangent * cos(angleJitter) + r_hat * sin(angleJitter);
 
         // Elevation jitter - vary launch angle up/down from orbital plane
-        float elevationJitter = baseElevJitter + (rand2 - 0.5) * uEmitterSpread * 0.5;
+        float elevationJitter = baseElevJitter + (rand2 - 0.5) * uEmitterSpread * 0.5 + microElevJitter;
         vec3 direction = normalize(jitteredTangent * cos(elevationJitter) + up * sin(elevationJitter));
 
         // Mix with inward based on uInwardAngle
@@ -106,11 +126,11 @@ void main() {
         vel = direction * orbitalSpeed;
 
         // Speed jitter - also fully controlled by spread
-        vel *= (1.0 + baseSpeedJitter + (rand3 - 0.5) * uEmitterSpread * 0.3);
+        vel *= (1.0 + baseSpeedJitter + (rand3 - 0.5) * uEmitterSpread * 0.3 + microSpeedJitter);
 
         // Radial velocity jitter - scales with spread
         float radialJitter = (rand4 - 0.5) * orbitalSpeed * uEmitterSpread * 0.4;
-        vel += r_hat * radialJitter;
+        vel += r_hat * (radialJitter + microRadialJitter * orbitalSpeed);
 
         // HFC boost - punch on percussive hits (snare, hi-hat)
         vel *= (1.0 + uHFCBoost * 0.3);
@@ -152,6 +172,20 @@ void main() {
 
         // Apply gravity half-step kick
         vel += totalAccel * uDeltaTime * 0.5;
+
+        // Always-on micro-turbulence: time-varying, lane-aware, and mostly tangential.
+        // This breaks long-lived, phase-locked banding patterns even when emitterSpread=0.
+        float emitterIndexKick = floor(hash2(uv, 100.0) * uEmitterCount);
+        float tStep = floor(uTime * 12.0); // update noise ~12 Hz to avoid per-frame shimmer
+        float seed = tStep * 97.0 + emitterIndexKick * 31.0;
+        vec3 n = vec3(
+            hash2(uv, 14000.0 + seed),
+            hash2(uv, 15000.0 + seed),
+            hash2(uv, 16000.0 + seed)
+        ) - 0.5;
+        vec3 nDir = normalize(n + vec3(1e-3));
+        vec3 tangentNoise = normalize(cross(nDir, normalize(vel + vec3(1e-3))));
+        vel += tangentNoise * (BASE_KICK_TURBULENCE * uDeltaTime * 0.5);
 
         // Beat-reactive repulsion from nearest black hole
         if (uBeatRepulsion > 0.0 && uBeatIntensity > 0.0 && nearestDist > 0.1) {
