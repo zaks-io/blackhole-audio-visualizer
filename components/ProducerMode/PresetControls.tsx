@@ -47,7 +47,7 @@ import { usePlayPreset } from "./usePlayPreset";
 import { useProducerMode } from "./useProducerMode";
 import { useVisualizationControls } from "@/hooks/useVisualizationControls";
 import { useConvexPresets } from "@/hooks/useConvexPresets";
-import { usePlaylistControls } from "@/components/playlist/usePlaylistControls";
+import { usePresetSelector } from "@/components/playlist/usePresetSelector";
 import { PRODUCER_PARAMETERS, DEFAULT_DURATION, DEFAULT_EASE } from "./producerConfig";
 import type { PresetParameter } from "./types";
 
@@ -317,7 +317,7 @@ export function PresetControls() {
     }
   };
 
-  const triggerStop = usePlaylistControls((s) => s.triggerStop);
+  const triggerStop = usePresetSelector((s) => s.triggerStop);
 
   const handleSelectPreset = (id: string | null) => {
     setActivePresetId(id);

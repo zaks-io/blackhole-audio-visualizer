@@ -39,7 +39,8 @@ import { useUIState } from "@/hooks/useUIState";
 import { useViewerMode } from "@/hooks/useViewerMode";
 import { useConvexPlaylists } from "@/hooks/useConvexPlaylists";
 import { useConvexScenes } from "@/hooks/useConvexScenes";
-import { usePlaylistControls } from "@/components/playlist/usePlaylistControls";
+import { usePresetSelector } from "@/components/playlist/usePresetSelector";
+import { useConvexPresets } from "@/hooks/useConvexPresets";
 import { useCameraMode, type CameraMode } from "@/components/CameraSystem";
 import { useRouter } from "next/navigation";
 
@@ -61,8 +62,16 @@ export function MobileOverflowMenu() {
   const sceneId = useViewerMode((s) => s.sceneId);
   const setMode = useViewerMode((s) => s.setMode);
   const { playlists, publicPlaylists, isLoading: isPlaylistLoading } = useConvexPlaylists();
+  const { presets: myPresets, publicPresets, isLoading: isPresetsLoading } = useConvexPresets();
   const { scenes, publicScenes, isLoading: isScenesLoading } = useConvexScenes();
-  const { selectedPlaylistId, setSelectedPlaylistId } = usePlaylistControls();
+  const {
+    mode: presetMode,
+    setMode: setPresetMode,
+    selectedPresetId,
+    setSelectedPresetId,
+    isLuckyPlaying,
+    triggerStop,
+  } = usePresetSelector();
   const cameraMode = useCameraMode();
 
   const handleSignIn = () => {
@@ -77,8 +86,15 @@ export function MobileOverflowMenu() {
     logout({ logoutParams: { returnTo: window.location.origin } });
   };
 
-  const handlePlaylistSelect = (playlistId: string | null) => {
-    setSelectedPlaylistId(playlistId);
+  const handlePresetSelect = (
+    presetId: string | null,
+    newMode: "none" | "preset" | "feeling-lucky"
+  ) => {
+    if (isLuckyPlaying) {
+      triggerStop();
+    }
+    setPresetMode(newMode);
+    setSelectedPresetId(presetId);
   };
 
   const handleModeSwitch = (newMode: "live" | "scene") => {
@@ -103,11 +119,38 @@ export function MobileOverflowMenu() {
   const filteredPublicScenes = publicScenes.filter((s) => !userSceneIds.has(s._id));
   const currentScene = [...scenes, ...filteredPublicScenes].find((s) => s._id === sceneId);
 
-  // Filter out public playlists that are already in user's playlists (to avoid duplicates)
-  const userPlaylistIds = new Set(playlists.map((p) => p._id));
-  const filteredPublicPlaylists = publicPlaylists.filter((p) => !userPlaylistIds.has(p._id));
-  const allPlaylists = [...playlists, ...filteredPublicPlaylists];
-  const selectedPlaylist = allPlaylists.find((p) => p._id === selectedPlaylistId);
+  // Build preset groups (same logic as PresetSelector)
+  const allPresets = [...myPresets, ...publicPresets];
+  const allPlaylists = [...playlists, ...publicPlaylists];
+
+  const presetIdsInPlaylists = new Set<string>();
+  for (const playlist of allPlaylists) {
+    for (const item of playlist.items) {
+      presetIdsInPlaylists.add(item.presetId);
+    }
+  }
+
+  const ungroupedPresets = myPresets.filter((p) => !presetIdsInPlaylists.has(p._id));
+  const publicUngroupedPresets = publicPresets.filter((p) => !presetIdsInPlaylists.has(p._id));
+
+  const playlistGroups = allPlaylists
+    .map((playlist) => {
+      const seenIds = new Set<string>();
+      const playlistPresets = playlist.items
+        .map((item) => {
+          if (seenIds.has(item.presetId)) return null;
+          const preset = allPresets.find((p) => p._id === item.presetId);
+          if (preset) seenIds.add(item.presetId);
+          return preset;
+        })
+        .filter(Boolean);
+      return { playlist, presets: playlistPresets };
+    })
+    .filter((g) => g.presets.length > 0);
+
+  const selectedPreset = allPresets.find((p) => p._id === selectedPresetId);
+  const displayName =
+    presetMode === "feeling-lucky" ? "Feeling Lucky" : (selectedPreset?.name ?? "None");
 
   const initials =
     user?.name
@@ -171,49 +214,69 @@ export function MobileOverflowMenu() {
                 </DropdownMenuSubContent>
               </DropdownMenuSub>
 
-              {/* Playlist Selection */}
+              {/* Preset Selection */}
               <DropdownMenuSub>
                 <DropdownMenuSubTrigger className="cursor-pointer">
                   <ListMusic className="mr-2 h-4 w-4" />
-                  <span className="truncate">{selectedPlaylist?.name ?? "Playlist"}</span>
+                  <span className="truncate">{displayName}</span>
                 </DropdownMenuSubTrigger>
-                <DropdownMenuSubContent>
+                <DropdownMenuSubContent className="max-h-80 overflow-y-auto">
                   <DropdownMenuItem
-                    onClick={() => handlePlaylistSelect(null)}
-                    className="cursor-pointer"
+                    onClick={() => handlePresetSelect(null, "feeling-lucky")}
+                    className={`cursor-pointer ${presetMode === "feeling-lucky" ? "bg-primary/20" : ""}`}
+                  >
+                    ✨ I&apos;m Feeling Lucky
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => handlePresetSelect(null, "none")}
+                    className={`cursor-pointer ${presetMode === "none" ? "bg-primary/20" : ""}`}
                   >
                     None
                   </DropdownMenuItem>
-                  {!isPlaylistLoading && (
+                  {!isPresetsLoading && !isPlaylistLoading && (
                     <>
-                      {isAuthenticated && playlists.length > 0 && (
+                      {ungroupedPresets.length > 0 && (
                         <>
                           <DropdownMenuSeparator />
-                          <DropdownMenuLabel className="text-xs text-muted-foreground">
-                            My Playlists
-                          </DropdownMenuLabel>
-                          {playlists.map((p) => (
+                          {ungroupedPresets.map((p) => (
                             <DropdownMenuItem
                               key={p._id}
-                              onClick={() => handlePlaylistSelect(p._id)}
-                              className="cursor-pointer"
+                              onClick={() => handlePresetSelect(p._id, "preset")}
+                              className={`cursor-pointer ${selectedPresetId === p._id ? "bg-primary/20" : ""}`}
                             >
                               {p.name}
                             </DropdownMenuItem>
                           ))}
                         </>
                       )}
-                      {filteredPublicPlaylists.length > 0 && (
+                      {playlistGroups.map(({ playlist, presets }) => (
+                        <div key={playlist._id}>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuLabel className="text-xs text-muted-foreground">
+                            {playlist.name}
+                          </DropdownMenuLabel>
+                          {presets.map((p) => (
+                            <DropdownMenuItem
+                              key={`${playlist._id}-${p!._id}`}
+                              onClick={() => handlePresetSelect(p!._id, "preset")}
+                              className={`cursor-pointer ${selectedPresetId === p!._id ? "bg-primary/20" : ""}`}
+                            >
+                              {p!.name}
+                            </DropdownMenuItem>
+                          ))}
+                        </div>
+                      ))}
+                      {publicUngroupedPresets.length > 0 && (
                         <>
                           <DropdownMenuSeparator />
                           <DropdownMenuLabel className="text-xs text-muted-foreground">
-                            Public Playlists
+                            Public Presets
                           </DropdownMenuLabel>
-                          {filteredPublicPlaylists.map((p) => (
+                          {publicUngroupedPresets.map((p) => (
                             <DropdownMenuItem
                               key={p._id}
-                              onClick={() => handlePlaylistSelect(p._id)}
-                              className="cursor-pointer"
+                              onClick={() => handlePresetSelect(p._id, "preset")}
+                              className={`cursor-pointer ${selectedPresetId === p._id ? "bg-primary/20" : ""}`}
                             >
                               {p.name}
                             </DropdownMenuItem>

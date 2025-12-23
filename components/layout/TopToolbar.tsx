@@ -2,7 +2,7 @@
 
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { CameraControls } from "@/components/camera";
-import { PlaylistControls } from "@/components/playlist";
+import { PresetSelector } from "@/components/playlist";
 import { SceneSelector } from "@/components/scenes";
 import { useViewerMode } from "@/hooks/useViewerMode";
 import { useUIState } from "@/hooks/useUIState";
@@ -63,7 +63,7 @@ export function TopToolbar({
                   onModeChange={onCameraModeChange}
                   isTransitioning={isCameraTransitioning}
                 />
-                <PlaylistControls />
+                <PresetSelector />
               </>
             )}
 

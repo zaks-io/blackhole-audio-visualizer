@@ -230,3 +230,29 @@ export const useVisualizationControls = create<VisualizationControlsStore>((set,
 
   reset: () => set(DEFAULT_STATE),
 }));
+
+// Module-level mutable storage for animating values (bypasses Zustand during animation)
+const animatingValues = new Map<string, unknown>();
+
+export function setAnimatingValue(path: string, value: unknown) {
+  animatingValues.set(path, value);
+}
+
+export function clearAnimatingValue(path: string) {
+  animatingValues.delete(path);
+}
+
+// Returns store state merged with currently animating values
+export function getAnimatedState(): VisualizationControlsState {
+  const state = useVisualizationControls.getState();
+  if (animatingValues.size === 0) return state;
+
+  const result = { ...state };
+  for (const [path, value] of animatingValues) {
+    const key = pathToKey[path];
+    if (key) {
+      (result as Record<string, unknown>)[key] = value;
+    }
+  }
+  return result;
+}
