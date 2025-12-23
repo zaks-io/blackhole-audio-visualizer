@@ -57,7 +57,7 @@ export const runtimeState = {
   vignetteOffset: 0.5,
   vignetteDarkness: 0.5,
   hfcVelocityBoost: 0.2,
-  spawnBurstMultiplier: 2.0,
+  spawnBurstMultiplier: 15.0,
 };
 
 export type RuntimeStateKey = keyof typeof runtimeState;

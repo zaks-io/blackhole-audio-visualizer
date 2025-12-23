@@ -88,7 +88,7 @@ void main() {
             float audioEnergy = spectrumValue * 15.0;
             // Add per-particle time offset to fill gaps between discrete spawn frames
             float timeJitter = hash2(uv, 5000.0) * 0.125; // Up to 1/8 second offset (one oscillation cycle)
-            float oscillation = sin((uTime - timeJitter) * 8.0 + emitterIndex * 0.5);
+            float oscillation = -sin((uTime - timeJitter) * 8.0 + emitterIndex * 0.5);
             float y = tiltAmount + audioEnergy * oscillation * uAudioAmplitude;
 
             // Always-on temporal + spatial de-correlation:
