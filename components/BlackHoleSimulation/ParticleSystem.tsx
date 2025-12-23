@@ -550,6 +550,8 @@ export function ParticleSystem({
         setBeatIntensity(0);
         setHFCBoost(0);
         setSpawnBurst(1);
+        // Clear spectrum so spawn-time audioEnergy doesn't keep oscillating after pause.
+        setSpectrum(undefined);
       }
       // ISCO radius can change due to UI while disabled; update only when it changes.
       if (prevDisabledIscoRadiusRef.current !== iscoRadius) {

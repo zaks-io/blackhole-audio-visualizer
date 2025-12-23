@@ -607,10 +607,26 @@ export function useGPUCompute(
   }, []);
 
   const setSpectrum = useCallback((spectrum: Float32Array | undefined) => {
-    if (!spectrumTextureRef.current || !spectrum) return;
+    if (!spectrumTextureRef.current) return;
     const data = spectrumTextureRef.current.image.data as Uint8Array;
 
     let changed = false;
+
+    // Allow clearing when audio is paused/disabled to avoid stale spectrum driving visuals.
+    if (!spectrum) {
+      for (let i = 0; i < SPECTRUM_SIZE; i++) {
+        const idx = i * 4;
+        if (data[idx] !== 0) {
+          data[idx] = 0;
+          changed = true;
+        }
+      }
+      if (changed) {
+        spectrumDirtyRef.current = true;
+      }
+      return;
+    }
+
     const len = Math.min(spectrum.length, SPECTRUM_SIZE);
     for (let i = 0; i < len; i++) {
       // Spectrum values are 0-1 normalized
@@ -620,6 +636,15 @@ export function useGPUCompute(
       const idx = i * 4;
       if (data[idx] !== next) {
         data[idx] = next;
+        changed = true;
+      }
+    }
+
+    // Zero out unused bins to avoid stale values persisting when spectrum length shrinks.
+    for (let i = len; i < SPECTRUM_SIZE; i++) {
+      const idx = i * 4;
+      if (data[idx] !== 0) {
+        data[idx] = 0;
         changed = true;
       }
     }

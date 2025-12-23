@@ -38,6 +38,11 @@ float hash2(vec2 p, float seed) {
     return fract(sin(n) * 43758.5453);
 }
 
+// Always-on spawn decorrelation (independent of uEmitterSpread).
+// Keep these small so we preserve "spokes" while breaking phase-locked banding.
+const float BASE_SPAWN_ANGLE_JITTER = 0.035; // ~2 degrees
+const float BASE_SPAWN_RADIAL_JITTER = 0.01; // 1% of uEmissionRadius
+
 void main() {
     vec2 uv = gl_FragCoord.xy / resolution.xy;
 
@@ -84,13 +89,29 @@ void main() {
             float oscillation = sin(uTime * 8.0 + emitterIndex * 0.5);
             float y = tiltAmount + audioEnergy * oscillation * uAudioAmplitude;
 
-            // Tiny arc offset to break banding, plus user-controlled spread
-            float h1 = fract(sin(dot(uv, vec2(12.9898, 78.233))) * 43758.5453);
-            float baseArc = (h1 - 0.5) * 0.05; // minimal base to break patterns
-            float userSpread = (h1 - 0.5) * uEmitterSpread * 0.5;
-            float spawnAngle = angle + baseArc + userSpread;
-            float spawnX = rad * cos(spawnAngle);
-            float spawnZ = rad * sin(spawnAngle);
+            // Always-on temporal + spatial de-correlation:
+            // - time-varying per-particle angle jitter breaks phase-locked lanes
+            // - uEmitterSpread remains an extra user-controlled intensifier
+            float timeSeed = uTime * 17.0 + emitterIndex * 13.0;
+            float hJitter = hash2(uv, 1000.0 + timeSeed);
+            float baseAngleJitter = (hJitter - 0.5) * BASE_SPAWN_ANGLE_JITTER;
+
+            // Small time-varying arc offset (kept modest to preserve spokes)
+            float hArc = hash2(uv, 2000.0 + timeSeed);
+            float baseArc = (hArc - 0.5) * 0.02;
+
+            // User-controlled spread (time-varying so it doesn't lock)
+            float hSpread = hash2(uv, 3000.0 + timeSeed);
+            float userSpread = (hSpread - 0.5) * uEmitterSpread * 0.5;
+
+            float spawnAngle = angle + baseArc + baseAngleJitter + userSpread;
+
+            // Subtle radial jitter breaks perfect circular quantization without destroying spoke structure
+            float hRad = hash2(uv, 4000.0 + timeSeed);
+            float spawnRad = rad + (hRad - 0.5) * (BASE_SPAWN_RADIAL_JITTER * rad);
+
+            float spawnX = spawnRad * cos(spawnAngle);
+            float spawnZ = spawnRad * sin(spawnAngle);
             pos = vec3(spawnX, y, spawnZ);
             lifetime = 1.0;
         }
