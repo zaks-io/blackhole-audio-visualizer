@@ -114,11 +114,11 @@ export function useRecording(fps = 60, videoBitsPerSecond = 100_000_000) {
   );
 
   const stopRecording = useCallback(() => {
-    if (mediaRecorderRef.current && state.isRecording) {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
       mediaRecorderRef.current.stop();
       setState((prev) => ({ ...prev, isRecording: false }));
     }
-  }, [state.isRecording]);
+  }, []);
 
   return {
     ...state,
