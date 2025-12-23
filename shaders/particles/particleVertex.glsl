@@ -19,15 +19,26 @@ varying vec3 vColor;
 varying vec2 vUV;
 varying float vStreakRatio;
 
-// Piecewise linear interpolation across 3 segments (p0→p1→p2→p3)
-vec3 piecewiseLerp(vec3 p0, vec3 p1, vec3 p2, vec3 p3, float t) {
-    if (t < 0.333) {
-        return mix(p0, p1, t * 3.0);
-    } else if (t < 0.666) {
-        return mix(p1, p2, (t - 0.333) * 3.0);
-    } else {
-        return mix(p2, p3, (t - 0.666) * 3.0);
-    }
+// Catmull-Rom spline - smooth curve through all 4 points
+vec3 catmullRom(vec3 p0, vec3 p1, vec3 p2, vec3 p3, float t) {
+    float t2 = t * t;
+    float t3 = t2 * t;
+    return 0.5 * (
+        (2.0 * p1) +
+        (-p0 + p2) * t +
+        (2.0 * p0 - 5.0 * p1 + 4.0 * p2 - p3) * t2 +
+        (-p0 + 3.0 * p1 - 3.0 * p2 + p3) * t3
+    );
+}
+
+// Analytical derivative of Catmull-Rom spline (tangent direction)
+vec3 catmullRomDerivative(vec3 p0, vec3 p1, vec3 p2, vec3 p3, float t) {
+    float t2 = t * t;
+    return 0.5 * (
+        (-p0 + p2) +
+        (4.0 * p0 - 10.0 * p1 + 8.0 * p2 - 2.0 * p3) * t +
+        (-3.0 * p0 + 9.0 * p1 - 9.0 * p2 + 3.0 * p3) * t2
+    );
 }
 
 void main() {
@@ -87,7 +98,7 @@ void main() {
     float t = position.y + 0.5;
 
     // Position along the curve using ACTUAL historical positions
-    vec3 curvePos = piecewiseLerp(p0, p1, p2, p3, t);
+    vec3 curvePos = catmullRom(p0, p1, p2, p3, t);
 
     // Compute total trail length for streak ratio (used by fragment shader)
     float totalDist = length(p3 - p2) + length(p2 - p1) + length(p1 - p0);
@@ -96,27 +107,33 @@ void main() {
     // Transform curve position to view space
     vec4 viewPos = modelViewMatrix * vec4(curvePos, 1.0);
 
-    // Compute tangent in world space using nearby curve points
-    float dt = 0.05;
-    vec3 nextPos = piecewiseLerp(p0, p1, p2, p3, min(t + dt, 1.0));
-    vec3 prevPos = piecewiseLerp(p0, p1, p2, p3, max(t - dt, 0.0));
-    vec3 tangentWorld = nextPos - prevPos;
-    float tangentLen = length(tangentWorld);
+    // Compute tangent using analytical derivative, blended with overall direction for smoothness
+    vec3 localTangent = catmullRomDerivative(p0, p1, p2, p3, t);
+    vec3 overallDir = p3 - p0;
+    float overallLen = length(overallDir);
 
-    // Fallback if tangent is too small
-    if (tangentLen < 0.001) {
-        tangentWorld = p3 - p0;  // Use head-to-tail
-        tangentLen = length(tangentWorld);
-        if (tangentLen < 0.001) {
-            tangentWorld = velocity;  // Use velocity
-            tangentLen = length(tangentWorld);
-            if (tangentLen < 0.001) {
-                tangentWorld = vec3(0.0, 0.0, 1.0);  // Final fallback
-                tangentLen = 1.0;
-            }
+    // Blend local tangent with overall direction to reduce twist at segment joints
+    vec3 tangentWorld;
+    if (overallLen > 0.001) {
+        overallDir = overallDir / overallLen;
+        float localLen = length(localTangent);
+        if (localLen > 0.001) {
+            localTangent = localTangent / localLen;
+            // Blend: 50% local detail, 50% overall smoothness
+            tangentWorld = normalize(localTangent * 0.5 + overallDir * 0.5);
+        } else {
+            tangentWorld = overallDir;
+        }
+    } else {
+        float localLen = length(localTangent);
+        if (localLen > 0.001) {
+            tangentWorld = localTangent / localLen;
+        } else if (length(velocity) > 0.001) {
+            tangentWorld = normalize(velocity);
+        } else {
+            tangentWorld = vec3(0.0, 0.0, 1.0);
         }
     }
-    tangentWorld = tangentWorld / tangentLen;
 
     // Transform tangent to view space
     vec3 tangentView = normalize(mat3(modelViewMatrix) * tangentWorld);
@@ -134,14 +151,14 @@ void main() {
         rightView = cross(upView, tangentView);
         rightLen = length(rightView);
         if (rightLen < 0.001) {
-            rightView = vec3(1.0, 0.0, 0.0);  // Final fallback
+            rightView = vec3(1.0, 0.0, 0.0);
             rightLen = 1.0;
         }
     }
     rightView = rightView / rightLen;
 
     // Width in view space - scale with uBaseSize
-    float baseWidth = uBaseSize * 0.1;  // Moderate scale factor
+    float baseWidth = uBaseSize * 0.2;
     float taperT = pow(t, 0.5);
     float halfW = baseWidth * (0.3 + 0.7 * taperT);
 

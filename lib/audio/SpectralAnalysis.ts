@@ -170,11 +170,12 @@ export function extractLogBandEnergies(
     const endBin = boundaries[band + 1];
     const binRange = Math.max(1, endBin - startBin);
 
-    let sum = 0;
+    // Use RMS to preserve energy regardless of band width
+    let sumSquared = 0;
     for (let i = startBin; i < endBin && i < binCount; i++) {
-      sum += spectrum[i];
+      sumSquared += spectrum[i] * spectrum[i];
     }
 
-    outputEnergies[band] = sum / binRange / maxValue;
+    outputEnergies[band] = Math.sqrt(sumSquared / binRange) / maxValue;
   }
 }

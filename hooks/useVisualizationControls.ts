@@ -195,7 +195,7 @@ const DEFAULT_STATE: VisualizationControlsState = {
 
   // Post-Processing defaults
   bloomEnabled: true,
-  bloomBaseIntensity: 0.1,
+  bloomBaseIntensity: 0.5,
   bloomAudioReactivity: 1,
   chromaticEnabled: true,
   chromaticAudioReactivity: 1,

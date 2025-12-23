@@ -41,14 +41,11 @@ export function AudioConnectOverlay({ isConnected, onConnect }: AudioConnectOver
     <div className="fixed inset-0 z-30 flex items-center justify-center pointer-events-none">
       <button
         onClick={handleClick}
-        className="pointer-events-auto group flex flex-col items-center gap-4 p-8 rounded-3xl glass-panel border border-white/10 transition-all duration-300 hover:scale-105 hover:border-white/20"
+        className="pointer-events-auto cursor-pointer group flex flex-col items-center gap-4 p-8 rounded-full glass-panel border border-white/10 transition-all duration-300 hover:scale-105 hover:border-white/20"
       >
         <div className="w-20 h-20 rounded-full bg-white/10 flex items-center justify-center transition-all duration-300 group-hover:bg-white/15">
           <Icon className="w-10 h-10 text-white/80 group-hover:text-white transition-colors" />
         </div>
-        <span className="text-white/60 text-sm group-hover:text-white/80 transition-colors">
-          Start listening
-        </span>
       </button>
     </div>
   );
