@@ -46,8 +46,15 @@ export function PresetSelector({ compact = false }: PresetSelectorProps) {
   const { presets: myPresets, publicPresets, isLoading: presetsLoading } = useConvexPresets();
   const { playlists, publicPlaylists, isLoading: playlistsLoading } = useConvexPlaylists();
 
-  const { mode, setMode, selectedPresetId, setSelectedPresetId, isLuckyPlaying, triggerStop } =
-    usePresetSelector();
+  const {
+    mode,
+    setMode,
+    selectedPresetId,
+    setSelectedPresetId,
+    isLuckyPlaying,
+    triggerStop,
+    triggerPlay,
+  } = usePresetSelector();
 
   const { playPreset, stopAll } = usePlayPreset();
 
@@ -217,58 +224,63 @@ export function PresetSelector({ compact = false }: PresetSelectorProps) {
         </Select>
       </div>
 
-      {mode === "preset" && selectedPresetId && (
+      {mode === "preset" && (
         <Button
           variant="ghost"
           size="icon"
           onClick={handlePlayPauseToggle}
+          disabled={!selectedPresetId}
           className="h-10 w-10 rounded-full"
         >
           <Play className="h-4 w-4" />
         </Button>
       )}
 
-      {mode === "feeling-lucky" && feelingLucky.state.isPlaying && (
+      {mode === "feeling-lucky" && (
         <>
           <div className="relative">
-            <svg
-              className="absolute inset-0 -rotate-90 pointer-events-none"
-              width="40"
-              height="40"
-              viewBox="0 0 40 40"
-            >
-              <circle
-                cx="20"
-                cy="20"
-                r="18"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                className="text-primary/30"
-              />
-              <circle
-                key={feelingLucky.state.cycleKey}
-                cx="20"
-                cy="20"
-                r="18"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeDasharray={2 * Math.PI * 18}
-                strokeDashoffset={2 * Math.PI * 18}
-                className="text-primary animate-progress-ring"
-                style={{
-                  animationPlayState: feelingLucky.state.isPaused ? "paused" : "running",
-                }}
-              />
-            </svg>
+            {feelingLucky.state.isPlaying && (
+              <svg
+                className="absolute inset-0 -rotate-90 pointer-events-none"
+                width="40"
+                height="40"
+                viewBox="0 0 40 40"
+              >
+                <circle
+                  cx="20"
+                  cy="20"
+                  r="18"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  className="text-primary/30"
+                />
+                <circle
+                  key={feelingLucky.state.cycleKey}
+                  cx="20"
+                  cy="20"
+                  r="18"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeDasharray={2 * Math.PI * 18}
+                  strokeDashoffset={2 * Math.PI * 18}
+                  className="text-primary animate-progress-ring"
+                  style={{
+                    animationPlayState: feelingLucky.state.isPaused ? "paused" : "running",
+                  }}
+                />
+              </svg>
+            )}
             <Button
               variant="ghost"
               size="icon"
               onClick={() => {
-                if (feelingLucky.state.isPaused) {
+                if (!feelingLucky.state.isPlaying) {
+                  triggerPlay();
+                } else if (feelingLucky.state.isPaused) {
                   feelingLucky.resume();
                 } else {
                   feelingLucky.pause();
@@ -276,10 +288,10 @@ export function PresetSelector({ compact = false }: PresetSelectorProps) {
               }}
               className={cn(
                 "h-10 w-10 rounded-full",
-                !feelingLucky.state.isPaused && "bg-primary/20 text-primary"
+                feelingLucky.state.isPlaying && !feelingLucky.state.isPaused && "bg-white/10"
               )}
             >
-              {feelingLucky.state.isPaused ? (
+              {!feelingLucky.state.isPlaying || feelingLucky.state.isPaused ? (
                 <Play className="h-4 w-4" />
               ) : (
                 <Pause className="h-4 w-4" />
@@ -290,6 +302,7 @@ export function PresetSelector({ compact = false }: PresetSelectorProps) {
             variant="ghost"
             size="icon"
             onClick={() => feelingLucky.skip()}
+            disabled={!feelingLucky.state.isPlaying}
             className="h-10 w-10 rounded-full"
           >
             <SkipForward className="h-4 w-4" />

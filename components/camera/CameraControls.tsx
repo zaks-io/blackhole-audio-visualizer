@@ -44,7 +44,7 @@ export function CameraControls({
           "hover:bg-accent/50",
           "focus:ring-0 focus-visible:ring-0",
           isTransitioning && "opacity-50 cursor-wait",
-          compact ? "w-10 px-0 justify-center sm:w-auto sm:px-3" : "w-auto px-3"
+          compact ? "w-10 px-0 justify-center sm:w-28 sm:px-3" : "w-28 px-3"
         )}
       >
         <Video className="h-4 w-4 shrink-0" />
