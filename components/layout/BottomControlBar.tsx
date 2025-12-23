@@ -7,8 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ModeToggle } from "./ModeToggle";
 import { AudioSourceButton } from "@/components/audio";
-import { RecordButton } from "@/components/recording";
-import { HelpModal, SettingsMenu } from "@/components/dialogs";
+import { SettingsMenu } from "@/components/dialogs";
 import { UserMenu } from "@/components/auth/UserMenu";
 import { useProducerMode } from "@/components/ProducerMode";
 import { useSceneControls } from "@/components/scenes/useSceneControls";
@@ -42,7 +41,7 @@ export function BottomControlBar({
   const isProducerModeOpen = useProducerMode((s) => s.isOpen);
   const toggleProducerMode = useProducerMode((s) => s.toggleOpen);
   const setProducerModeOpen = useProducerMode((s) => s.setOpen);
-  const { isSceneEditorOpen, openSceneEditor, closeSceneEditor } = useSceneControls();
+  const { isSceneAgentOpen, openSceneAgent, closeSceneAgent } = useSceneControls();
   const isAdmin = useIsAdmin();
   const { controlBarCollapsed, setControlBarCollapsed, setDevControlsVisible } = useUIState();
 
@@ -95,7 +94,7 @@ export function BottomControlBar({
             </TooltipProvider>
           </div>
 
-          {/* Scene Editor Toggle - Admin only, Desktop only */}
+          {/* Scene Agent Toggle - Admin only, Desktop only */}
           {isAdmin && (
             <div className="hidden md:block">
               <TooltipProvider delayDuration={300}>
@@ -104,17 +103,17 @@ export function BottomControlBar({
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => (isSceneEditorOpen ? closeSceneEditor() : openSceneEditor())}
+                      onClick={() => (isSceneAgentOpen ? closeSceneAgent() : openSceneAgent())}
                       className={cn(
                         "h-10 w-10 rounded-full",
-                        isSceneEditorOpen && "bg-primary/20 text-primary"
+                        isSceneAgentOpen && "bg-primary/20 text-primary"
                       )}
                     >
                       <Film className="h-4 w-4" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent side="top" className="text-xs">
-                    Scene Editor
+                    Scene Agent
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -137,17 +136,6 @@ export function BottomControlBar({
               onConnect={onAudioConnect}
               onDisconnect={onAudioDisconnect}
             />
-            {/* RecordButton - Desktop only */}
-            {isAdmin && (
-              <div className="hidden md:block">
-                <RecordButton
-                  isRecording={isRecording}
-                  duration={recordingDuration}
-                  disabled={!isAudioConnected}
-                  onToggle={onRecordToggle}
-                />
-              </div>
-            )}
           </div>
 
           {/* Mobile Overflow Menu */}
@@ -158,11 +146,12 @@ export function BottomControlBar({
 
           {/* Settings - Desktop only */}
           <div className="hidden md:block">
-            <SettingsMenu />
-          </div>
-          {/* Help - Tablet+ */}
-          <div className="hidden sm:block">
-            <HelpModal />
+            <SettingsMenu
+              isRecording={isRecording}
+              recordingDuration={recordingDuration}
+              onRecordToggle={onRecordToggle}
+              recordDisabled={!isAudioConnected}
+            />
           </div>
 
           <Separator orientation="vertical" className="hidden sm:block h-6 mx-1 sm:mx-2" />

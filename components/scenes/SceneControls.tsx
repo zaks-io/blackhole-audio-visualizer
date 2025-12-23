@@ -25,7 +25,7 @@ export function SceneControls({ compact = false }: SceneControlsProps) {
   const router = useRouter();
   const { isAuthenticated } = useConvexAuth();
   const { scenes, publicScenes, isLoading } = useConvexScenes();
-  const { openSceneEditor, setIsCreatingScene, setChatThreadId } = useSceneControls();
+  const { openSceneAgent, setIsCreatingScene, setChatThreadId } = useSceneControls();
 
   const handleValueChange = (value: string) => {
     if (value === "none") {
@@ -34,7 +34,7 @@ export function SceneControls({ compact = false }: SceneControlsProps) {
     } else if (value === "create") {
       setIsCreatingScene(true);
       setChatThreadId(null);
-      openSceneEditor();
+      openSceneAgent();
     } else {
       // Navigate to dedicated scene page
       router.push(`/app/scene/${value}`);
