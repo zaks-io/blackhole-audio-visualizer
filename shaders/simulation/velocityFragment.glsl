@@ -181,36 +181,92 @@ void main() {
             vel *= maxVel / currentSpeed;
         }
 
-        // Multi-body: Use Roche lobe physics
-        // Single body: Use ISCO physics
+        // Multi-body Roche lobe physics with per-BH ISCO capture
         if (uBlackHoleCount > 1 && uISCOStrength > 0.0) {
-            // Roche lobe physics for binary/multi-body systems
-            // Calculate gravitational potential from first two black holes
-            float dist1 = length(pos - uBlackHolePos[0]) + uSoftening;
-            float dist2 = length(pos - uBlackHolePos[1]) + uSoftening;
-            float potential1 = uBlackHoleMass[0] / dist1;
-            float potential2 = uBlackHoleMass[1] / dist2;
+            // Calculate potential contributions from ALL black holes
+            float potentials[MAX_BLACK_HOLES];
+            float totalPotential = 0.0;
 
-            // Potential ratio determines which lobe the particle is in
-            // ratio > 0.5 = in BH1's lobe, ratio < 0.5 = in BH2's lobe
-            float potentialRatio = potential1 / (potential1 + potential2);
-
-            // l1Proximity: 1.0 at L1 point (potentialRatio = 0.5), 0.0 deep in lobes
-            float l1Proximity = 1.0 - abs(potentialRatio - 0.5) * 2.0;
-
-            // Only apply drift when deep in a lobe (l1Proximity < 0.3)
-            // Near L1: let gravity create chaotic dynamics
-            if (l1Proximity < 0.3) {
-                // Determine dominant black hole
-                vec3 toBH = potentialRatio > 0.5
-                    ? normalize(uBlackHolePos[0] - pos)
-                    : normalize(uBlackHolePos[1] - pos);
-
-                // Gentle inward drift (much gentler than ISCO)
-                float driftStrength = (0.3 - l1Proximity) / 0.3; // 0 at edge, 1 at lobe center
-                vel += toBH * driftStrength * uISCOStrength * 0.5 * uDeltaTime;
+            for (int i = 0; i < MAX_BLACK_HOLES; i++) {
+                if (i >= uBlackHoleCount) {
+                    potentials[i] = 0.0;
+                    continue;
+                }
+                float dist = length(pos - uBlackHolePos[i]) + uSoftening;
+                potentials[i] = uBlackHoleMass[i] / dist;
+                totalPotential += potentials[i];
             }
-        } else if (uBlackHoleCount == 1 && uISCOStrength > 0.0) {
+
+            // Find dominant BH and second-strongest for lobe depth calculation
+            int dominantIdx = 0;
+            float maxPotential = 0.0;
+            float secondMaxPotential = 0.0;
+
+            for (int i = 0; i < MAX_BLACK_HOLES; i++) {
+                if (i >= uBlackHoleCount) break;
+                if (potentials[i] > maxPotential) {
+                    secondMaxPotential = maxPotential;
+                    maxPotential = potentials[i];
+                    dominantIdx = i;
+                } else if (potentials[i] > secondMaxPotential) {
+                    secondMaxPotential = potentials[i];
+                }
+            }
+
+            // Dominance ratio: how much stronger is dominant vs next strongest
+            // High ratio = deep in lobe, low ratio = near L-point
+            float dominanceRatio = maxPotential / (secondMaxPotential + 0.001);
+
+            // lobeDepth: 0.0 at L-point (equal potentials), approaches 1.0 deep in lobe
+            float lobeDepth = 1.0 - 1.0 / (0.5 + dominanceRatio * 0.5);
+            lobeDepth = clamp(lobeDepth, 0.0, 1.0);
+
+            // Distance/direction to dominant black hole
+            float distToDominant = length(pos - uBlackHolePos[dominantIdx]);
+            vec3 toDominant = normalize(uBlackHolePos[dominantIdx] - pos);
+            vec3 fromDominant = -toDominant;
+
+            // Per-BH ISCO radius scales with mass
+            float massRatio = uBlackHoleMass[dominantIdx] / (totalPotential * distToDominant + 0.001);
+            float bhISCORadius = uISCORadius * sqrt(massRatio) * 0.5 + uISCORadius * 0.5;
+
+            float lobeThreshold = 0.3;
+
+            if (lobeDepth > lobeThreshold && distToDominant < bhISCORadius && distToDominant > uEventHorizon) {
+                // ISCO CAPTURE ZONE - spiral dynamics toward dominant BH
+
+                float iscoDepth = 1.0 - (distToDominant - uEventHorizon) / (bhISCORadius - uEventHorizon);
+                iscoDepth = clamp(iscoDepth, 0.0, 1.0);
+
+                // Scale effect by both lobe depth and ISCO depth
+                float captureStrength = iscoDepth * (lobeDepth - lobeThreshold) / (1.0 - lobeThreshold);
+                captureStrength = clamp(captureStrength, 0.0, 1.0);
+
+                float orbitalSpeed = sqrt(uBlackHoleMass[dominantIdx] / (distToDominant + uSoftening));
+
+                // Decompose velocity relative to dominant BH
+                float radialVel = dot(vel, fromDominant);
+                vec3 tangentialVel = vel - fromDominant * radialVel;
+
+                // Progressive tangential decay (angular momentum loss) - keep 20% for spiral
+                float tangentialDecay = captureStrength * uISCOStrength * 0.8;
+                tangentialVel *= (1.0 - tangentialDecay);
+
+                // Force inward spiral
+                float targetRadialVel = -orbitalSpeed * captureStrength * uISCOStrength;
+                radialVel = min(radialVel, targetRadialVel);
+
+                vel = fromDominant * radialVel + tangentialVel;
+            }
+            else if (lobeDepth > lobeThreshold) {
+                // DRIFT ZONE - deep in lobe but outside ISCO
+                float driftStrength = (lobeDepth - lobeThreshold) / (1.0 - lobeThreshold);
+                driftStrength *= uISCOStrength * 2.0; // Stronger than original 0.5
+                vel += toDominant * driftStrength * uDeltaTime;
+            }
+            // Near L-points (lobeDepth < 0.3): N-body gravity creates chaotic transfers
+        }
+        else if (uBlackHoleCount == 1 && uISCOStrength > 0.0) {
             // Single black hole: Original ISCO physics
             if (nearestDist < uISCORadius && nearestDist > uEventHorizon) {
                 float iscoDepth = 1.0 - (nearestDist - uEventHorizon) / (uISCORadius - uEventHorizon);
