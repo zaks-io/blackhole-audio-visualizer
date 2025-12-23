@@ -3,7 +3,6 @@
 import { useSyncExternalStore } from "react";
 import { Play, Mic } from "lucide-react";
 import { isElectron } from "@/lib/platform";
-import { usePresetSelector } from "@/components/playlist";
 import type { AudioSourceType } from "@/hooks/useAudioSource";
 import { useFPSStore } from "@/hooks/useFPSMonitor";
 
@@ -19,8 +18,6 @@ interface AudioConnectOverlayProps {
 export function AudioConnectOverlay({ isConnected, onConnect }: AudioConnectOverlayProps) {
   // useSyncExternalStore handles hydration mismatch by using getServerSnapshot on server
   const isElectronApp = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
-  const mode = usePresetSelector((s) => s.mode);
-  const triggerPlay = usePresetSelector((s) => s.triggerPlay);
   const resetSpikes = useFPSStore((s) => s.resetSpikes);
 
   if (isConnected) return null;
@@ -33,9 +30,6 @@ export function AudioConnectOverlay({ isConnected, onConnect }: AudioConnectOver
     // Reset so the overlay doesn't permanently pin the max with that initialization frame.
     resetSpikes();
     onConnect(sourceType);
-    if (mode !== "none") {
-      triggerPlay();
-    }
   };
 
   return (
