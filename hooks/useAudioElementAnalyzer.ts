@@ -37,6 +37,7 @@ export async function resumeAudioContext(): Promise<void> {
 }
 
 const DEFAULT_ANALYSIS: AnalyzedAudio = {
+  timestamp: 0,
   energy: {
     overall: 0,
     subBass: 0,
@@ -89,8 +90,22 @@ let sceneRafId: number | null = null;
 let sceneConnectedElement: HTMLAudioElement | null = null;
 let sceneWorkerInitialized = false;
 
-// Shared analysis ref for scene mode
-const sceneAnalysisRef = { current: { ...DEFAULT_ANALYSIS } as AnalyzedAudio };
+// Pre-allocated buffers for worker output - copied in place to avoid GC pressure
+const sceneAnalysisBuffers = {
+  spectrum: new Float32Array(128),
+  bandOnsets: new Float32Array(MAX_BANDS),
+  bandEnergies: new Float32Array(MAX_BANDS),
+};
+
+// Shared analysis ref for scene mode - use pre-allocated buffers
+const sceneAnalysisRef = {
+  current: {
+    ...DEFAULT_ANALYSIS,
+    spectrum: sceneAnalysisBuffers.spectrum,
+    bandOnsets: sceneAnalysisBuffers.bandOnsets,
+    bandEnergies: sceneAnalysisBuffers.bandEnergies,
+  } as AnalyzedAudio,
+};
 
 function initSceneWorker() {
   if (sceneWorkerInitialized || typeof window === "undefined") return;
@@ -100,17 +115,59 @@ function initSceneWorker() {
   sceneWorker.onmessage = (e: MessageEvent<WorkerOutput>) => {
     if (e.data.type === "result") {
       const result = e.data;
-      sceneAnalysisRef.current = {
-        energy: result.energy,
-        peaks: result.peaks,
-        raw: result.raw,
-        thresholds: result.thresholds,
-        spectrum: result.spectrum,
-        bandOnsets: result.bandOnsets,
-        bandEnergies: result.bandEnergies,
-        bandCount: result.bandCount,
-        peakHistory: result.peakHistory,
-      };
+      const current = sceneAnalysisRef.current;
+
+      // Mutate in-place to avoid per-frame object allocations
+      current.timestamp = result.timestamp;
+
+      // Energy (nested object)
+      current.energy.overall = result.energy.overall;
+      current.energy.subBass = result.energy.subBass;
+      current.energy.bass = result.energy.bass;
+      current.energy.lowMid = result.energy.lowMid;
+      current.energy.mid = result.energy.mid;
+      current.energy.highMid = result.energy.highMid;
+      current.energy.high = result.energy.high;
+
+      // Peaks (nested object)
+      current.peaks.spectralFlux = result.peaks.spectralFlux;
+      current.peaks.hfc = result.peaks.hfc;
+      current.peaks.bass = result.peaks.bass;
+      current.peaks.high = result.peaks.high;
+
+      // Raw (nested object)
+      current.raw.spectralFlux = result.raw.spectralFlux;
+      current.raw.hfc = result.raw.hfc;
+      current.raw.rms = result.raw.rms;
+      current.raw.spectralCentroid = result.raw.spectralCentroid;
+      current.raw.spectralFlatness = result.raw.spectralFlatness;
+      current.raw.spectralRolloff = result.raw.spectralRolloff;
+      current.raw.zcr = result.raw.zcr;
+      current.raw.perceptualSharpness = result.raw.perceptualSharpness;
+
+      // Thresholds (nested object with sub-objects)
+      current.thresholds.spectralFlux.mean = result.thresholds.spectralFlux.mean;
+      current.thresholds.spectralFlux.threshold = result.thresholds.spectralFlux.threshold;
+      current.thresholds.hfc.mean = result.thresholds.hfc.mean;
+      current.thresholds.hfc.threshold = result.thresholds.hfc.threshold;
+      current.thresholds.bass.mean = result.thresholds.bass.mean;
+      current.thresholds.bass.threshold = result.thresholds.bass.threshold;
+      current.thresholds.high.mean = result.thresholds.high.mean;
+      current.thresholds.high.threshold = result.thresholds.high.threshold;
+
+      // Typed arrays - copy into pre-allocated buffers
+      const specLen = Math.min(result.spectrum.length, sceneAnalysisBuffers.spectrum.length);
+      for (let i = 0; i < specLen; i++) {
+        sceneAnalysisBuffers.spectrum[i] = result.spectrum[i];
+      }
+      const bandLen = Math.min(result.bandOnsets.length, MAX_BANDS);
+      for (let i = 0; i < bandLen; i++) {
+        sceneAnalysisBuffers.bandOnsets[i] = result.bandOnsets[i];
+        sceneAnalysisBuffers.bandEnergies[i] = result.bandEnergies[i];
+      }
+
+      current.bandCount = result.bandCount;
+      current.peakHistory = result.peakHistory;
     }
   };
 

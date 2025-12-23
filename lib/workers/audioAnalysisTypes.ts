@@ -60,6 +60,7 @@ export type WorkerInput = WorkerAnalyzeMessage | WorkerResetMessage | WorkerSetD
 
 export interface WorkerResultMessage {
   type: "result";
+  timestamp: number;
   energy: AudioEnergy;
   peaks: AudioPeaks;
   raw: AudioRaw;

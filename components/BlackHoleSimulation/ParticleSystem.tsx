@@ -110,6 +110,20 @@ export function ParticleSystem({
   const prevAudioEnabledRef = useRef<boolean>(audioEnabled);
   const prevDisabledEmitterCountRef = useRef<number>(-1);
   const prevDisabledIscoRadiusRef = useRef<number | null>(null);
+
+  // Threshold-based dirty checking for audio uniforms to reduce GPU updates
+  const AUDIO_THRESHOLDS = {
+    beatIntensity: 0.01,
+    hfcBoost: 0.02,
+    spawnBurst: 0.05,
+    iscoRadius: 0.1,
+  };
+  const prevAudioValuesRef = useRef({
+    beatIntensity: 0,
+    hfcBoost: 0,
+    spawnBurst: 1,
+    iscoRadiusDerived: 0,
+  });
   const prevRenderUniformsRef = useRef<{
     pointSize: number;
     motionBlurTaper: number;
@@ -494,16 +508,34 @@ export function ParticleSystem({
 
     if (audioEnabled) {
       const audioData = getAudioData();
+      // Band onsets and spectrum already have internal dirty-checking in useGPUCompute
       setBandOnsets(audioData.bandOnsets, audioData.bandCount);
       setSpectrum(audioData.spectrum);
-      // Use synchronized beat from BlackHoleSimulation (already clamped)
+
+      // Threshold-based dirty checking for audio uniforms to reduce GPU updates
       const beat = audioData.beatIntensity ?? 0;
-      setBeatIntensity(beat);
-      // Only re-send beatPulse-driven ISCO radius if the pulse changes or beat changes.
-      // Beat changes every frame, so this is still per-frame when audio is enabled.
-      setISCORadius(iscoRadius * (1 + beat * state.beatPulse));
-      setHFCBoost(audioData.hfcBoost);
-      setSpawnBurst(audioData.spawnBurst);
+      const prev = prevAudioValuesRef.current;
+
+      if (Math.abs(beat - prev.beatIntensity) > AUDIO_THRESHOLDS.beatIntensity) {
+        prev.beatIntensity = beat;
+        setBeatIntensity(beat);
+      }
+
+      const derivedIsco = iscoRadius * (1 + beat * state.beatPulse);
+      if (Math.abs(derivedIsco - prev.iscoRadiusDerived) > AUDIO_THRESHOLDS.iscoRadius) {
+        prev.iscoRadiusDerived = derivedIsco;
+        setISCORadius(derivedIsco);
+      }
+
+      if (Math.abs(audioData.hfcBoost - prev.hfcBoost) > AUDIO_THRESHOLDS.hfcBoost) {
+        prev.hfcBoost = audioData.hfcBoost;
+        setHFCBoost(audioData.hfcBoost);
+      }
+
+      if (Math.abs(audioData.spawnBurst - prev.spawnBurst) > AUDIO_THRESHOLDS.spawnBurst) {
+        prev.spawnBurst = audioData.spawnBurst;
+        setSpawnBurst(audioData.spawnBurst);
+      }
     } else {
       // When audio is disabled, avoid spamming identical updates each frame.
       // Only refresh when emitterCount changes (it affects how many bands are read).

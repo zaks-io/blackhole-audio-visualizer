@@ -23,6 +23,7 @@ export function AudioDebugTab({ analysisRef, isVisible = true }: AudioDebugTabPr
       const current = analysisRef.current;
       if (current) {
         setAnalysis({
+          timestamp: current.timestamp,
           energy: { ...current.energy },
           peaks: { ...current.peaks },
           raw: { ...current.raw },

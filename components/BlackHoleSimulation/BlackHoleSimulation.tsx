@@ -248,36 +248,48 @@ export function BlackHoleSimulation({
 
     if (isAudioConnected) {
       const analysis = getAnalysis();
-      // Use bass peak detection for beat intensity, or fall back to band onsets
-      // Clamp onsets to prevent audio glitch spikes before gain multiplication
-      const bassBeat = analysis.peaks.bass ? 1 : 0;
-      const onsetBeat = Math.min(
-        Math.max(analysis.bandOnsets[0] ?? 0, analysis.bandOnsets[1] ?? 0),
-        1.0
-      );
-      const beat = Math.max(bassBeat * 0.8, onsetBeat) * (store.audioGain ?? 1);
-      beatIntensityRef.current = Math.min(beat, 0.75);
+      const now = performance.now();
+      const MAX_STALE_MS = 33; // 2 frames at 60fps
 
-      // HFC boost - envelope follow the raw HFC with attack/decay
-      const hfcTarget = analysis.raw.hfc;
-      if (hfcTarget > hfcBoostRef.current) {
-        // Fast attack (50ms)
-        hfcBoostRef.current = 0.8 * hfcBoostRef.current + 0.2 * hfcTarget;
+      // Protect against stale data during GC pauses - decay instead of using stale high values
+      const isStale = analysis.timestamp > 0 && now - analysis.timestamp > MAX_STALE_MS;
+
+      if (isStale) {
+        beatIntensityRef.current *= 0.85;
+        hfcBoostRef.current *= 0.85;
+        spawnBurstRef.current = 1 + (spawnBurstRef.current - 1) * 0.85;
       } else {
-        // Slower decay (150ms)
-        hfcBoostRef.current = hfcDecayCoef.current * hfcBoostRef.current;
-      }
+        // Use bass peak detection for beat intensity, or fall back to band onsets
+        // Clamp onsets to prevent audio glitch spikes before gain multiplication
+        const bassBeat = analysis.peaks.bass ? 1 : 0;
+        const onsetBeat = Math.min(
+          Math.max(analysis.bandOnsets[0] ?? 0, analysis.bandOnsets[1] ?? 0),
+          1.0
+        );
+        const beat = Math.max(bassBeat * 0.8, onsetBeat) * (store.audioGain ?? 1);
+        beatIntensityRef.current = Math.min(beat, 0.75);
 
-      // Spawn burst - trigger on bass peaks, decay back to 1
-      if (analysis.peaks.bass) {
-        spawnBurstRef.current = store.spawnBurstMultiplier;
-      } else {
-        // Decay back toward 1.0
-        spawnBurstRef.current = 1.0 + (spawnBurstRef.current - 1.0) * spawnDecayCoef.current;
-      }
+        // HFC boost - envelope follow the raw HFC with attack/decay
+        const hfcTarget = analysis.raw.hfc;
+        if (hfcTarget > hfcBoostRef.current) {
+          // Fast attack (50ms)
+          hfcBoostRef.current = 0.8 * hfcBoostRef.current + 0.2 * hfcTarget;
+        } else {
+          // Slower decay (150ms)
+          hfcBoostRef.current = hfcDecayCoef.current * hfcBoostRef.current;
+        }
 
-      if (store.autoColorChange) {
-        colorMode.processBeat(beat, state.clock.elapsedTime);
+        // Spawn burst - trigger on bass peaks, decay back to 1
+        if (analysis.peaks.bass) {
+          spawnBurstRef.current = store.spawnBurstMultiplier;
+        } else {
+          // Decay back toward 1.0
+          spawnBurstRef.current = 1.0 + (spawnBurstRef.current - 1.0) * spawnDecayCoef.current;
+        }
+
+        if (store.autoColorChange) {
+          colorMode.processBeat(beat, state.clock.elapsedTime);
+        }
       }
 
       // Update cached audio data in-place (avoid per-frame object allocation)

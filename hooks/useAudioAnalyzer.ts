@@ -5,6 +5,7 @@ import { useVisualizationControls } from "@/hooks/useVisualizationControls";
 import type { WorkerInput, WorkerOutput } from "@/lib/workers/audioAnalysisTypes";
 
 export interface AnalyzedAudio {
+  timestamp: number;
   energy: {
     overall: number;
     subBass: number;
@@ -46,6 +47,7 @@ export interface AnalyzedAudio {
 const MAX_BANDS = 36;
 
 const DEFAULT_ANALYSIS: AnalyzedAudio = {
+  timestamp: 0,
   energy: {
     overall: 0,
     subBass: 0,
@@ -100,8 +102,23 @@ let rafId: number | null = null;
 let onsetDecay = 0.92;
 let workerInitialized = false;
 
+// Pre-allocated buffers for worker output - copied in place to avoid GC pressure
+const analysisBuffers = {
+  spectrum: new Float32Array(128),
+  bandOnsets: new Float32Array(MAX_BANDS),
+  bandEnergies: new Float32Array(MAX_BANDS),
+};
+
 // Shared analysis ref - all components read from here
-const analysisRef = { current: { ...DEFAULT_ANALYSIS } as AnalyzedAudio };
+// Use the pre-allocated buffers for typed arrays
+const analysisRef = {
+  current: {
+    ...DEFAULT_ANALYSIS,
+    spectrum: analysisBuffers.spectrum,
+    bandOnsets: analysisBuffers.bandOnsets,
+    bandEnergies: analysisBuffers.bandEnergies,
+  } as AnalyzedAudio,
+};
 
 function initWorker() {
   if (workerInitialized || typeof window === "undefined") return;
@@ -111,17 +128,59 @@ function initWorker() {
   worker.onmessage = (e: MessageEvent<WorkerOutput>) => {
     if (e.data.type === "result") {
       const result = e.data;
-      analysisRef.current = {
-        energy: result.energy,
-        peaks: result.peaks,
-        raw: result.raw,
-        thresholds: result.thresholds,
-        spectrum: result.spectrum,
-        bandOnsets: result.bandOnsets,
-        bandEnergies: result.bandEnergies,
-        bandCount: result.bandCount,
-        peakHistory: result.peakHistory,
-      };
+      const current = analysisRef.current;
+
+      // Mutate in-place to avoid per-frame object allocations
+      current.timestamp = result.timestamp;
+
+      // Energy (nested object)
+      current.energy.overall = result.energy.overall;
+      current.energy.subBass = result.energy.subBass;
+      current.energy.bass = result.energy.bass;
+      current.energy.lowMid = result.energy.lowMid;
+      current.energy.mid = result.energy.mid;
+      current.energy.highMid = result.energy.highMid;
+      current.energy.high = result.energy.high;
+
+      // Peaks (nested object)
+      current.peaks.spectralFlux = result.peaks.spectralFlux;
+      current.peaks.hfc = result.peaks.hfc;
+      current.peaks.bass = result.peaks.bass;
+      current.peaks.high = result.peaks.high;
+
+      // Raw (nested object)
+      current.raw.spectralFlux = result.raw.spectralFlux;
+      current.raw.hfc = result.raw.hfc;
+      current.raw.rms = result.raw.rms;
+      current.raw.spectralCentroid = result.raw.spectralCentroid;
+      current.raw.spectralFlatness = result.raw.spectralFlatness;
+      current.raw.spectralRolloff = result.raw.spectralRolloff;
+      current.raw.zcr = result.raw.zcr;
+      current.raw.perceptualSharpness = result.raw.perceptualSharpness;
+
+      // Thresholds (nested object with sub-objects)
+      current.thresholds.spectralFlux.mean = result.thresholds.spectralFlux.mean;
+      current.thresholds.spectralFlux.threshold = result.thresholds.spectralFlux.threshold;
+      current.thresholds.hfc.mean = result.thresholds.hfc.mean;
+      current.thresholds.hfc.threshold = result.thresholds.hfc.threshold;
+      current.thresholds.bass.mean = result.thresholds.bass.mean;
+      current.thresholds.bass.threshold = result.thresholds.bass.threshold;
+      current.thresholds.high.mean = result.thresholds.high.mean;
+      current.thresholds.high.threshold = result.thresholds.high.threshold;
+
+      // Typed arrays - copy into pre-allocated buffers
+      const specLen = Math.min(result.spectrum.length, analysisBuffers.spectrum.length);
+      for (let i = 0; i < specLen; i++) {
+        analysisBuffers.spectrum[i] = result.spectrum[i];
+      }
+      const bandLen = Math.min(result.bandOnsets.length, MAX_BANDS);
+      for (let i = 0; i < bandLen; i++) {
+        analysisBuffers.bandOnsets[i] = result.bandOnsets[i];
+        analysisBuffers.bandEnergies[i] = result.bandEnergies[i];
+      }
+
+      current.bandCount = result.bandCount;
+      current.peakHistory = result.peakHistory;
     }
   };
 

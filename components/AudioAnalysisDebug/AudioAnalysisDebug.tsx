@@ -24,6 +24,7 @@ export function AudioAnalysisDebug({ analysisRef }: AudioAnalysisDebugProps) {
       const current = analysisRef.current;
       if (current) {
         setAnalysis({
+          timestamp: current.timestamp,
           energy: { ...current.energy },
           peaks: { ...current.peaks },
           raw: { ...current.raw },

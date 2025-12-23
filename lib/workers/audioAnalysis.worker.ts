@@ -30,12 +30,23 @@ import {
 
 const MAX_BANDS = 36;
 const PEAK_HISTORY_DURATION_MS = 2000;
+const PEAK_RING_BUFFER_SIZE = 32; // Max peaks in 2 seconds at typical beat rate
 
 // Analysis state
 let prevSpectrum: Float32Array | null = null;
-let peakHistory: Array<{ time: number; type: "flux" | "hfc" | "bass" | "high" }> = [];
 let currentOnsetDecay = 0.92;
 const smoothingFactor = 0.75;
+
+// Ring buffer for peak history - avoids per-frame array allocation from filter()
+type PeakType = "flux" | "hfc" | "bass" | "high";
+const peakRingBuffer: Array<{ time: number; type: PeakType }> = [];
+let peakWriteIndex = 0;
+// Pre-allocate ring buffer entries
+for (let i = 0; i < PEAK_RING_BUFFER_SIZE; i++) {
+  peakRingBuffer.push({ time: 0, type: "flux" });
+}
+// Output array for valid peaks - reused each frame
+const peakHistoryOutput: Array<{ time: number; type: PeakType }> = [];
 
 // Reusable buffers
 const bandEnergiesBuffer = new Float32Array(MAX_BANDS);
@@ -102,8 +113,13 @@ function computeRMS(frequencyData: Uint8Array): number {
 
 function reset(): void {
   prevSpectrum = null;
-  peakHistory = [];
   prevBandEnergies = new Float32Array(MAX_BANDS);
+
+  // Reset ring buffer by zeroing timestamps (entries with time=0 will be filtered out)
+  peakWriteIndex = 0;
+  for (let i = 0; i < PEAK_RING_BUFFER_SIZE; i++) {
+    peakRingBuffer[i].time = 0;
+  }
 
   Object.values(thresholds).forEach((t) => t.reset());
   Object.values(smoothers.energy).forEach((s) => s.reset());
@@ -195,15 +211,27 @@ function analyze(
     high: highPeak,
   };
 
-  // Track peak history
-  if (fluxPeak) peakHistory.push({ time: timestamp, type: "flux" });
-  if (hfcPeak) peakHistory.push({ time: timestamp, type: "hfc" });
-  if (bassPeak) peakHistory.push({ time: timestamp, type: "bass" });
-  if (highPeak) peakHistory.push({ time: timestamp, type: "high" });
+  // Track peak history using ring buffer - avoids per-frame array allocation
+  function addPeak(type: PeakType): void {
+    const entry = peakRingBuffer[peakWriteIndex];
+    entry.time = timestamp;
+    entry.type = type;
+    peakWriteIndex = (peakWriteIndex + 1) % PEAK_RING_BUFFER_SIZE;
+  }
+  if (fluxPeak) addPeak("flux");
+  if (hfcPeak) addPeak("hfc");
+  if (bassPeak) addPeak("bass");
+  if (highPeak) addPeak("high");
 
-  // Prune old peaks
+  // Build output array from valid ring buffer entries (reuse output array)
   const cutoffTime = timestamp - PEAK_HISTORY_DURATION_MS;
-  peakHistory = peakHistory.filter((p) => p.time > cutoffTime);
+  peakHistoryOutput.length = 0;
+  for (let i = 0; i < PEAK_RING_BUFFER_SIZE; i++) {
+    const entry = peakRingBuffer[i];
+    if (entry.time > cutoffTime) {
+      peakHistoryOutput.push(entry);
+    }
+  }
 
   // Store raw values
   const smoothedFlux = smoothers.spectralFlux.process(spectralFluxNorm);
@@ -282,6 +310,7 @@ function analyze(
 
   return {
     type: "result",
+    timestamp,
     energy,
     peaks,
     raw,
@@ -290,7 +319,7 @@ function analyze(
     bandOnsets: bandOnsetsOutput,
     bandEnergies: bandEnergiesOutput,
     bandCount: clampedBandCount,
-    peakHistory, // No spread - consumer just reads it
+    peakHistory: peakHistoryOutput,
   };
 }
 
