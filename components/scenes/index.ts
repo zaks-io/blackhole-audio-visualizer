@@ -1,4 +1,4 @@
 export { SceneControls } from "./SceneControls";
 export { SceneSelector } from "./SceneSelector";
-export { SceneEditorPanel } from "./SceneEditorPanel";
+export { SceneAgentPanel } from "./SceneAgentPanel";
 export { useSceneControls } from "./useSceneControls";

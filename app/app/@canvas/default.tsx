@@ -9,7 +9,7 @@ import { FPSMeter } from "@/components/debug/FPSMeter";
 import { FPSTracker } from "@/hooks/useFPSMonitor";
 import { ControlSidebar } from "@/components/layout";
 import { ProducerModePanel } from "@/components/ProducerMode";
-import { SceneEditorPanel } from "@/components/scenes";
+import { SceneAgentPanel } from "@/components/scenes";
 import { useCameraMode, type CameraMode } from "@/components/CameraSystem";
 import { useColorMode } from "@/components/ColorModeSystem";
 import { useUIState } from "@/hooks/useUIState";
@@ -187,8 +187,8 @@ export default function CanvasSlot() {
         {fpsVisible && <FPSMeter />}
       </div>
 
-      {/* Scene Editor Panel */}
-      <SceneEditorPanel sceneId={sceneId ?? undefined} />
+      {/* Scene Agent Panel */}
+      <SceneAgentPanel sceneId={sceneId ?? undefined} />
 
       {/* Control Sidebar */}
       {devControlsVisible && <ControlSidebar analysisRef={audio.analysisRef} />}

@@ -6,10 +6,10 @@ import { persist } from "zustand/middleware";
 interface SceneControlsState {
   selectedSceneId: string | null;
   setSelectedSceneId: (id: string | null) => void;
-  isSceneEditorOpen: boolean;
-  openSceneEditor: () => void;
-  closeSceneEditor: () => void;
-  toggleSceneEditor: () => void;
+  isSceneAgentOpen: boolean;
+  openSceneAgent: () => void;
+  closeSceneAgent: () => void;
+  toggleSceneAgent: () => void;
   chatThreadId: string | null;
   setChatThreadId: (id: string | null) => void;
   isCreatingScene: boolean;
@@ -21,10 +21,10 @@ export const useSceneControls = create<SceneControlsState>()(
     (set) => ({
       selectedSceneId: null,
       setSelectedSceneId: (id) => set({ selectedSceneId: id }),
-      isSceneEditorOpen: false,
-      openSceneEditor: () => set({ isSceneEditorOpen: true }),
-      closeSceneEditor: () => set({ isSceneEditorOpen: false }),
-      toggleSceneEditor: () => set((s) => ({ isSceneEditorOpen: !s.isSceneEditorOpen })),
+      isSceneAgentOpen: false,
+      openSceneAgent: () => set({ isSceneAgentOpen: true }),
+      closeSceneAgent: () => set({ isSceneAgentOpen: false }),
+      toggleSceneAgent: () => set((s) => ({ isSceneAgentOpen: !s.isSceneAgentOpen })),
       chatThreadId: null,
       setChatThreadId: (id) => set({ chatThreadId: id }),
       isCreatingScene: false,
@@ -32,7 +32,7 @@ export const useSceneControls = create<SceneControlsState>()(
     }),
     {
       name: "scene-controls",
-      partialize: (state) => ({ isSceneEditorOpen: state.isSceneEditorOpen }),
+      partialize: (state) => ({ isSceneAgentOpen: state.isSceneAgentOpen }),
     }
   )
 );

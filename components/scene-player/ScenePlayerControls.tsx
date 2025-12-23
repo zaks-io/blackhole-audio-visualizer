@@ -41,7 +41,7 @@ function ScenePlayerControlsComponent({
   const toggleProducerMode = useProducerMode((s) => s.toggleOpen);
   const setProducerModeOpen = useProducerMode((s) => s.setOpen);
   const { controlBarCollapsed, setControlBarCollapsed, setDevControlsVisible } = useUIState();
-  const { openSceneEditor, closeSceneEditor, isSceneEditorOpen } = useSceneControls();
+  const { openSceneAgent, closeSceneAgent, isSceneAgentOpen } = useSceneControls();
   const isAdmin = useIsAdmin();
   const { triggerTranscription } = useConvexScenes();
   const globalAudioPause = useAudioPlayerStore((s) => s.pause);
@@ -164,7 +164,7 @@ function ScenePlayerControlsComponent({
             </Tooltip>
           </div>
 
-          {/* Scene Editor button - Admin only, Desktop only */}
+          {/* Scene Agent button - Admin only, Desktop only */}
           {isAdmin && (
             <div className="hidden md:block">
               <Tooltip>
@@ -172,17 +172,17 @@ function ScenePlayerControlsComponent({
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => (isSceneEditorOpen ? closeSceneEditor() : openSceneEditor())}
+                    onClick={() => (isSceneAgentOpen ? closeSceneAgent() : openSceneAgent())}
                     className={cn(
                       "h-10 w-10 rounded-full",
-                      isSceneEditorOpen && "bg-primary/20 text-primary"
+                      isSceneAgentOpen && "bg-primary/20 text-primary"
                     )}
                   >
                     <Film className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="top" className="text-xs">
-                  Scene Editor
+                  Scene Agent
                 </TooltipContent>
               </Tooltip>
             </div>
@@ -218,7 +218,13 @@ function ScenePlayerControlsComponent({
           </Tooltip>
 
           {/* Timeline */}
-          <div className="w-48 sm:w-64 md:w-80">
+          <div className="w-48 sm:w-64 md:w-80 relative">
+            {/* Scene name (tiny) */}
+            <div className="absolute -top-4 left-0 right-0 text-center pointer-events-none">
+              <span className="text-[10px] leading-none text-white/60 truncate block">
+                {scene.name}
+              </span>
+            </div>
             <SceneTimeline
               subscribeToTime={subscribeToTime}
               getCurrentTime={getCurrentTime}

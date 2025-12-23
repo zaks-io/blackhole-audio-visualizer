@@ -20,10 +20,10 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { AssistantMessage } from "./messages/AssistantMessage";
 import { ThreadAudioPlayer } from "./ThreadAudioPlayer";
 
-export function SceneEditorPanel({ sceneId }: { sceneId?: string }) {
+export function SceneAgentPanel({ sceneId }: { sceneId?: string }) {
   const {
-    isSceneEditorOpen,
-    closeSceneEditor,
+    isSceneAgentOpen,
+    closeSceneAgent,
     chatThreadId,
     setChatThreadId,
     isCreatingScene,
@@ -95,7 +95,7 @@ export function SceneEditorPanel({ sceneId }: { sceneId?: string }) {
       className={cn(
         "h-screen flex flex-col border-l border-white/10 glass-panel-solid z-40",
         "transition-all duration-300 ease-out overflow-hidden",
-        isSceneEditorOpen ? "w-96" : "w-0"
+        isSceneAgentOpen ? "w-96" : "w-0"
       )}
     >
       <div className="w-96 h-full flex flex-col min-w-96">
@@ -104,7 +104,7 @@ export function SceneEditorPanel({ sceneId }: { sceneId?: string }) {
           <div className="flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-primary" />
             <span className="text-sm font-medium">
-              {isCreatingScene ? "Create Scene" : "Edit Scene"}
+              {isCreatingScene ? "Create Scene" : "Scene Agent"}
             </span>
           </div>
           <div className="flex items-center gap-1">
@@ -143,7 +143,7 @@ export function SceneEditorPanel({ sceneId }: { sceneId?: string }) {
             <Button
               variant="ghost"
               size="icon"
-              onClick={closeSceneEditor}
+              onClick={closeSceneAgent}
               className="h-7 w-7 rounded-md hover:bg-white/10"
             >
               <X className="h-4 w-4" />
