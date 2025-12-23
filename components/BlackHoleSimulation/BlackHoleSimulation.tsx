@@ -133,13 +133,19 @@ export function BlackHoleSimulation({
           initial.blackHoleMassMax - ti * (initial.blackHoleMassMax - initial.blackHoleMassMin);
       }
       const avgMassRatio = totalMassRatio / initialCount;
+
+      // Ensure minimum orbit radius to prevent black hole overlap
+      const spacingFactor = 2.5 / Math.sin(Math.PI / initialCount);
+      const minOrbitRadius = initial.eventHorizonRadius * spacingFactor;
+      const effectiveOrbitRadius = Math.max(initial.orbitRadius, minOrbitRadius);
+
       for (let i = 0; i < initialCount; i++) {
         const angle = i * angleStep;
         const t = i / (initialCount - 1);
         const massRatio =
           initial.blackHoleMassMax - t * (initial.blackHoleMassMax - initial.blackHoleMassMin);
         const mass = totalMass * massRatio;
-        const r = initial.orbitRadius * (avgMassRatio / massRatio);
+        const r = effectiveOrbitRadius * (avgMassRatio / massRatio);
         positions[i].set(Math.cos(angle) * r, 0, Math.sin(angle) * r);
         masses[i] = mass;
       }
@@ -196,6 +202,7 @@ export function BlackHoleSimulation({
       gravity,
       blackHoleMassMin,
       blackHoleMassMax,
+      eventHorizonRadius,
     } = store;
     const elapsed = state.clock.elapsedTime;
 
@@ -222,6 +229,11 @@ export function BlackHoleSimulation({
       }
       const avgMassRatio = totalMassRatio / count;
 
+      // Ensure minimum orbit radius to prevent black hole overlap
+      const spacingFactor = 2.5 / Math.sin(Math.PI / count);
+      const minOrbitRadius = eventHorizonRadius * spacingFactor;
+      const effectiveOrbitRadius = Math.max(orbitRadius, minOrbitRadius);
+
       for (let i = 0; i < count; i++) {
         const angle = elapsed * orbitSpeed + i * angleStep;
         // Interpolate mass from max to min based on index
@@ -229,7 +241,7 @@ export function BlackHoleSimulation({
         const massRatio = blackHoleMassMax - t * (blackHoleMassMax - blackHoleMassMin);
         const mass = totalMass * massRatio;
         // Orbit radius inversely proportional to mass (heavier = closer to center)
-        const r = orbitRadius * (avgMassRatio / massRatio);
+        const r = effectiveOrbitRadius * (avgMassRatio / massRatio);
 
         const x = Math.cos(angle) * r;
         const z = Math.sin(angle) * r;
