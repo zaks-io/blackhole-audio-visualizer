@@ -1,13 +1,17 @@
 "use client";
 
-import { useMemo, useEffect } from "react";
+import { useMemo, useEffect, useState, useCallback } from "react";
 import { ScenePlayerControls } from "@/components/scene-player/ScenePlayerControls";
+import { SceneInfoPanel } from "@/components/scene-player/SceneInfoPanel";
+import { TopControlBar } from "@/components/layout";
 import { useCameraMode, type CameraMode } from "@/components/CameraSystem";
 import { useViewerMode } from "@/hooks/useViewerMode";
 import { useUnifiedAudio } from "@/hooks/useUnifiedAudio";
 import { useUnifiedPlayer } from "@/hooks/useUnifiedPlayer";
+import { useSceneRecording } from "@/hooks/useSceneRecording";
+import { useConvexScenes } from "@/hooks/useConvexScenes";
 import type { PlaylistWithPresets } from "@/components/ProducerMode/types";
-import { Preloaded, usePreloadedQuery } from "convex/react";
+import { Preloaded, usePreloadedQuery, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 
 interface SceneModeUIClientProps {
@@ -17,6 +21,7 @@ interface SceneModeUIClientProps {
 
 export function SceneModeUIClient({ sceneId, preloadedScene }: SceneModeUIClientProps) {
   const setMode = useViewerMode((s) => s.setMode);
+  const [isInfoOpen, setIsInfoOpen] = useState(false);
 
   // Sync URL to store
   useEffect(() => {
@@ -53,18 +58,71 @@ export function SceneModeUIClient({ sceneId, preloadedScene }: SceneModeUIClient
     sceneAudioElement: scenePlayer.audioElement,
   });
 
+  const sceneRecording = useSceneRecording({
+    player: scenePlayer,
+    getRecordingStream: audio.getRecordingStream,
+  });
+
+  const { triggerTranscription } = useConvexScenes();
+
+  const transcription = useQuery(
+    api.model.transcriptions.public.getBySong,
+    scene?.song?._id ? { songId: scene.song._id } : "skip"
+  );
+
+  const handleRecordToggle = useCallback(() => {
+    if (sceneRecording.isRecording) {
+      sceneRecording.stopRecording();
+    } else {
+      sceneRecording.startRecording();
+    }
+  }, [sceneRecording]);
+
+  const handleLoopToggle = useCallback(() => {
+    scenePlayer.setLoop(!scenePlayer.loopEnabled);
+  }, [scenePlayer]);
+
+  const handleTranscribe = useCallback(() => {
+    if (scene?.song?._id) {
+      triggerTranscription(scene.song._id);
+    }
+  }, [scene, triggerTranscription]);
+
   // No loading overlays - Canvas continues to show while scene loads
   if (!scene) {
-    // Fallback UI to confirm SSR is working even if data is missing/private
     return null;
   }
 
+  const transcriptionStatus: "idle" | "processing" | "complete" =
+    transcription?.status === "processing" ? "processing" : transcription ? "complete" : "idle";
+
   return (
     <>
-      <ScenePlayerControls
+      <TopControlBar
+        isAudioConnected={false}
+        audioSourceType={null}
+        canUseSystemAudio={false}
+        onAudioConnect={() => {}}
+        onAudioDisconnect={() => {}}
+        isRecording={sceneRecording.isRecording}
+        recordingDuration={sceneRecording.duration}
+        onRecordToggle={handleRecordToggle}
+        recordDisabled={!scene.audioUrl || scene.song?.status === "generating"}
+        loopEnabled={scenePlayer.loopEnabled}
+        onLoopToggle={handleLoopToggle}
+        onTranscribe={scene.song?._id ? handleTranscribe : undefined}
+        transcriptionStatus={transcriptionStatus}
+        onInfoClick={() => setIsInfoOpen(true)}
+      />
+
+      <ScenePlayerControls scene={scene} player={scenePlayer} />
+
+      <SceneInfoPanel
         scene={scene}
-        player={scenePlayer}
-        getRecordingStream={audio.getRecordingStream}
+        sectionTimings={scenePlayer.sectionTimings}
+        currentSectionIndex={scenePlayer.state.currentSectionIndex}
+        isOpen={isInfoOpen}
+        onClose={() => setIsInfoOpen(false)}
       />
     </>
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useEffect } from "react";
-import { BottomControlBar, TopToolbar } from "@/components/layout";
+import { BottomControlBar, TopControlBar } from "@/components/layout";
 import { PermissionDialog } from "@/components/PermissionDialog";
 import { MicPermissionDialog } from "@/components/MicPermissionDialog";
 import { AudioConnectOverlay } from "@/components/audio/AudioConnectOverlay";
@@ -88,13 +88,7 @@ export function LiveModeUIClient({ preloadedPresets, preloadedPlaylists }: LiveM
 
   return (
     <>
-      <TopToolbar
-        currentCameraMode={cameraMode.mode}
-        onCameraModeChange={cameraMode.setMode}
-        isCameraTransitioning={cameraMode.isTransitioning}
-      />
-
-      <BottomControlBar
+      <TopControlBar
         isAudioConnected={audio.isConnected}
         audioSourceType={audio.liveSourceType}
         canUseSystemAudio={audio.canUseSystemAudio}
@@ -103,6 +97,13 @@ export function LiveModeUIClient({ preloadedPresets, preloadedPlaylists }: LiveM
         isRecording={isRecording}
         recordingDuration={recordingDuration}
         onRecordToggle={handleRecordToggle}
+        recordDisabled={!audio.isConnected}
+      />
+
+      <BottomControlBar
+        currentCameraMode={cameraMode.mode}
+        onCameraModeChange={cameraMode.setMode}
+        isCameraTransitioning={cameraMode.isTransitioning}
       />
 
       {/* Hide when scene mode with no scene selected (showing centered selector) */}

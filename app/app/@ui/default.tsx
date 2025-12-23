@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useRef, useMemo, useEffect } from "react";
-import { BottomControlBar, TopToolbar } from "@/components/layout";
+import { useCallback, useMemo, useEffect } from "react";
+import { BottomControlBar, TopControlBar } from "@/components/layout";
 import { PermissionDialog } from "@/components/PermissionDialog";
 import { MicPermissionDialog } from "@/components/MicPermissionDialog";
 import { AudioConnectOverlay } from "@/components/audio/AudioConnectOverlay";
@@ -26,7 +26,6 @@ export default function LiveModeUI() {
   }, [setMode]);
 
   const cameraMode = useCameraMode();
-  const canvasContainerRef = useRef<HTMLDivElement>(null);
 
   // Scene data for audio
   const { scene } = usePublicSceneWithDetails(sceneId ?? "");
@@ -68,7 +67,7 @@ export default function LiveModeUI() {
     if (isRecording) {
       stopRecording();
     } else {
-      const canvas = canvasContainerRef.current?.querySelector("canvas");
+      const canvas = document.querySelector("canvas");
       const stream = audio.getRecordingStream();
       if (canvas && stream) {
         startRecording(canvas, stream);
@@ -78,13 +77,7 @@ export default function LiveModeUI() {
 
   return (
     <>
-      <TopToolbar
-        currentCameraMode={cameraMode.mode}
-        onCameraModeChange={cameraMode.setMode}
-        isCameraTransitioning={cameraMode.isTransitioning}
-      />
-
-      <BottomControlBar
+      <TopControlBar
         isAudioConnected={audio.isConnected}
         audioSourceType={audio.liveSourceType}
         canUseSystemAudio={audio.canUseSystemAudio}
@@ -93,6 +86,13 @@ export default function LiveModeUI() {
         isRecording={isRecording}
         recordingDuration={recordingDuration}
         onRecordToggle={handleRecordToggle}
+        recordDisabled={!audio.isConnected}
+      />
+
+      <BottomControlBar
+        currentCameraMode={cameraMode.mode}
+        onCameraModeChange={cameraMode.setMode}
+        isCameraTransitioning={cameraMode.isTransitioning}
       />
 
       {/* Hide when scene mode with no scene selected (showing centered selector) */}
