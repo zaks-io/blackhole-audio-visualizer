@@ -9,9 +9,46 @@ if (!process.env.OPENROUTER_API_KEY) {
   throw new Error("OPENROUTER_API_KEY is not set");
 }
 
-// Initialize OpenRouter provider
+// Trace-flow utilities for LLM observability
+// traceId: generated ONCE per user request, shared across all calls in workflow
+// spanId: generated fresh for EACH LLM call
+// operation: labels the type of call for filtering in trace-flow UI
+
+export function generateTraceId(): string {
+  return Array.from(crypto.getRandomValues(new Uint8Array(16)))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+function generateSpanId(): string {
+  return Array.from(crypto.getRandomValues(new Uint8Array(8)))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+export function createTraceHeaders(traceId: string, operation: string): Record<string, string> {
+  if (!process.env.TRACEFLOW_API_KEY) return {};
+
+  const spanId = generateSpanId();
+  return {
+    "X-Trace-Flow-Api-Key": process.env.TRACEFLOW_API_KEY,
+    traceparent: `00-${traceId}-${spanId}-01`,
+    baggage: `operation=${operation}`,
+  };
+}
+
+// Custom context type for trace propagation
+export type TraceCtx = {
+  traceId?: string;
+};
+
+// Initialize OpenRouter provider (routes through trace-flow gateway when API key is set)
+// Note: headers are passed per-request, not globally, to support trace correlation
 const openrouter = createOpenRouter({
   apiKey: process.env.OPENROUTER_API_KEY!,
+  baseURL: process.env.TRACEFLOW_API_KEY
+    ? "https://gateway.trace-flow.dev/openrouter/v1"
+    : undefined,
 });
 
 // Composition plan section schema for validation (using Zod)
@@ -422,6 +459,9 @@ ${args.customInstructions ? `## Custom Instructions\n${args.customInstructions}`
       schema: playlistOutputSchema,
       system: VISUALIZATION_INSTRUCTIONS,
       prompt,
+      headers: (ctx as TraceCtx).traceId
+        ? createTraceHeaders((ctx as TraceCtx).traceId!, "visualization-generation")
+        : {},
     });
 
     const generatedPresets: GeneratedPreset[] = result.object.presets;
@@ -772,7 +812,7 @@ const updateScene = createTool({
 });
 
 // Scene Agent (Kimi K2 Thinking)
-export const sceneAgent = new Agent(components.agent, {
+export const sceneAgent = new Agent<TraceCtx>(components.agent, {
   name: "Scene Agent",
   languageModel: openrouter.chat("moonshotai/kimi-k2-thinking"),
   instructions: SCENE_AGENT_INSTRUCTIONS,

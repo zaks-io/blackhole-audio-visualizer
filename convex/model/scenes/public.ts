@@ -2,7 +2,7 @@ import { mutation, query, action, internalMutation, internalQuery } from "../../
 import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
 import { internal, components } from "../../_generated/api";
-import { sceneAgent } from "./agents";
+import { sceneAgent, generateTraceId, createTraceHeaders } from "./agents";
 import { listUIMessages, syncStreams, vStreamArgs } from "@convex-dev/agent";
 import { stepCountIs, ModelMessage } from "ai";
 
@@ -360,10 +360,17 @@ export const sendSceneMessage = action({
       tokenIdentifier: identity.tokenIdentifier,
     });
 
+    // Generate traceId for this request - shared across all LLM calls in this workflow
+    const traceId = generateTraceId();
+
     await sceneAgent.streamText(
-      ctx,
+      { ...ctx, traceId },
       { threadId, userId: user?._id },
-      { prompt, stopWhen: stepCountIs(10) },
+      {
+        prompt,
+        stopWhen: stepCountIs(10),
+        headers: createTraceHeaders(traceId, "scene-agent"),
+      },
       {
         saveStreamDeltas: true,
         contextHandler: async (ctx, args) => {
@@ -433,6 +440,9 @@ export const startSongGeneration = action({
   },
   handler: async (ctx, { songId }): Promise<{ success: boolean }> => {
     await requireAdmin(ctx);
+
+    // Generate traceId for this request - shared across all LLM calls in this workflow
+    const traceId = generateTraceId();
 
     // Get the song record
     const song = await ctx.runQuery(internal.model.scenes.public.getSongInternal, { songId });
@@ -586,9 +596,12 @@ export const startSongGeneration = action({
 
       // Continue agent to generate visualization
       await sceneAgent.streamText(
-        ctx,
+        { ...ctx, traceId },
         { threadId: song.threadId },
-        { stopWhen: stepCountIs(30) },
+        {
+          stopWhen: stepCountIs(30),
+          headers: createTraceHeaders(traceId, "song-generation"),
+        },
         { saveStreamDeltas: true }
       );
 
@@ -643,9 +656,12 @@ export const startSongGeneration = action({
 
       // Continue agent with error context
       await sceneAgent.streamText(
-        ctx,
+        { ...ctx, traceId },
         { threadId: song.threadId },
-        { stopWhen: stepCountIs(30) },
+        {
+          stopWhen: stepCountIs(30),
+          headers: createTraceHeaders(traceId, "song-generation"),
+        },
         { saveStreamDeltas: true }
       );
 
