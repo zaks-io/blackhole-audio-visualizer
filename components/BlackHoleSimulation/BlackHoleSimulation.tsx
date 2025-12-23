@@ -86,13 +86,7 @@ export function BlackHoleSimulation({
   );
 
   // These values only affect useEffects, use individual selectors
-  const colorPalette = useVisualizationControls((s) => s.colorPalette);
   const onsetDecay = useVisualizationControls((s) => s.onsetDecay);
-
-  // Sync color palette changes to colorMode
-  useEffect(() => {
-    colorMode.setPalette(colorPalette);
-  }, [colorPalette, colorMode]);
 
   // Sync onset decay changes
   useEffect(() => {
@@ -362,7 +356,6 @@ export function BlackHoleSimulation({
       <ParticleSystem
         key={textureSize}
         allColors={colorMode.allColors}
-        paletteOffset={colorMode.paletteOffset}
         getAudioData={getAudioData}
         audioEnabled={isAudioConnected}
         getBlackHoleData={getBlackHoleData}

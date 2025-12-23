@@ -31,7 +31,6 @@ interface BlackHoleData {
 
 interface ParticleSystemProps {
   allColors?: string[];
-  paletteOffset?: number;
   getAudioData: () => ParticleAudioData;
   audioEnabled: boolean;
   getBlackHoleData: () => BlackHoleData;
@@ -40,7 +39,6 @@ interface ParticleSystemProps {
 
 export function ParticleSystem({
   allColors = DEFAULT_ALL_COLORS,
-  paletteOffset = 0,
   getAudioData,
   audioEnabled,
   getBlackHoleData,
@@ -137,9 +135,9 @@ export function ParticleSystem({
   } | null>(null);
 
   const quadGeometry = useMemo(() => {
-    // Multi-segment trail: 8 rows x 2 columns = 16 vertices, 7 segments
+    // Multi-segment trail: 16 rows x 2 columns = 32 vertices, 15 segments
     // Row y positions map to Catmull-Rom spline parameter t: 0 (tail) to 1 (head)
-    const rows = 8;
+    const rows = 16;
     const quadPositions = new Float32Array(rows * 2 * 3);
     const quadUVs = new Float32Array(rows * 2 * 2);
 
@@ -365,7 +363,7 @@ export function ParticleSystem({
     // Dirty updates: only touch GPU uniforms when values actually change
     if (!prevControlsRef.current) {
       prevControlsRef.current = {
-        paletteOffset,
+        paletteOffset: state.colorPaletteOffset,
         gravity: state.gravity,
         timeScale: state.timeScale,
         eventHorizonRadius: state.eventHorizonRadius,
@@ -386,7 +384,7 @@ export function ParticleSystem({
         lifetimeGravityMultiplier: state.lifetimeGravityMultiplier,
       };
 
-      setPaletteOffset(paletteOffset);
+      setPaletteOffset(state.colorPaletteOffset);
       setGravitationalParameter(state.gravity);
       setTimeScale(state.timeScale);
       setEventHorizon(state.eventHorizonRadius);
@@ -407,9 +405,9 @@ export function ParticleSystem({
       setLifetimeGravityMultiplier(state.lifetimeGravityMultiplier);
     } else {
       const prev = prevControlsRef.current;
-      if (prev.paletteOffset !== paletteOffset) {
-        prev.paletteOffset = paletteOffset;
-        setPaletteOffset(paletteOffset);
+      if (prev.paletteOffset !== state.colorPaletteOffset) {
+        prev.paletteOffset = state.colorPaletteOffset;
+        setPaletteOffset(state.colorPaletteOffset);
       }
       if (prev.gravity !== state.gravity) {
         prev.gravity = state.gravity;

@@ -158,7 +158,7 @@ void main() {
     rightView = rightView / rightLen;
 
     // Width in view space - scale with uBaseSize
-    float baseWidth = uBaseSize * 0.2;
+    float baseWidth = uBaseSize * 1.0;
     float taperT = pow(t, 0.5);
     float halfW = baseWidth * (0.3 + 0.7 * taperT);
 

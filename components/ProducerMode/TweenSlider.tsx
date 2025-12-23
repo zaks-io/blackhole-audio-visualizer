@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, memo } from "react";
 import { HelpCircle } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { TweenSliderTrack } from "./TweenSliderTrack";
@@ -11,7 +11,7 @@ interface TweenSliderProps {
   config: ParameterConfig;
 }
 
-export function TweenSlider({ config }: TweenSliderProps) {
+export const TweenSlider = memo(function TweenSlider({ config }: TweenSliderProps) {
   const {
     currentValue,
     targetValue: storeTargetValue,
@@ -89,4 +89,4 @@ export function TweenSlider({ config }: TweenSliderProps) {
       </div>
     </TooltipProvider>
   );
-}
+});

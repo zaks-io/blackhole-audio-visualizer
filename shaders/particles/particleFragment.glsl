@@ -25,15 +25,15 @@ void main() {
 
     // Simple soft teardrop: ellipse that tapers toward tail
     // Use polar-ish distance from center, stretched along y
-    float centerY = 0.6;  // Center of the teardrop shape
-    float dy = (t - centerY) * 0.8;  // Compressed y distance
-    float dx = x * 2.0;  // Stretched x for narrower shape
+    float centerY = 0.5;  // Center of shape - equal room front/back
+    float dy = (t - centerY) * 1.0;  // Balanced vertical
+    float dx = x * 3.0;  // Tighter horizontal
 
     // Elliptical distance
     float dist = length(vec2(dx, dy));
 
-    // Soft falloff
-    float shapeAlpha = exp(-dist * dist * 4.0);
+    // Soft falloff - steeper to avoid edge cropping
+    float shapeAlpha = exp(-dist * dist * 14.0);
 
     // Extra fade toward tail
     float tailFade = smoothstep(0.0, 0.3, t);

@@ -1,11 +1,7 @@
-import { useState, useCallback, useRef, useMemo } from "react";
-import {
-  PALETTES,
-  PALETTE_IDS,
-  PALETTE_OFFSETS,
-  getAllColors,
-  type ColorPaletteId,
-} from "./colorPalettes";
+import { useCallback, useRef, useMemo, useEffect } from "react";
+import { PALETTE_IDS, PALETTE_OFFSETS, getAllColors, type ColorPaletteId } from "./colorPalettes";
+import { useVisualizationControls } from "@/hooks/useVisualizationControls";
+import { setRuntimeValue } from "@/lib/runtimeStateRegistry";
 
 interface UseColorModeReturn {
   paletteId: ColorPaletteId;
@@ -16,23 +12,45 @@ interface UseColorModeReturn {
 }
 
 export function useColorMode(): UseColorModeReturn {
-  const [paletteId, setPaletteId] = useState<ColorPaletteId>("grayscale");
+  // DON'T subscribe to Zustand - causes parent re-renders that cascade to 3D components
+  // Instead use ref that's synced outside React's render cycle
+  const paletteIdRef = useRef<ColorPaletteId>(useVisualizationControls.getState().colorPalette);
+
+  // Subscribe to store changes OUTSIDE of React's render cycle
+  // This updates the ref without causing re-renders
+  useEffect(() => {
+    const unsub = useVisualizationControls.subscribe((state) => {
+      if (state.colorPalette !== paletteIdRef.current) {
+        paletteIdRef.current = state.colorPalette;
+        // Update runtimeState for GPU
+        setRuntimeValue("colorPaletteOffset", PALETTE_OFFSETS[state.colorPalette]);
+      }
+    });
+    return unsub;
+  }, []);
+
   const lastTriggerTimeRef = useRef(0);
   const silenceStartRef = useRef<number | null>(null);
 
   // Memoize to avoid creating new array on every render
   const allColors = useMemo(() => getAllColors(), []);
-  const paletteOffset = PALETTE_OFFSETS[paletteId];
+  // Return offset from ref (stable, doesn't cause re-renders)
+  const paletteOffset = PALETTE_OFFSETS[paletteIdRef.current];
 
   const setPalette = useCallback((newId: ColorPaletteId) => {
-    setPaletteId(newId);
+    paletteIdRef.current = newId;
+    // Update runtimeState for GPU (immediate, no re-render)
+    setRuntimeValue("colorPaletteOffset", PALETTE_OFFSETS[newId]);
+    // Update Zustand for persistence/UI (will be picked up by subscription)
+    useVisualizationControls.getState().set("colorPalette", newId);
   }, []);
 
   const triggerRandomPalette = useCallback(() => {
-    const otherIds = PALETTE_IDS.filter((id) => id !== paletteId);
+    const currentId = paletteIdRef.current;
+    const otherIds = PALETTE_IDS.filter((id) => id !== currentId);
     const randomId = otherIds[Math.floor(Math.random() * otherIds.length)];
-    setPaletteId(randomId);
-  }, [paletteId]);
+    setPalette(randomId);
+  }, [setPalette]);
 
   const processBeat = useCallback(
     (intensity: number, time: number) => {
@@ -65,7 +83,7 @@ export function useColorMode(): UseColorModeReturn {
   );
 
   return {
-    paletteId,
+    paletteId: paletteIdRef.current,
     paletteOffset,
     allColors,
     setPalette,

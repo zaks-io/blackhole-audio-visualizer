@@ -77,6 +77,7 @@ interface VisualizationControlsActions {
   ) => void;
   get: <K extends keyof VisualizationControlsState>(key: K) => VisualizationControlsState[K];
   setByPath: (path: string, value: unknown) => void;
+  batchSetByPath: (updates: Array<{ path: string; value: unknown }>) => void;
   getByPath: (path: string) => unknown;
   reset: () => void;
 }
@@ -168,9 +169,9 @@ const DEFAULT_STATE: VisualizationControlsState = {
   softening: 1.0,
   orbitDecay: 1,
   iscoStrength: 0.5,
-  lifetimeGracePeriod: 30,
+  lifetimeGracePeriod: 90,
   lifetimeMax: 60,
-  lifetimeGravityMultiplier: 3.0,
+  lifetimeGravityMultiplier: 10,
 
   // Emitters defaults
   emitRadius: 200,
@@ -196,7 +197,7 @@ const DEFAULT_STATE: VisualizationControlsState = {
 
   // Post-Processing defaults
   bloomEnabled: true,
-  bloomBaseIntensity: 0.5,
+  bloomBaseIntensity: 1,
   bloomAudioReactivity: 1,
   chromaticEnabled: true,
   chromaticAudioReactivity: 1,
@@ -221,6 +222,19 @@ export const useVisualizationControls = create<VisualizationControlsStore>((set,
     }
   },
 
+  batchSetByPath: (updates) => {
+    const changes: Partial<VisualizationControlsState> = {};
+    for (const { path, value } of updates) {
+      const key = pathToKey[path];
+      if (key) {
+        (changes as Record<string, unknown>)[key] = value;
+      }
+    }
+    if (Object.keys(changes).length > 0) {
+      set(changes);
+    }
+  },
+
   getByPath: (path) => {
     const key = pathToKey[path];
     if (key) {
@@ -233,10 +247,53 @@ export const useVisualizationControls = create<VisualizationControlsStore>((set,
 }));
 
 // Sync store changes to runtime state for render loop access
-// This subscription runs after store updates to keep runtime state in sync
+// This subscription tracks which keys changed and only syncs those (performance optimization)
+
+// Flag to skip sync during playback (runtime state is already updated via callGPUSetter)
+let skipNextSync = false;
+export function setSkipNextSync(skip: boolean) {
+  skipNextSync = skip;
+}
+
+// Debug timing flag
+const getTimingDebug = () =>
+  typeof window !== "undefined" && new URLSearchParams(window.location.search).has("timingDebug");
+
+let prevState = useVisualizationControls.getState();
 useVisualizationControls.subscribe((state) => {
-  syncFromStore(state);
+  const timing = getTimingDebug();
+  if (timing) performance.mark("store-subscription-start");
+
+  // Skip sync if flag is set (playback already updated runtime state)
+  if (skipNextSync) {
+    skipNextSync = false;
+    prevState = state;
+    if (timing) console.log("[TIMING] Skipped syncFromStore (playback mode)");
+    return;
+  }
+
+  const changedKeys = new Set<string>();
+  for (const key of Object.keys(state) as Array<keyof VisualizationControlsState>) {
+    if (state[key] !== prevState[key]) {
+      changedKeys.add(key);
+    }
+  }
+  if (changedKeys.size > 0) {
+    if (timing) performance.mark("syncFromStore-start");
+    syncFromStore(state, changedKeys);
+    if (timing) {
+      performance.mark("syncFromStore-end");
+      performance.measure("syncFromStore", "syncFromStore-start", "syncFromStore-end");
+      console.log(`[TIMING] syncFromStore: ${changedKeys.size} keys changed`);
+    }
+  }
+  prevState = state;
+
+  if (timing) {
+    performance.mark("store-subscription-end");
+    performance.measure("store-subscription", "store-subscription-start", "store-subscription-end");
+  }
 });
 
-// Initialize runtime state with current store values
+// Initialize runtime state with current store values (full sync on load)
 syncFromStore(useVisualizationControls.getState());
