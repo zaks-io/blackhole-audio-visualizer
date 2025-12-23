@@ -63,10 +63,13 @@ export function usePlayPreset() {
         const ref: TweenRef = { path: param.path, tween: null! as gsap.core.Tween, state };
         tweensRef.current.push(ref);
 
+        // Handle durations stored as milliseconds (legacy/AI-generated) vs seconds
+        // If duration > 100, assume it's milliseconds and convert to seconds
+        const durationInSeconds = param.duration > 100 ? param.duration / 1000 : param.duration;
         const tween = gsap.to(state, {
           value: param.value,
           progress: 1,
-          duration: param.duration,
+          duration: durationInSeconds,
           ease: param.ease,
           onUpdate: () => {
             setAnimatingValue(param.path, state.value);
