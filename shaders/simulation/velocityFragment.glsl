@@ -295,10 +295,20 @@ void main() {
             else if (lobeDepth > lobeThreshold) {
                 // DRIFT ZONE - deep in lobe but outside ISCO
                 float driftStrength = (lobeDepth - lobeThreshold) / (1.0 - lobeThreshold);
-                driftStrength *= uISCOStrength * 2.0; // Stronger than original 0.5
+                driftStrength *= uISCOStrength * 2.0;
                 vel += toDominant * driftStrength * uDeltaTime;
             }
-            // Near L-points (lobeDepth < 0.3): N-body gravity creates chaotic transfers
+            // L-point speed cap only - no damping (damping traps particles at barycenter)
+            float lPointProximity = max(0.0, 1.0 - lobeDepth / lobeThreshold);
+
+            if (lPointProximity > 0.0) {
+                float avgMass = totalPotential * (uEmissionRadius + uSoftening);
+                float maxLPointSpeed = sqrt(avgMass / (uEmissionRadius + uSoftening)) * 0.5;
+                float speed = length(vel);
+                if (speed > maxLPointSpeed) {
+                    vel *= maxLPointSpeed / speed;
+                }
+            }
         }
         else if (uBlackHoleCount == 1 && uISCOStrength > 0.0) {
             // Single black hole: Original ISCO physics

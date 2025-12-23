@@ -7,15 +7,15 @@ varying float vStreakRatio;
 uniform float uMaxDistance;
 uniform float uBrightness;
 uniform float uAlpha;
-uniform float uEventHorizon;
-uniform float uISCORadius;
 uniform float uMotionBlurTaper;
 uniform float uMotionBlurFade;
 
 void main() {
     // Distance fades
-    float distanceFade = smoothstep(uEventHorizon, uISCORadius, vDistance);
-    float horizonAlpha = step(uEventHorizon, vDistance);
+    float effectiveRadius = 0.0;
+    float fadeStart = 2.0;
+    float distanceFade = smoothstep(effectiveRadius, fadeStart, vDistance);
+    float horizonAlpha = step(effectiveRadius, vDistance);
 
     // UV.y: 0 = tail, 1 = head
     float t = vUV.y;

@@ -9,6 +9,7 @@ import { runtimeState } from "@/lib/runtimeStateRegistry";
 interface BlackHoleData {
   positions: THREE.Vector3[];
   masses: number[];
+  radii: number[];
   count: number;
 }
 
@@ -24,21 +25,15 @@ export function BlackHole({ beatIntensityRef, blackHoleDataRef, index }: BlackHo
   useFrame(() => {
     if (!meshRef.current || !blackHoleDataRef.current) return;
 
-    // Read from runtimeState instead of store for performance during tweens
-    const { eventHorizonRadius, beatPulse, gravity, blackHoleMassMax } = runtimeState;
+    const { beatPulse } = runtimeState;
     const bhData = blackHoleDataRef.current;
 
-    // Use pre-computed position from parent (already calculated in BlackHoleSimulation.useFrame)
     if (index < bhData.count) {
       meshRef.current.position.copy(bhData.positions[index]);
 
-      // Calculate scale from mass - mass is already computed by parent
-      const mass = bhData.masses[index];
-      const massRatio = gravity > 0 ? mass / (gravity * blackHoleMassMax) : 1;
-
-      // Update scale with beat pulse
+      // Use pre-computed radius from parent, apply beat pulse
       const pulse = 1 + (beatIntensityRef.current ?? 0) * beatPulse;
-      meshRef.current.scale.setScalar(eventHorizonRadius * massRatio * pulse);
+      meshRef.current.scale.setScalar(bhData.radii[index] * pulse);
     }
   });
 

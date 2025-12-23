@@ -100,6 +100,7 @@ export function BlackHoleSimulation({
   const blackHoleDataRef = useRef<{
     positions: THREE.Vector3[];
     masses: number[];
+    radii: number[];
     count: number;
   } | null>(null);
 
@@ -114,10 +115,13 @@ export function BlackHoleSimulation({
       new THREE.Vector3(0, 0, 0),
     ];
     const masses = [0, 0, 0, 0];
+    const radii = [0, 0, 0, 0];
+    const maxMass = initial.gravity * initial.blackHoleMassMax;
 
     if (initialCount === 1) {
       positions[0].set(0, 0, 0);
-      masses[0] = initial.gravity * initial.blackHoleMassMax;
+      masses[0] = maxMass;
+      radii[0] = initial.eventHorizonRadius;
     } else {
       const angleStep = (2 * Math.PI) / initialCount;
       const totalMass = initial.gravity;
@@ -143,15 +147,17 @@ export function BlackHoleSimulation({
         const r = effectiveOrbitRadius * (avgMassRatio / massRatio);
         positions[i].set(Math.cos(angle) * r, 0, Math.sin(angle) * r);
         masses[i] = mass;
+        radii[i] = initial.eventHorizonRadius * (mass / maxMass);
       }
     }
 
     for (let i = initialCount; i < 4; i++) {
       positions[i].set(0, 0, 0);
       masses[i] = 0;
+      radii[i] = 0;
     }
 
-    blackHoleDataRef.current = { positions, masses, count: initialCount };
+    blackHoleDataRef.current = { positions, masses, radii, count: initialCount };
   }
 
   // Subscribe to blackHoleCount for reactive rendering of BlackHole components
@@ -207,13 +213,16 @@ export function BlackHoleSimulation({
     const bh = blackHoleDataRef.current!;
     const positions = bh.positions;
     const masses = bh.masses;
+    const radii = bh.radii;
     // Hard cap to shader/compute limit
     const count = Math.max(1, Math.min(Math.floor(bhCount), 4));
+    const maxMass = gravity * blackHoleMassMax;
 
     if (count === 1) {
       // Single black hole at origin
       positions[0].set(0, 0, 0);
-      masses[0] = gravity * blackHoleMassMax;
+      masses[0] = maxMass;
+      radii[0] = eventHorizonRadius;
     } else {
       // Multi-body: distribute around center of mass in circular orbit
       const angleStep = (2 * Math.PI) / count;
@@ -246,6 +255,7 @@ export function BlackHoleSimulation({
 
         positions[i].set(x, 0, z);
         masses[i] = mass;
+        radii[i] = eventHorizonRadius * (mass / maxMass);
       }
     }
 
@@ -253,6 +263,7 @@ export function BlackHoleSimulation({
     for (let i = count; i < 4; i++) {
       positions[i].set(0, 0, 0);
       masses[i] = 0;
+      radii[i] = 0;
     }
     bh.count = count;
 

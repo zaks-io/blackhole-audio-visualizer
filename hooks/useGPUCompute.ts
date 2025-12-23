@@ -40,6 +40,7 @@ export function useGPUCompute(
   // Stable buffers for black hole uniforms (avoid per-frame allocations).
   const blackHolePosRef = useRef<THREE.Vector3[] | null>(null);
   const blackHoleMassRef = useRef<number[] | null>(null);
+  const blackHoleRadiusRef = useRef<number[] | null>(null);
   // Position history for motion blur trails (ring buffer: history2 <- history1 <- prev <- current)
   const positionHistory1RTRef = useRef<THREE.WebGLRenderTarget | null>(null);
   const positionHistory2RTRef = useRef<THREE.WebGLRenderTarget | null>(null);
@@ -163,10 +164,13 @@ export function useGPUCompute(
       new THREE.Vector3(0, 0, 0),
     ];
     const bhMass = [DEFAULT_GM, DEFAULT_GM * 0.5, DEFAULT_GM * 0.3, DEFAULT_GM * 0.2];
+    const bhRadius = [5, 5, 5, 5];
     blackHolePosRef.current = bhPos;
     blackHoleMassRef.current = bhMass;
+    blackHoleRadiusRef.current = bhRadius;
     positionVariable.material.uniforms.uBlackHolePos = { value: bhPos };
     positionVariable.material.uniforms.uBlackHoleMass = { value: bhMass };
+    positionVariable.material.uniforms.uBlackHoleRadius = { value: bhRadius };
     positionVariable.material.uniforms.uBlackHoleCount = { value: 1 };
 
     // Store refs to textures for updates
@@ -244,9 +248,11 @@ export function useGPUCompute(
 
     // Initialize black holes consistently with `BlackHoleSimulation` at t=0
     const bhCount = Math.max(1, Math.min(Math.floor(initial.blackHoleCount), 4));
+    const maxMass = initial.gravity * initial.blackHoleMassMax;
     if (bhCount === 1) {
       bhPos[0].set(0, 0, 0);
-      bhMass[0] = initial.gravity * initial.blackHoleMassMax;
+      bhMass[0] = maxMass;
+      bhRadius[0] = initial.eventHorizonRadius;
     } else {
       const angleStep = (2 * Math.PI) / bhCount;
       const totalMass = initial.gravity;
@@ -266,11 +272,13 @@ export function useGPUCompute(
         const r = initial.orbitRadius * (avgMassRatio / massRatio);
         bhPos[i].set(Math.cos(angle) * r, 0, Math.sin(angle) * r);
         bhMass[i] = mass;
+        bhRadius[i] = initial.eventHorizonRadius * (mass / maxMass);
       }
     }
     for (let i = bhCount; i < 4; i++) {
       bhPos[i].set(0, 0, 0);
       bhMass[i] = 0;
+      bhRadius[i] = 0;
     }
     positionVariable.material.uniforms.uBlackHoleCount.value = bhCount;
     velocityVariable.material.uniforms.uBlackHoleCount.value = bhCount;
@@ -346,6 +354,7 @@ export function useGPUCompute(
       bandOnsetsTextureRef.current = null;
       blackHolePosRef.current = null;
       blackHoleMassRef.current = null;
+      blackHoleRadiusRef.current = null;
 
       // Dispose history resources
       positionHistory1RTRef.current?.dispose();
@@ -700,10 +709,11 @@ export function useGPUCompute(
   }, []);
 
   const setBlackHoles = useCallback(
-    (positions: THREE.Vector3[], masses: number[], count: number) => {
+    (positions: THREE.Vector3[], masses: number[], radii: number[], count: number) => {
       const targetPos = blackHolePosRef.current;
       const targetMass = blackHoleMassRef.current;
-      if (!targetPos || !targetMass) return;
+      const targetRadius = blackHoleRadiusRef.current;
+      if (!targetPos || !targetMass || !targetRadius) return;
 
       const clampedCount = Math.max(1, Math.min(Math.floor(count), 4));
       for (let i = 0; i < 4; i++) {
@@ -715,16 +725,25 @@ export function useGPUCompute(
             targetPos[i].set(0, 0, 0);
           }
           targetMass[i] = masses[i] ?? 0;
+          targetRadius[i] = radii[i] ?? 0;
         } else {
           targetPos[i].set(0, 0, 0);
           targetMass[i] = 0;
+          targetRadius[i] = 0;
         }
       }
 
+      // Explicitly reassign all uniform values to trigger GPU upload
+      // (vec3 array setters in Three.js have no mutation detection)
       if (positionVariableRef.current) {
+        positionVariableRef.current.material.uniforms.uBlackHolePos.value = targetPos;
+        positionVariableRef.current.material.uniforms.uBlackHoleMass.value = targetMass;
+        positionVariableRef.current.material.uniforms.uBlackHoleRadius.value = targetRadius;
         positionVariableRef.current.material.uniforms.uBlackHoleCount.value = clampedCount;
       }
       if (velocityVariableRef.current) {
+        velocityVariableRef.current.material.uniforms.uBlackHolePos.value = targetPos;
+        velocityVariableRef.current.material.uniforms.uBlackHoleMass.value = targetMass;
         velocityVariableRef.current.material.uniforms.uBlackHoleCount.value = clampedCount;
       }
     },

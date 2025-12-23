@@ -25,6 +25,7 @@ uniform float uSpawnBurst;
 // Multi-black hole uniforms
 uniform vec3 uBlackHolePos[MAX_BLACK_HOLES];
 uniform float uBlackHoleMass[MAX_BLACK_HOLES];
+uniform float uBlackHoleRadius[MAX_BLACK_HOLES];
 uniform int uBlackHoleCount;
 
 // 1D hash that explicitly breaks grid correlation by combining x and y
@@ -53,7 +54,7 @@ void main() {
     float lifetime = posData.w;
     vec3 vel = velData.xyz;
 
-    if (lifetime < 0.0) {
+    if (lifetime <= 0.0) {
         // PASS 1: keep queued particles unchanged to avoid bunching spawns into the same frame.
         // PASS 2 (drift pass): advance the spawn queue with a doubled dt to preserve overall spawn rate.
         if (!uDoDrift) {
@@ -119,14 +120,50 @@ void main() {
         // PASS 1 (no drift): keep alive particles unchanged.
         // Recycling checks are safe to run on the drift pass, since positions only change there.
     } else {
-        // Check event horizon against ALL black holes
+        // DRIFT: compute new position first
+        vec3 newPos = pos + vel * uDeltaTime;
+
+        // Check if path intersects ANY black hole (ray-sphere intersection)
+        // This prevents fast particles from tunneling through
         bool shouldRecycle = false;
+        vec3 rayDir = newPos - pos;
+        float rayLen = length(rayDir);
+
         for (int i = 0; i < MAX_BLACK_HOLES; i++) {
             if (i >= uBlackHoleCount) break;
-            float dist = length(pos - uBlackHolePos[i]);
-            if (dist < uEventHorizon) {
+
+            // Recycle very close to center (matches fragment shader effectiveRadius=0, fadeStart=2)
+            float radius = 0.5;
+            if (uBlackHoleRadius[i] <= 0.0) continue;
+
+            // Check if new position is inside (handles slow particles)
+            if (length(newPos - uBlackHolePos[i]) < radius) {
                 shouldRecycle = true;
                 break;
+            }
+
+            // Ray-sphere intersection for fast particles
+            if (rayLen > 0.001) {
+                vec3 d = rayDir / rayLen; // normalized direction
+                vec3 oc = pos - uBlackHolePos[i];
+                float b = dot(oc, d);
+                float c = dot(oc, oc) - radius * radius;
+                float discriminant = b * b - c;
+
+                if (discriminant >= 0.0) {
+                    // Check entry point
+                    float t = -b - sqrt(discriminant);
+                    if (t >= 0.0 && t <= rayLen) {
+                        shouldRecycle = true;
+                        break;
+                    }
+                    // Check exit point (in case we started inside)
+                    t = -b + sqrt(discriminant);
+                    if (t >= 0.0 && t <= rayLen) {
+                        shouldRecycle = true;
+                        break;
+                    }
+                }
             }
         }
 
@@ -136,7 +173,7 @@ void main() {
         }
 
         if (shouldRecycle) {
-            // HIT CENTER or MAX LIFETIME: recycle to emitter queue
+            // HIT BLACK HOLE or MAX LIFETIME: recycle to emitter queue
             float recycleRand = hash2(uv, uTime + 500.0);
             if (uParticlesPerSecond <= 0.0) {
                 lifetime = 0.0;  // Instant respawn
@@ -144,11 +181,9 @@ void main() {
                 lifetime = -recycleRand;  // 0 to -1 second queue position
             }
             pos = vec3(0.0, 0.0, 0.0);  // Reset position for recycled particles
-        } else if (uDoDrift) {
-            // DRIFT: update position using velocity
-            pos = pos + vel * uDeltaTime;
-
-            // Age the particle
+        } else {
+            // No collision: commit new position
+            pos = newPos;
             lifetime += uDeltaTime;
         }
     }

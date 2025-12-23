@@ -26,6 +26,7 @@ interface ParticleAudioData {
 interface BlackHoleData {
   positions: THREE.Vector3[];
   masses: number[];
+  radii: number[];
   count: number;
 }
 
@@ -130,8 +131,6 @@ export function ParticleSystem({
     brightness: number;
     alpha: number;
     maxDistance: number;
-    eventHorizonRadius: number;
-    iscoRadius: number;
   } | null>(null);
 
   const quadGeometry = useMemo(() => {
@@ -241,8 +240,6 @@ export function ParticleSystem({
       uColorLUT: { value: colorLUT.tex },
       uColorLUTSize: { value: colorLUT.size },
       uMaxDistance: { value: initialControls.maxDistance },
-      uEventHorizon: { value: initialControls.eventHorizonRadius },
-      uISCORadius: { value: initialControls.eventHorizonRadius * initialControls.iscoRatio },
       uBlackHolePos: {
         value: [
           new THREE.Vector3(0, 0, 0),
@@ -293,8 +290,6 @@ export function ParticleSystem({
           brightness: state.brightness,
           alpha: state.alpha,
           maxDistance: state.maxDistance,
-          eventHorizonRadius: state.eventHorizonRadius,
-          iscoRadius,
         };
         materialRef.current.uniforms.uBaseSize.value = state.pointSize;
         materialRef.current.uniforms.uMotionBlurTaper.value = state.motionBlurTaper;
@@ -302,8 +297,6 @@ export function ParticleSystem({
         materialRef.current.uniforms.uBrightness.value = state.brightness;
         materialRef.current.uniforms.uAlpha.value = state.alpha;
         materialRef.current.uniforms.uMaxDistance.value = state.maxDistance;
-        materialRef.current.uniforms.uEventHorizon.value = state.eventHorizonRadius;
-        materialRef.current.uniforms.uISCORadius.value = iscoRadius;
       } else {
         const prevR = prevRenderUniformsRef.current;
         if (prevR.pointSize !== state.pointSize) {
@@ -329,14 +322,6 @@ export function ParticleSystem({
         if (prevR.maxDistance !== state.maxDistance) {
           prevR.maxDistance = state.maxDistance;
           materialRef.current.uniforms.uMaxDistance.value = state.maxDistance;
-        }
-        if (prevR.eventHorizonRadius !== state.eventHorizonRadius) {
-          prevR.eventHorizonRadius = state.eventHorizonRadius;
-          materialRef.current.uniforms.uEventHorizon.value = state.eventHorizonRadius;
-        }
-        if (prevR.iscoRadius !== iscoRadius) {
-          prevR.iscoRadius = iscoRadius;
-          materialRef.current.uniforms.uISCORadius.value = iscoRadius;
         }
       }
 
@@ -483,9 +468,14 @@ export function ParticleSystem({
       }
     }
 
-    // Update black hole positions and masses
+    // Update black hole positions, masses, and radii
     const blackHoleData = getBlackHoleData();
-    setBlackHoles(blackHoleData.positions, blackHoleData.masses, blackHoleData.count);
+    setBlackHoles(
+      blackHoleData.positions,
+      blackHoleData.masses,
+      blackHoleData.radii,
+      blackHoleData.count
+    );
 
     // Update render shader uniforms for black hole positions
     if (materialRef.current) {

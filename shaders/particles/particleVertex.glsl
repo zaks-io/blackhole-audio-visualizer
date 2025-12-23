@@ -82,7 +82,7 @@ void main() {
         p2 = p3;
     }
 
-    // Distance to nearest black hole (use current position)
+    // Distance to nearest black hole
     float nearestDist = 99999.0;
     for (int i = 0; i < MAX_BLACK_HOLES; i++) {
         if (i >= uBlackHoleCount) break;
