@@ -244,6 +244,18 @@ The visualizer renders a black hole with particles emitting from configurable po
 
 - Only owners can edit or delete scenes.
 
+## PRESET ADJUSTMENT
+
+After generating visualization, you can adjust individual presets:
+- Use readPlaylistPresets to see all presets with their timing
+- Use readPreset to see a specific preset's parameters in detail
+- Use updatePreset to modify visual settings (colorPalette, parameters, cameraMode) or timing (waitDuration)
+
+When the user asks to adjust the visualization:
+1. First call readPlaylistPresets to see current state
+2. Identify which preset(s) need changes
+3. Call updatePreset with the new values
+
 ## IMPORTANT
 
 - Consider how music syncs to the beat-reactive particle visualization
@@ -354,6 +366,10 @@ const generateVisualizationPlaylist = createTool({
   description:
     "Generate and save a visualization playlist synced to the song composition. Call this after the composition plan is finalized to create the visual experience. This will automatically create presets and a playlist in the database.",
   args: z.object({
+    customInstructions: z
+      .string()
+      .optional()
+      .describe("Custom instructions for the visualization playlist"),
     songId: z.string().describe("The ID of the song to generate a visualization playlist for"),
   }),
   handler: async (ctx, args) => {
@@ -380,12 +396,12 @@ const generateVisualizationPlaylist = createTool({
       currentTime += section.duration_ms;
       return sectionInfo;
     });
-    const totalDurationMs = currentTime;
 
-    const prompt: string = `Create a visualization playlist for the song "${song.name}".
+    const prompt: string = `# Visualization Playlist Instructions
+Create a visualization playlist for the song "${song.name}".
 
 ## Song Structure
-${JSON.stringify(sectionsWithTiming, null, 2)}
+${JSON.stringify(sectionsWithTiming)}
 
 ## Global Styles
 Positive: ${composition.positive_global_styles.join(", ")}
@@ -397,7 +413,8 @@ Negative (avoid): ${composition.negative_global_styles.join(", ")}
 3. Consider how sections transition into each other, e.g.
   - Make choruses visually impactful with high energy settings
   - Add a variety of settings to the presets to make the visualization more interesting.
-  - Keep intros/outros calmer and more atmospheric`;
+
+${args.customInstructions ? `## Custom Instructions\n${args.customInstructions}` : ""}`.trim();
 
     // Use generateObject with Gemini 3 Pro for structured output
     const result: GenerateObjectResult<PlaylistOutput> = await generateObject({
@@ -532,6 +549,190 @@ const createScene = createTool({
   },
 });
 
+// Tool: Read a single preset by ID
+const readPreset = createTool({
+  description:
+    "Read a preset's details by ID. Use this to see the current values of a specific preset before making changes.",
+  args: z.object({
+    presetId: z.string().describe("The ID of the preset to read"),
+  }),
+  handler: async (
+    ctx,
+    args
+  ): Promise<
+    | { action: "error"; error: string }
+    | {
+        action: "readPreset";
+        preset: {
+          id: Id<"presets">;
+          name: string;
+          colorPalette: string;
+          parameters: Array<{ path: string; value: number; duration: number; ease: string }>;
+          cameraMode: string | undefined;
+        };
+      }
+  > => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      return { action: "error", error: "Not authenticated" };
+    }
+    const user = await ctx.runQuery(internal.model.scenes.public.getUserByToken, {
+      tokenIdentifier: identity.tokenIdentifier as string,
+    });
+    if (!user) {
+      return { action: "error", error: "User not found" };
+    }
+    const preset = await ctx.runQuery(internal.model.scenes.internal.getPresetById, {
+      presetId: args.presetId as Id<"presets">,
+      userId: user._id,
+    });
+    if (!preset) {
+      return { action: "error", error: "Preset not found or access denied" };
+    }
+    return {
+      action: "readPreset",
+      preset: {
+        id: preset._id,
+        name: preset.name,
+        colorPalette: preset.colorPalette,
+        parameters: preset.parameters,
+        cameraMode: preset.cameraMode,
+      },
+    };
+  },
+});
+
+// Tool: Read all presets in a playlist with timing
+const readPlaylistPresets = createTool({
+  description:
+    "Read all presets in a playlist with their timing information. Use this to see the full visualization sequence and identify which presets to modify.",
+  args: z.object({
+    playlistId: z.string().describe("The ID of the playlist to read presets from"),
+  }),
+  handler: async (
+    ctx,
+    args
+  ): Promise<
+    | { action: "error"; error: string }
+    | {
+        action: "readPlaylistPresets";
+        playlistName: string;
+        presets: Array<{
+          index: number;
+          id: Id<"presets">;
+          name: string;
+          colorPalette: string;
+          cameraMode: string | undefined;
+          waitDuration: number;
+          parameters: Array<{ path: string; value: number; duration: number; ease: string }>;
+        }>;
+      }
+  > => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      return { action: "error", error: "Not authenticated" };
+    }
+    const user = await ctx.runQuery(internal.model.scenes.public.getUserByToken, {
+      tokenIdentifier: identity.tokenIdentifier as string,
+    });
+    if (!user) {
+      return { action: "error", error: "User not found" };
+    }
+    const result = await ctx.runQuery(internal.model.scenes.internal.getPlaylistWithPresets, {
+      playlistId: args.playlistId as Id<"playlists">,
+      userId: user._id,
+    });
+    if (!result) {
+      return { action: "error", error: "Playlist not found or access denied" };
+    }
+    return {
+      action: "readPlaylistPresets",
+      playlistName: result.playlist.name,
+      presets: result.presets
+        .filter((p): p is NonNullable<typeof p> => p !== null)
+        .map((preset) => ({
+          index: preset.index,
+          id: preset._id,
+          name: preset.name,
+          colorPalette: preset.colorPalette,
+          cameraMode: preset.cameraMode,
+          waitDuration: preset.waitDuration ?? 0,
+          parameters: preset.parameters,
+        })),
+    };
+  },
+});
+
+// Tool: Update a preset's visual parameters and/or timing
+const updatePresetTool = createTool({
+  description:
+    "Update a preset's visual parameters (colorPalette, parameters, cameraMode) and optionally its timing in a playlist. Use this to make adjustments to the visualization after generation.",
+  args: z.object({
+    presetId: z.string().describe("The ID of the preset to update"),
+    name: z.string().optional().describe("New name for the preset"),
+    colorPalette: z.string().optional().describe("New color palette"),
+    parameters: z
+      .array(presetParameterSchema)
+      .optional()
+      .describe("New visualization parameters (replaces all existing parameters)"),
+    cameraMode: z.string().optional().describe("New camera mode (circle, closeup, orbit, edge)"),
+    playlistId: z.string().optional().describe("Playlist ID - required if updating waitDuration"),
+    waitDuration: z
+      .number()
+      .optional()
+      .describe("New duration in seconds for how long this preset plays in the playlist"),
+  }),
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      return { action: "error", error: "Not authenticated" };
+    }
+    const user = await ctx.runQuery(internal.model.scenes.public.getUserByToken, {
+      tokenIdentifier: identity.tokenIdentifier as string,
+    });
+    if (!user) {
+      return { action: "error", error: "User not found" };
+    }
+
+    // Update preset visual properties if any provided
+    const hasPresetUpdates =
+      args.name !== undefined ||
+      args.colorPalette !== undefined ||
+      args.parameters !== undefined ||
+      args.cameraMode !== undefined;
+
+    if (hasPresetUpdates) {
+      await ctx.runMutation(internal.model.scenes.internal.updatePreset, {
+        presetId: args.presetId as Id<"presets">,
+        userId: user._id,
+        name: args.name,
+        colorPalette: args.colorPalette,
+        parameters: args.parameters,
+        cameraMode: args.cameraMode,
+      });
+    }
+
+    // Update timing in playlist if provided
+    if (args.waitDuration !== undefined) {
+      if (!args.playlistId) {
+        return { action: "error", error: "playlistId is required when updating waitDuration" };
+      }
+      await ctx.runMutation(internal.model.scenes.internal.updatePlaylistItemTiming, {
+        playlistId: args.playlistId as Id<"playlists">,
+        presetId: args.presetId as Id<"presets">,
+        userId: user._id,
+        waitDuration: args.waitDuration,
+      });
+    }
+
+    return {
+      action: "updatePreset",
+      presetId: args.presetId,
+      success: true,
+    };
+  },
+});
+
 // Tool: Update an existing scene
 const updateScene = createTool({
   description:
@@ -583,5 +784,8 @@ export const sceneAgent = new Agent(components.agent, {
     generateVisualizationPlaylist,
     createScene,
     updateScene,
+    readPreset,
+    readPlaylistPresets,
+    updatePreset: updatePresetTool,
   },
 });
