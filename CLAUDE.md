@@ -13,38 +13,104 @@ bun lint                   # Run ESLint
 
 ## Architecture
 
-**Stack:** Next.js 16 (App Router) + React Three Fiber + Electron
+**Stack:** Next.js 16 (App Router) + React Three Fiber + Electron + Convex
 
-### Key Data Flow
+### Data Flow
 
-1. **Audio Input** → `useAudioSource` (web: mic only, Electron: mic + system audio via `electron-audio-loopback`)
-2. **Audio Analysis** → `useAudioAnalyzer` sends FFT data to Web Worker (`lib/workers/audioAnalysis.worker.ts`) for off-main-thread processing (spectral flux, HFC, band energies, onset detection)
-3. **GPU Compute** → `useGPUCompute` runs kick-drift-kick Verlet integration via `GPUComputationRenderer` (position + velocity shaders)
-4. **Rendering** → `ParticleSystem` reads GPU textures, renders points with additive blending
+```
+Audio Input (mic/system)
+    ↓
+Web Worker (audioAnalysis.worker.ts)
+    ↓
+useAudioAnalyzer (envelope followers)
+    ↓
+BlackHoleSimulation (orchestrator)
+    ↓
+useGPUCompute → Position/Velocity Shaders
+    ↓
+ParticleSystem → Render Shaders → Screen
+```
 
-### Directory Map
+## Directory Map
 
-- `components/BlackHoleSimulation/` - Main viz: `ParticleSystem.tsx` (GPU particles), `BlackHole.tsx` (center sphere)
-- `components/CameraSystem/` - Camera presets + GSAP transitions
-- `components/ColorModeSystem/` - 7 palettes (56 total colors), beat-reactive palette switching
-- `hooks/` - Audio (`useAudioAnalyzer`, `useAudioSource`), GPU compute, recording
-- `lib/workers/` - Web Worker for audio analysis (runs off main thread)
-- `shaders/simulation/` - Position/velocity compute shaders (GLSL)
-- `shaders/particles/` - Point rendering shaders
-- `lib/gpu/verletPhysics.ts` - Initial particle textures, physics constants
-- `electron/` - Main process + preload (system audio capture, permissions)
+```
+app/                      # Next.js App Router
+├── @canvas/              # Parallel route: 3D canvas
+├── @ui/                  # Parallel route: UI overlay
+├── scene/[id]/           # Scene routes
+└── watch/[id]/           # Playback routes
 
-### Platform Detection
+components/               # Feature-organized React components
+├── BlackHoleSimulation/  # Core viz: ParticleSystem, BlackHole
+├── CameraSystem/         # Camera presets + GSAP transitions
+├── ColorModeSystem/      # 7 palettes, beat-reactive switching
+├── ProducerMode/         # Preset editing + playlist management
+├── scenes/               # Scene player + editor
+├── layout/               # UI layout (toolbar, sidebar, overlays)
+├── controls/             # Form controls (sliders, selects)
+├── dialogs/              # Modal dialogs
+├── ui/                   # Shadcn UI primitives
+└── audio/                # Audio playback controls
+
+hooks/                    # Custom React hooks
+├── useAudio*.ts          # Audio input/analysis
+├── useGPUCompute.ts      # GPU simulation
+├── useConvex*.ts         # Backend data
+├── useRecording.ts       # Screen/audio capture
+└── useVisualizationControls.ts  # Main state store
+
+lib/
+├── audio/                # SpectralAnalysis, EnvelopeFollower
+├── gpu/                  # verletPhysics.ts
+├── workers/              # audioAnalysis.worker.ts
+└── platform.ts           # isElectron(), isWeb()
+
+shaders/
+├── simulation/           # positionFragment, velocityFragment
+├── particles/            # particleVertex, particleFragment
+└── starfield/            # Background stars
+
+convex/                   # Backend
+├── schema.ts             # All table definitions
+├── http.ts               # HTTP routes
+└── model/                # Domain-organized APIs
+
+electron/                 # Desktop app
+├── main.ts               # Main process
+└── preload.ts            # IPC bridge (window.electronAPI)
+```
+
+## Convex Model Convention
+
+```
+convex/model/{modelName}/
+├── public.ts      # Client queries/mutations/actions
+├── internal.ts    # Server-only functions (optional)
+└── agents.ts      # AI agents (scenes only)
+```
+
+**Tables:** users, presets, playlists, recordings, releases, compositions, generatedSongs, transcriptions, scenes, sceneConversations
+
+## Naming Conventions
+
+- **Hooks:** `use[Feature].ts` in `hooks/`
+- **Components:** PascalCase directories with `index.ts` barrel exports
+- **Shaders:** `{purpose}Fragment.glsl`, `{purpose}Vertex.glsl`
+- **Convex:** `model/{entity}/public.ts`, `model/{entity}/internal.ts`
+
+## Key Files
+
+| Purpose                      | File                                                     |
+| ---------------------------- | -------------------------------------------------------- |
+| Main simulation orchestrator | `components/BlackHoleSimulation/BlackHoleSimulation.tsx` |
+| GPU particle rendering       | `components/BlackHoleSimulation/ParticleSystem.tsx`      |
+| Physics constants            | `lib/gpu/verletPhysics.ts`                               |
+| Audio analysis worker        | `lib/workers/audioAnalysis.worker.ts`                    |
+| Visualization state          | `hooks/useVisualizationControls.ts`                      |
+| Platform detection           | `lib/platform.ts`                                        |
+| Camera presets               | `components/CameraSystem/cameraPresets.ts`               |
+| Color palettes               | `components/ColorModeSystem/colorPalettes.ts`            |
+
+## Platform Detection
 
 `lib/platform.ts` exports `isElectron()`, `isWeb()`, `getSystemAudioStream()`. Electron exposes `window.electronAPI` for IPC (audio loopback, screen permission).
-
-### Particle Physics
-
-Particles spawn at configurable emitter positions around the black hole. GPU shaders handle:
-
-- Gravitational attraction (configurable GM)
-- ISCO (innermost stable circular orbit) effects
-- Beat-reactive repulsion force
-- Respawn when crossing event horizon
-
-All physics params exposed via controls in `BlackHoleSimulation.tsx`.
