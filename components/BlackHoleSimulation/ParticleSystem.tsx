@@ -16,6 +16,7 @@ interface ParticleAudioData {
   bandEnergies: Float32Array;
   bandOnsets: Float32Array;
   bandCount: number;
+  spectrum?: Float32Array;
   hfcBoost: number;
   spawnBurst: number;
   beatIntensity: number;
@@ -69,6 +70,7 @@ export function ParticleSystem({
     setBeatIntensity,
     setBeatRepulsion,
     setBandOnsets,
+    setSpectrum,
     setAudioAmplitude,
     setPaletteOffset,
     setHFCBoost,
@@ -118,9 +120,9 @@ export function ParticleSystem({
   } | null>(null);
 
   const quadGeometry = useMemo(() => {
-    // Multi-segment trail: 4 rows x 2 columns = 8 vertices, 3 segments
+    // Multi-segment trail: 8 rows x 2 columns = 16 vertices, 7 segments
     // Row y positions map to Catmull-Rom spline parameter t: 0 (tail) to 1 (head)
-    const rows = 4;
+    const rows = 8;
     const quadPositions = new Float32Array(rows * 2 * 3);
     const quadUVs = new Float32Array(rows * 2 * 2);
 
@@ -141,7 +143,7 @@ export function ParticleSystem({
       quadUVs[r * 4 + 3] = v;
     }
 
-    // Generate indices for 3 segments (6 triangles)
+    // Generate indices for 7 segments (14 triangles)
     const indices = new Uint16Array((rows - 1) * 6);
     for (let r = 0; r < rows - 1; r++) {
       const baseVertex = r * 2;
@@ -491,6 +493,7 @@ export function ParticleSystem({
     if (audioEnabled) {
       const audioData = getAudioData();
       setBandOnsets(audioData.bandOnsets, audioData.bandCount);
+      setSpectrum(audioData.spectrum);
       // Use synchronized beat from BlackHoleSimulation (already clamped)
       const beat = audioData.beatIntensity ?? 0;
       setBeatIntensity(beat);

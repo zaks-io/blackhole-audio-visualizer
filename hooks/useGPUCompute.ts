@@ -20,6 +20,7 @@ import velocityFragmentShader from "@/shaders/simulation/velocityFragment.glsl";
 import copyTextureShader from "@/shaders/simulation/copyTexture.glsl";
 
 const MAX_BANDS = 36;
+const SPECTRUM_SIZE = 128; // FFT bins to send to GPU
 
 export function useGPUCompute(textureSize: number = DEFAULT_TEXTURE_SIZE) {
   const { gl } = useThree();
@@ -29,6 +30,8 @@ export function useGPUCompute(textureSize: number = DEFAULT_TEXTURE_SIZE) {
   const timeScaleRef = useRef(0.5);
   const bandOnsetsTextureRef = useRef<THREE.DataTexture | null>(null);
   const bandOnsetsDirtyRef = useRef(false);
+  const spectrumTextureRef = useRef<THREE.DataTexture | null>(null);
+  const spectrumDirtyRef = useRef(false);
   // Stable buffers for black hole uniforms (avoid per-frame allocations).
   const blackHolePosRef = useRef<THREE.Vector3[] | null>(null);
   const blackHoleMassRef = useRef<number[] | null>(null);
@@ -61,7 +64,24 @@ export function useGPUCompute(textureSize: number = DEFAULT_TEXTURE_SIZE) {
     );
     bandOnsetsTexture.needsUpdate = true;
 
-    return { initialPosition, initialVelocity, bandOnsetsTexture };
+    // Create spectrum texture for raw FFT data (per-particle frequency sampling)
+    const spectrumData = new Uint8Array(SPECTRUM_SIZE * 4);
+    for (let i = 0; i < SPECTRUM_SIZE; i++) {
+      spectrumData[i * 4 + 0] = 0;
+      spectrumData[i * 4 + 1] = 0;
+      spectrumData[i * 4 + 2] = 0;
+      spectrumData[i * 4 + 3] = 255;
+    }
+    const spectrumTexture = new THREE.DataTexture(
+      spectrumData,
+      SPECTRUM_SIZE,
+      1,
+      THREE.RGBAFormat,
+      THREE.UnsignedByteType
+    );
+    spectrumTexture.needsUpdate = true;
+
+    return { initialPosition, initialVelocity, bandOnsetsTexture, spectrumTexture };
   }, [textureSize]);
 
   useEffect(() => {
@@ -124,6 +144,8 @@ export function useGPUCompute(textureSize: number = DEFAULT_TEXTURE_SIZE) {
     // Byte texture returns normalized [0..1] in shader; rescale to original onset range.
     positionVariable.material.uniforms.uBandOnsetMax = { value: 10.0 };
     positionVariable.material.uniforms.uBandCount = { value: 2.0 };
+    positionVariable.material.uniforms.uSpectrumTexture = { value: textures.spectrumTexture };
+    positionVariable.material.uniforms.uSpectrumSize = { value: SPECTRUM_SIZE };
     positionVariable.material.uniforms.uAudioAmplitude = { value: 1.0 };
     positionVariable.material.uniforms.uSpawnBurst = { value: 1.0 };
 
@@ -141,8 +163,9 @@ export function useGPUCompute(textureSize: number = DEFAULT_TEXTURE_SIZE) {
     positionVariable.material.uniforms.uBlackHoleMass = { value: bhMass };
     positionVariable.material.uniforms.uBlackHoleCount = { value: 1 };
 
-    // Store ref to band onsets texture for updates
+    // Store refs to textures for updates
     bandOnsetsTextureRef.current = textures.bandOnsetsTexture;
+    spectrumTextureRef.current = textures.spectrumTexture;
 
     // Set up uniforms for velocity shader
     velocityVariable.material.uniforms.uTime = { value: 0 };
@@ -335,10 +358,14 @@ export function useGPUCompute(textureSize: number = DEFAULT_TEXTURE_SIZE) {
     velocityVariableRef.current.material.uniforms.uTime.value = scaledTime;
     velocityVariableRef.current.material.uniforms.uDeltaTime.value = scaledDelta;
 
-    // If audio data changed, upload the band-onsets texture once per frame at most.
+    // If audio data changed, upload textures once per frame at most.
     if (bandOnsetsDirtyRef.current && bandOnsetsTextureRef.current) {
       bandOnsetsTextureRef.current.needsUpdate = true;
       bandOnsetsDirtyRef.current = false;
+    }
+    if (spectrumDirtyRef.current && spectrumTextureRef.current) {
+      spectrumTextureRef.current.needsUpdate = true;
+      spectrumDirtyRef.current = false;
     }
 
     // Shift position history ring buffer BEFORE physics compute
@@ -559,6 +586,29 @@ export function useGPUCompute(textureSize: number = DEFAULT_TEXTURE_SIZE) {
     }
   }, []);
 
+  const setSpectrum = useCallback((spectrum: Float32Array | undefined) => {
+    if (!spectrumTextureRef.current || !spectrum) return;
+    const data = spectrumTextureRef.current.image.data as Uint8Array;
+
+    let changed = false;
+    const len = Math.min(spectrum.length, SPECTRUM_SIZE);
+    for (let i = 0; i < len; i++) {
+      // Spectrum values are 0-1 normalized
+      const val = spectrum[i];
+      const clamped = Number.isFinite(val) ? Math.max(0, Math.min(val, 1)) : 0;
+      const next = Math.round(clamped * 255);
+      const idx = i * 4;
+      if (data[idx] !== next) {
+        data[idx] = next;
+        changed = true;
+      }
+    }
+
+    if (changed) {
+      spectrumDirtyRef.current = true;
+    }
+  }, []);
+
   const setAudioAmplitude = useCallback((value: number) => {
     if (positionVariableRef.current) {
       positionVariableRef.current.material.uniforms.uAudioAmplitude.value = value;
@@ -659,6 +709,7 @@ export function useGPUCompute(textureSize: number = DEFAULT_TEXTURE_SIZE) {
     setBeatIntensity,
     setBeatRepulsion,
     setBandOnsets,
+    setSpectrum,
     setAudioAmplitude,
     setPaletteOffset,
     setHFCBoost,

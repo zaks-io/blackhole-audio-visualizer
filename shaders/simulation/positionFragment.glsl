@@ -16,6 +16,8 @@ uniform bool uDoDrift;
 uniform sampler2D uBandOnsetsTexture;
 uniform float uBandOnsetMax;
 uniform float uBandCount;
+uniform sampler2D uSpectrumTexture;
+uniform float uSpectrumSize;
 uniform float uAudioAmplitude;
 uniform float uSpawnBurst;
 
@@ -71,15 +73,13 @@ void main() {
             float z = rad * sin(angle);
             float tiltAmount = sin(angle) * uEmitterTilt;
 
-            // Sample this emitter's band onset from texture
-            // Texture is 1D (36 x 1), sample at center of texel
-            float bandU = (emitterIndex + 0.5) / 36.0;
-            float bandOnset = texture2D(uBandOnsetsTexture, vec2(bandU, 0.5)).r * uBandOnsetMax;
+            // Map emitter to frequency band (emitter 0 = low freq, emitter N = high freq)
+            float freqIndex = emitterIndex / uEmitterCount;
+            float spectrumU = (freqIndex * (uSpectrumSize - 1.0) + 0.5) / uSpectrumSize;
+            float spectrumValue = texture2D(uSpectrumTexture, vec2(spectrumU, 0.5)).r;
 
-            // Beat-reactive Y offset - oscillates based on this band's onset
-            float audioEnergy = bandOnset * 15.0;
-            float oscillation = sin(uTime * 8.0 + emitterIndex * 0.5);
-            float y = tiltAmount + audioEnergy * oscillation * uAudioAmplitude;
+            // Y offset based on this particle's frequency bin energy
+            float y = tiltAmount + spectrumValue * uAudioAmplitude * 15.0;
 
             // Tiny arc offset to break banding, plus user-controlled spread
             float h1 = fract(sin(dot(uv, vec2(12.9898, 78.233))) * 43758.5453);

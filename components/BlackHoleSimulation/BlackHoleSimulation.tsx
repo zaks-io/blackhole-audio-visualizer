@@ -277,6 +277,7 @@ export function BlackHoleSimulation({
       bandEnergies: analysis.bandEnergies,
       bandOnsets: scaledOnsets,
       bandCount: analysis.bandCount,
+      spectrum: analysis.spectrum,
       hfcBoost: (hfcBoostRef.current * store.hfcVelocityBoost) / 0.3, // Normalize to control range
       spawnBurst: spawnBurstRef.current,
       beatIntensity: beatIntensityRef.current, // Synchronized beat for particles
