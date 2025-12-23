@@ -78,9 +78,10 @@ void main() {
             float spectrumU = (freqIndex * (uSpectrumSize - 1.0) + 0.5) / uSpectrumSize;
             float spectrumValue = texture2D(uSpectrumTexture, vec2(spectrumU, 0.5)).r;
 
-            // Y offset based on this particle's frequency bin energy
-            // freqIndex 0 (bass) goes down, freqIndex 1 (highs) goes up
-            float y = tiltAmount + (freqIndex * 2.0 - 1.0) * spectrumValue * uAudioAmplitude * 15.0;
+            // Beat-reactive Y offset - oscillates up and down based on frequency energy
+            float audioEnergy = spectrumValue * 15.0;
+            float oscillation = sin(uTime * 8.0 + emitterIndex * 0.5);
+            float y = tiltAmount + audioEnergy * oscillation * uAudioAmplitude;
 
             // Tiny arc offset to break banding, plus user-controlled spread
             float h1 = fract(sin(dot(uv, vec2(12.9898, 78.233))) * 43758.5453);
