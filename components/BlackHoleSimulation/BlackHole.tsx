@@ -4,7 +4,7 @@ import type { RefObject, MutableRefObject } from "react";
 import { useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
-import { useVisualizationControls } from "@/hooks/useVisualizationControls";
+import { runtimeState } from "@/lib/runtimeStateRegistry";
 
 interface BlackHoleData {
   positions: THREE.Vector3[];
@@ -24,8 +24,8 @@ export function BlackHole({ beatIntensityRef, blackHoleDataRef, index }: BlackHo
   useFrame(() => {
     if (!meshRef.current || !blackHoleDataRef.current) return;
 
-    const { eventHorizonRadius, beatPulse, gravity, blackHoleMassMax } =
-      useVisualizationControls.getState();
+    // Read from runtimeState instead of store for performance during tweens
+    const { eventHorizonRadius, beatPulse, gravity, blackHoleMassMax } = runtimeState;
     const bhData = blackHoleDataRef.current;
 
     // Use pre-computed position from parent (already calculated in BlackHoleSimulation.useFrame)

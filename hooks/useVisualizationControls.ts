@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type { ColorPaletteId } from "@/components/ColorModeSystem";
+import { syncFromStore } from "@/lib/runtimeStateRegistry";
 
 export interface VisualizationControlsState {
   // Black Hole
@@ -230,3 +231,12 @@ export const useVisualizationControls = create<VisualizationControlsStore>((set,
 
   reset: () => set(DEFAULT_STATE),
 }));
+
+// Sync store changes to runtime state for render loop access
+// This subscription runs after store updates to keep runtime state in sync
+useVisualizationControls.subscribe((state) => {
+  syncFromStore(state);
+});
+
+// Initialize runtime state with current store values
+syncFromStore(useVisualizationControls.getState());

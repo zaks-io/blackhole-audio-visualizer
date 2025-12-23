@@ -7,6 +7,7 @@ import { BlendFunction } from "postprocessing";
 import { Vector2 } from "three";
 import { useShallow } from "zustand/shallow";
 import { useVisualizationControls } from "@/hooks/useVisualizationControls";
+import { runtimeState } from "@/lib/runtimeStateRegistry";
 import { useUIState } from "@/hooks/useUIState";
 import type { AnalyzedAudio } from "@/hooks/useAudioAnalyzer";
 
@@ -86,17 +87,24 @@ export function AudioReactiveEffects({ getAnalysis, isAudioConnected }: AudioRea
   }, []);
 
   useFrame(() => {
-    const state = useVisualizationControls.getState();
+    // Read from runtimeState instead of store for performance during tweens
+    const {
+      vignetteOffset,
+      vignetteDarkness,
+      bloomBaseIntensity,
+      bloomAudioReactivity,
+      chromaticAudioReactivity,
+    } = runtimeState;
 
     // Vignette - always update from controls (before any early returns)
     if (vignetteInstance) {
-      vignetteInstance.offset = state.vignetteOffset;
-      vignetteInstance.darkness = vignetteEnabled ? state.vignetteDarkness : 0;
+      vignetteInstance.offset = vignetteOffset;
+      vignetteInstance.darkness = vignetteEnabled ? vignetteDarkness : 0;
     }
 
-    const bloomBase = state.bloomBaseIntensity;
-    const bloomReactivity = state.bloomAudioReactivity;
-    const chromaticReactivity = state.chromaticAudioReactivity;
+    const bloomBase = bloomBaseIntensity;
+    const bloomReactivity = bloomAudioReactivity;
+    const chromaticReactivity = chromaticAudioReactivity;
 
     if (!isAudioConnected || !bloomEnabled) {
       // Reset to defaults when not connected or disabled

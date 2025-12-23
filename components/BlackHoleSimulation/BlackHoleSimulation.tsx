@@ -10,6 +10,7 @@ import { BlackHole } from "./BlackHole";
 import { CameraSystem } from "@/components/CameraSystem";
 import { StarField } from "@/components/StarField";
 import { useVisualizationControls } from "@/hooks/useVisualizationControls";
+import { runtimeState } from "@/lib/runtimeStateRegistry";
 import type { ColorPaletteId } from "@/components/ColorModeSystem";
 import type { AnalyzedAudio } from "@/hooks/useAudioAnalyzer";
 import type { CameraMode } from "@/components/CameraSystem";
@@ -191,9 +192,7 @@ export function BlackHoleSimulation({
   });
 
   useFrame((state) => {
-    // Use getState() to avoid subscriptions for runtime-only values
-    const store = useVisualizationControls.getState();
-
+    // Read from runtimeState instead of store for performance during tweens
     // Calculate black hole positions based on orbit parameters
     const {
       blackHoleCount: bhCount,
@@ -203,7 +202,12 @@ export function BlackHoleSimulation({
       blackHoleMassMin,
       blackHoleMassMax,
       eventHorizonRadius,
-    } = store;
+      audioGain,
+      spawnBurstMultiplier,
+      hfcVelocityBoost,
+    } = runtimeState;
+    // autoColorChange is a boolean from the store, not runtime state
+    const { autoColorChange } = useVisualizationControls.getState();
     const elapsed = state.clock.elapsedTime;
 
     const bh = blackHoleDataRef.current!;
@@ -278,7 +282,7 @@ export function BlackHoleSimulation({
           Math.max(analysis.bandOnsets[0] ?? 0, analysis.bandOnsets[1] ?? 0),
           1.0
         );
-        const beat = Math.max(bassBeat * 0.8, onsetBeat) * (store.audioGain ?? 1);
+        const beat = Math.max(bassBeat * 0.8, onsetBeat) * (audioGain ?? 1);
         beatIntensityRef.current = Math.min(beat, 0.75);
 
         // HFC boost - envelope follow the raw HFC with attack/decay
@@ -293,13 +297,13 @@ export function BlackHoleSimulation({
 
         // Spawn burst - trigger on bass peaks, decay back to 1
         if (analysis.peaks.bass) {
-          spawnBurstRef.current = store.spawnBurstMultiplier;
+          spawnBurstRef.current = spawnBurstMultiplier;
         } else {
           // Decay back toward 1.0
           spawnBurstRef.current = 1.0 + (spawnBurstRef.current - 1.0) * spawnDecayCoef.current;
         }
 
-        if (store.autoColorChange) {
+        if (autoColorChange) {
           colorMode.processBeat(beat, state.clock.elapsedTime);
         }
       }
@@ -307,14 +311,14 @@ export function BlackHoleSimulation({
       // Update cached audio data in-place (avoid per-frame object allocation)
       const scaledOnsets = scaledOnsetsRef.current;
       for (let i = 0; i < analysis.bandOnsets.length; i++) {
-        scaledOnsets[i] = Math.min(analysis.bandOnsets[i], 1.0) * store.audioGain;
+        scaledOnsets[i] = Math.min(analysis.bandOnsets[i], 1.0) * audioGain;
       }
       const audioData = audioDataRef.current;
       audioData.bandEnergies = analysis.bandEnergies;
       audioData.bandOnsets = scaledOnsets;
       audioData.bandCount = analysis.bandCount;
       audioData.spectrum = analysis.spectrum;
-      audioData.hfcBoost = (hfcBoostRef.current * store.hfcVelocityBoost) / 0.3;
+      audioData.hfcBoost = (hfcBoostRef.current * hfcVelocityBoost) / 0.3;
       audioData.spawnBurst = spawnBurstRef.current;
       audioData.beatIntensity = beatIntensityRef.current;
     } else {
