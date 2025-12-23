@@ -6,7 +6,7 @@ import { usePresetSelector } from "@/components/playlist/usePresetSelector";
 import type { ConvexPreset, Preset } from "@/components/ProducerMode/types";
 import type { CameraMode } from "@/components/CameraSystem";
 
-const CAMERA_MODES: Exclude<CameraMode, "free">[] = ["circle", "closeup", "orbit", "edge"];
+const CAMERA_MODES: Exclude<CameraMode, "free" | "edge">[] = ["circle", "closeup", "orbit"];
 const CYCLE_DURATION = 10;
 
 export interface FeelingLuckyState {
