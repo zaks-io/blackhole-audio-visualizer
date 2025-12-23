@@ -1,26 +1,22 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Radio, Film } from "lucide-react";
+import { Radio } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { useViewerMode, type ViewerMode } from "@/hooks/useViewerMode";
+import { useViewerMode } from "@/hooks/useViewerMode";
 import { cn } from "@/lib/utils";
+import { SceneSelector } from "@/components/scenes";
 
 export function ModeToggle() {
   const router = useRouter();
   const mode = useViewerMode((s) => s.mode);
   const setMode = useViewerMode((s) => s.setMode);
 
-  const handleModeChange = (newMode: ViewerMode) => {
-    if (newMode === mode) return;
-
-    if (newMode === "live") {
-      setMode("live", null);
-      router.push("/app");
-    } else {
-      setMode("scene", null);
-    }
+  const handleLiveClick = () => {
+    if (mode === "live") return;
+    setMode("live", null);
+    router.push("/app");
   };
 
   return (
@@ -30,7 +26,7 @@ export function ModeToggle() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => handleModeChange("live")}
+            onClick={handleLiveClick}
             className={cn(
               "h-9 w-9 rounded-full transition-colors",
               mode === "live" && "bg-primary/20 text-primary"
@@ -44,24 +40,8 @@ export function ModeToggle() {
         </TooltipContent>
       </Tooltip>
 
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => handleModeChange("scene")}
-            className={cn(
-              "h-9 w-9 rounded-full transition-colors",
-              mode === "scene" && "bg-primary/20 text-primary"
-            )}
-          >
-            <Film className="h-4 w-4" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent side="top" className="text-xs">
-          Scene Mode
-        </TooltipContent>
-      </Tooltip>
+      {/* Scene dropdown (selecting navigates directly to /app/scene/:id) */}
+      <SceneSelector variant="icon" />
     </div>
   );
 }

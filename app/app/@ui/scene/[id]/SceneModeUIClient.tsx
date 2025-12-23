@@ -2,7 +2,6 @@
 
 import { useMemo, useEffect } from "react";
 import { ScenePlayerControls } from "@/components/scene-player/ScenePlayerControls";
-import { TopToolbar } from "@/components/layout";
 import { useCameraMode, type CameraMode } from "@/components/CameraSystem";
 import { useViewerMode } from "@/hooks/useViewerMode";
 import { useUnifiedAudio } from "@/hooks/useUnifiedAudio";
@@ -62,8 +61,6 @@ export function SceneModeUIClient({ sceneId, preloadedScene }: SceneModeUIClient
 
   return (
     <>
-      <TopToolbar currentScene={scene} />
-
       <ScenePlayerControls
         scene={scene}
         player={scenePlayer}

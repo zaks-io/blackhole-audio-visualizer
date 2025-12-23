@@ -3,74 +3,56 @@
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { CameraControls } from "@/components/camera";
 import { PresetSelector } from "@/components/playlist";
-import { SceneSelector } from "@/components/scenes";
 import { useViewerMode } from "@/hooks/useViewerMode";
 import { useUIState } from "@/hooks/useUIState";
 import { cn } from "@/lib/utils";
 import type { CameraMode } from "@/components/CameraSystem";
-import type { SceneWithDetails } from "@/hooks/useConvexScenes";
 
 interface TopToolbarProps {
   currentCameraMode?: CameraMode;
   onCameraModeChange?: (mode: CameraMode) => void;
   isCameraTransitioning?: boolean;
-  currentScene?: SceneWithDetails | null;
 }
 
 export function TopToolbar({
   currentCameraMode,
   onCameraModeChange,
   isCameraTransitioning = false,
-  currentScene,
 }: TopToolbarProps) {
   const mode = useViewerMode((s) => s.mode);
-  const sceneId = useViewerMode((s) => s.sceneId);
   const controlBarCollapsed = useUIState((s) => s.controlBarCollapsed);
 
-  const showCenteredSceneSelector = mode === "scene" && !sceneId;
+  // Scene selection is handled from the bottom control bar (ModeToggle Film dropdown).
+  // Keep the top toolbar focused on live-mode camera + preset controls.
+  if (mode !== "live") return null;
 
   return (
     <TooltipProvider delayDuration={300}>
-      {/* Centered scene selector when no scene is selected */}
-      {showCenteredSceneSelector && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
-          <div className="glass-panel rounded-2xl px-6 py-4 flex flex-col items-center gap-3 pointer-events-auto">
-            <span className="text-sm text-muted-foreground">Select a scene to play</span>
-            <SceneSelector currentScene={currentScene} />
-          </div>
-        </div>
-      )}
-
-      {/* Top toolbar - hidden when showing centered selector */}
-      {!showCenteredSceneSelector && (
+      <div
+        className={cn(
+          "fixed top-0 left-0 right-0 z-50 flex justify-center pt-6 pointer-events-none hidden sm:flex",
+          "transition-all duration-300",
+          controlBarCollapsed && "-translate-y-full opacity-0"
+        )}
+      >
         <div
           className={cn(
-            "fixed top-0 left-0 right-0 z-50 flex justify-center pt-6 pointer-events-none hidden sm:flex",
-            "transition-all duration-300",
-            controlBarCollapsed && "-translate-y-full opacity-0"
+            "glass-panel rounded-full px-4 py-2 flex items-center gap-2",
+            "pointer-events-auto"
           )}
         >
-          <div
-            className={cn(
-              "glass-panel rounded-full px-4 py-2 flex items-center gap-2",
-              "pointer-events-auto"
-            )}
-          >
-            {mode === "live" && currentCameraMode && onCameraModeChange && (
-              <>
-                <CameraControls
-                  currentMode={currentCameraMode}
-                  onModeChange={onCameraModeChange}
-                  isTransitioning={isCameraTransitioning}
-                />
-                <PresetSelector />
-              </>
-            )}
-
-            {mode === "scene" && <SceneSelector currentScene={currentScene} />}
-          </div>
+          {currentCameraMode && onCameraModeChange && (
+            <>
+              <CameraControls
+                currentMode={currentCameraMode}
+                onModeChange={onCameraModeChange}
+                isTransitioning={isCameraTransitioning}
+              />
+              <PresetSelector />
+            </>
+          )}
         </div>
-      )}
+      </div>
     </TooltipProvider>
   );
 }

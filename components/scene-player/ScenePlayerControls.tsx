@@ -218,7 +218,13 @@ function ScenePlayerControlsComponent({
           </Tooltip>
 
           {/* Timeline */}
-          <div className="w-48 sm:w-64 md:w-80">
+          <div className="w-48 sm:w-64 md:w-80 relative">
+            {/* Scene name (tiny) */}
+            <div className="absolute -top-4 left-0 right-0 text-center pointer-events-none">
+              <span className="text-[10px] leading-none text-white/60 truncate block">
+                {scene.name}
+              </span>
+            </div>
             <SceneTimeline
               subscribeToTime={subscribeToTime}
               getCurrentTime={getCurrentTime}

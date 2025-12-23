@@ -21,10 +21,12 @@ function SelectValue({ ...props }: React.ComponentProps<typeof SelectPrimitive.V
 function SelectTrigger({
   className,
   size = "default",
+  hideChevron = false,
   children,
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Trigger> & {
   size?: "sm" | "default";
+  hideChevron?: boolean;
 }) {
   return (
     <SelectPrimitive.Trigger
@@ -37,9 +39,11 @@ function SelectTrigger({
       {...props}
     >
       {children}
-      <SelectPrimitive.Icon asChild>
-        <ChevronDownIcon className="size-4 opacity-50" />
-      </SelectPrimitive.Icon>
+      {!hideChevron && (
+        <SelectPrimitive.Icon asChild>
+          <ChevronDownIcon className="size-4 opacity-50" />
+        </SelectPrimitive.Icon>
+      )}
     </SelectPrimitive.Trigger>
   );
 }
