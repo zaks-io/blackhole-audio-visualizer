@@ -1,7 +1,7 @@
 import { useRef, useState, useCallback, useEffect } from "react";
 import gsap from "gsap";
 import { usePlayPreset } from "@/components/ProducerMode/usePlayPreset";
-import { usePlaylistControls } from "@/components/playlist/usePlaylistControls";
+import { usePresetSelector } from "@/components/playlist/usePresetSelector";
 import type {
   PlaylistWithPresets,
   ConvexPreset,
@@ -185,8 +185,8 @@ export function usePlaylistPlayer(playlist: PlaylistWithPresets | null) {
     };
   }, [cleanup]);
 
-  const shouldStop = usePlaylistControls((s) => s.shouldStop);
-  const clearTriggerStop = usePlaylistControls((s) => s.clearTriggerStop);
+  const shouldStop = usePresetSelector((s) => s.shouldStop);
+  const clearTriggerStop = usePresetSelector((s) => s.clearTriggerStop);
 
   useEffect(() => {
     if (!shouldStop) return;

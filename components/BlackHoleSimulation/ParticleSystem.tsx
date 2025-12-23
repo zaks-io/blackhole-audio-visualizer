@@ -8,7 +8,7 @@ import { DEFAULT_TEXTURE_SIZE } from "@/lib/gpu/verletPhysics";
 import particleVertexShader from "@/shaders/particles/particleVertex.glsl";
 import particleFragmentShader from "@/shaders/particles/particleFragment.glsl";
 import { getAllColors } from "@/components/ColorModeSystem";
-import { useVisualizationControls } from "@/hooks/useVisualizationControls";
+import { useVisualizationControls, getAnimatedState } from "@/hooks/useVisualizationControls";
 
 const DEFAULT_ALL_COLORS = getAllColors();
 
@@ -240,7 +240,7 @@ export function ParticleSystem({
   );
 
   useFrame(() => {
-    const state = useVisualizationControls.getState();
+    const state = getAnimatedState();
     const iscoRadius = state.eventHorizonRadius * state.iscoRatio;
 
     if (materialRef.current) {

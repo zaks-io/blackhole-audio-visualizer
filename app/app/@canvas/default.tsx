@@ -13,9 +13,6 @@ import { SceneEditorPanel } from "@/components/scenes";
 import { useCameraMode, type CameraMode } from "@/components/CameraSystem";
 import { useColorMode } from "@/components/ColorModeSystem";
 import { useUIState } from "@/hooks/useUIState";
-import { useCameraPlaylist } from "@/hooks/useCameraPlaylist";
-import { usePlaylistWithPresets } from "@/hooks/useConvexPlaylists";
-import { usePlaylistControls } from "@/components/playlist/usePlaylistControls";
 import { useViewerMode } from "@/hooks/useViewerMode";
 import { useUnifiedAudio } from "@/hooks/useUnifiedAudio";
 import { usePublicSceneWithDetails } from "@/hooks/useConvexScenes";
@@ -117,38 +114,6 @@ export default function CanvasSlot() {
 
     return { displayWidth: width, displayHeight: height, effectiveDpr: dpr };
   }, [resolutionConfig, containerSize]);
-
-  // Camera playlist integration (live mode only)
-  const selectedPlaylistId = usePlaylistControls((s) => s.selectedPlaylistId);
-  const shouldPlay = usePlaylistControls((s) => s.shouldPlay);
-  const shouldStop = usePlaylistControls((s) => s.shouldStop);
-  const { playlist: livePlaylist } = usePlaylistWithPresets(selectedPlaylistId);
-
-  const cameraPlaylist = useCameraPlaylist(
-    livePlaylist?.cameraPresets,
-    livePlaylist?.shuffle ?? false,
-    livePlaylist?.defaultCameraDuration,
-    cameraMode.setMode
-  );
-
-  // Start camera cycling when visual playlist starts (live mode)
-  useEffect(() => {
-    if (
-      mode === "live" &&
-      shouldPlay &&
-      livePlaylist?.cameraPresets &&
-      livePlaylist.cameraPresets.length > 0
-    ) {
-      cameraPlaylist.start();
-    }
-  }, [mode, shouldPlay, livePlaylist?.cameraPresets, cameraPlaylist]);
-
-  // Stop camera cycling when visual playlist stops (live mode)
-  useEffect(() => {
-    if (mode === "live" && shouldStop) {
-      cameraPlaylist.stop();
-    }
-  }, [mode, shouldStop, cameraPlaylist]);
 
   return (
     <div className="absolute inset-0 grid grid-cols-[auto_1fr_auto_auto]">

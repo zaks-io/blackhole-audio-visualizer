@@ -1,6 +1,10 @@
 import { useRef, useCallback, useEffect } from "react";
 import gsap from "gsap";
-import { useVisualizationControls } from "@/hooks/useVisualizationControls";
+import {
+  useVisualizationControls,
+  setAnimatingValue,
+  clearAnimatingValue,
+} from "@/hooks/useVisualizationControls";
 import { useProducerMode } from "./useProducerMode";
 import { usePresets } from "./usePresets";
 import type { Preset } from "./types";
@@ -65,9 +69,11 @@ export function usePlayPreset() {
           duration: param.duration,
           ease: param.ease,
           onUpdate: () => {
-            vizStore.getState().setByPath(param.path, state.value);
+            setAnimatingValue(param.path, state.value);
           },
           onComplete: () => {
+            clearAnimatingValue(param.path);
+            vizStore.getState().setByPath(param.path, state.value);
             setIsTweening(param.path, false);
             setProgress(param.path, 0);
             tweensRef.current = tweensRef.current.filter((t) => t.path !== param.path);
