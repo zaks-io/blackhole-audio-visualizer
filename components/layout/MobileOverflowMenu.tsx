@@ -42,7 +42,9 @@ import { useConvexScenes } from "@/hooks/useConvexScenes";
 import { usePresetSelector } from "@/components/playlist/usePresetSelector";
 import { useConvexPresets } from "@/hooks/useConvexPresets";
 import { useCameraMode, type CameraMode } from "@/components/CameraSystem";
+import { usePlayPreset } from "@/components/ProducerMode/usePlayPreset";
 import { useRouter } from "next/navigation";
+import type { ConvexPreset, Preset } from "@/components/ProducerMode/types";
 
 const CAMERA_MODES: { id: CameraMode; label: string }[] = [
   { id: "free", label: "Free Look" },
@@ -51,6 +53,16 @@ const CAMERA_MODES: { id: CameraMode; label: string }[] = [
   { id: "orbit", label: "Orbit" },
   { id: "edge", label: "Edge" },
 ];
+
+function convexPresetToPreset(preset: ConvexPreset): Preset {
+  return {
+    id: preset._id,
+    name: preset.name,
+    colorPalette: preset.colorPalette,
+    parameters: preset.parameters,
+    cameraMode: preset.cameraMode,
+  };
+}
 
 export function MobileOverflowMenu() {
   const router = useRouter();
@@ -64,6 +76,7 @@ export function MobileOverflowMenu() {
   const { playlists, publicPlaylists, isLoading: isPlaylistLoading } = useConvexPlaylists();
   const { presets: myPresets, publicPresets, isLoading: isPresetsLoading } = useConvexPresets();
   const { scenes, publicScenes, isLoading: isScenesLoading } = useConvexScenes();
+  const { playPreset, stopAll } = usePlayPreset();
   const {
     mode: presetMode,
     setMode: setPresetMode,
@@ -93,8 +106,19 @@ export function MobileOverflowMenu() {
     if (isLuckyPlaying) {
       triggerStop();
     }
+    stopAll();
     setPresetMode(newMode);
     setSelectedPresetId(presetId);
+
+    if (newMode === "preset" && presetId) {
+      const preset = allPresets.find((p) => p._id === presetId);
+      if (preset) {
+        playPreset(convexPresetToPreset(preset));
+        if (preset.cameraMode) {
+          cameraMode.setMode(preset.cameraMode as CameraMode);
+        }
+      }
+    }
   };
 
   const handleModeSwitch = (newMode: "live" | "scene") => {

@@ -19,6 +19,7 @@ import { useConvexPresets } from "@/hooks/useConvexPresets";
 import { useConvexPlaylists } from "@/hooks/useConvexPlaylists";
 import { useFeelingLucky } from "@/hooks/useFeelingLucky";
 import { usePlayPreset } from "@/components/ProducerMode/usePlayPreset";
+import { useCameraMode, type CameraMode } from "@/components/CameraSystem";
 import { usePresetSelector } from "./usePresetSelector";
 import type { ConvexPreset, Playlist, Preset } from "@/components/ProducerMode/types";
 
@@ -38,6 +39,7 @@ function convexPresetToPreset(preset: ConvexPreset): Preset {
     name: preset.name,
     colorPalette: preset.colorPalette,
     parameters: preset.parameters,
+    cameraMode: preset.cameraMode,
   };
 }
 
@@ -45,6 +47,7 @@ export function PresetSelector({ compact = false }: PresetSelectorProps) {
   const { isAuthenticated } = useConvexAuth();
   const { presets: myPresets, publicPresets, isLoading: presetsLoading } = useConvexPresets();
   const { playlists, publicPlaylists, isLoading: playlistsLoading } = useConvexPlaylists();
+  const cameraMode = useCameraMode();
 
   const {
     mode,
@@ -124,8 +127,15 @@ export function PresetSelector({ compact = false }: PresetSelectorProps) {
       setMode("none");
       setSelectedPresetId(null);
     } else {
+      const preset = allPresets.find((p) => p._id === value);
       setMode("preset");
       setSelectedPresetId(value);
+      if (preset) {
+        playPreset(convexPresetToPreset(preset));
+        if (preset.cameraMode) {
+          cameraMode.setMode(preset.cameraMode as CameraMode);
+        }
+      }
     }
   };
 
@@ -134,6 +144,9 @@ export function PresetSelector({ compact = false }: PresetSelectorProps) {
       const preset = allPresets.find((p) => p._id === selectedPresetId);
       if (preset) {
         playPreset(convexPresetToPreset(preset));
+        if (preset.cameraMode) {
+          cameraMode.setMode(preset.cameraMode as CameraMode);
+        }
       }
     }
   };
