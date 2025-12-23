@@ -202,7 +202,7 @@ const DEFAULT_STATE: VisualizationControlsState = {
   vignetteEnabled: true,
   vignetteOffset: 0.5,
   vignetteDarkness: 0.5,
-  hfcVelocityBoost: 0.3,
+  hfcVelocityBoost: 0,
   spawnBurstMultiplier: 2.0,
 };
 
