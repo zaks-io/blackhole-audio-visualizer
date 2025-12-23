@@ -40,6 +40,10 @@ const smoothingFactor = 0.75;
 // Reusable buffers
 const bandEnergiesBuffer = new Float32Array(MAX_BANDS);
 let prevBandEnergies = new Float32Array(MAX_BANDS);
+// Pre-allocated output buffers to avoid per-frame allocations
+let spectrumBuffer: Float32Array | null = null;
+const bandOnsetsOutput = new Float32Array(MAX_BANDS);
+const bandEnergiesOutput = new Float32Array(MAX_BANDS);
 
 // Analysis utilities
 const thresholds = {
@@ -121,11 +125,15 @@ function analyze(
   const numBins = frequencyData.length;
   const clampedBandCount = Math.min(Math.max(1, bandCount), MAX_BANDS);
 
-  // Convert to Float32Array for spectrum (normalized 0-1)
-  const spectrum = new Float32Array(numBins);
-  for (let i = 0; i < numBins; i++) {
-    spectrum[i] = frequencyData[i] / 255;
+  // Reuse spectrum buffer (only reallocate if FFT size changes)
+  if (!spectrumBuffer || spectrumBuffer.length !== numBins) {
+    spectrumBuffer = new Float32Array(numBins);
   }
+  // Convert to Float32Array for spectrum (normalized 0-1)
+  for (let i = 0; i < numBins; i++) {
+    spectrumBuffer[i] = frequencyData[i] / 255;
+  }
+  const spectrum = spectrumBuffer;
 
   // Compute spectral flux
   let spectralFluxRaw = 0;
@@ -257,15 +265,16 @@ function analyze(
   extractLogBandEnergies(frequencyData, clampedBandCount, bandEnergiesBuffer, 255);
 
   // Apply envelope follower for onset detection on each band
-  const bandOnsets = new Float32Array(MAX_BANDS);
-  const bandEnergies = new Float32Array(MAX_BANDS);
+  // Zero out the output buffers for unused bands
+  bandOnsetsOutput.fill(0);
+  bandEnergiesOutput.fill(0);
 
   for (let band = 0; band < clampedBandCount; band++) {
     const currentEnergy = bandEnergiesBuffer[band];
     const prevEnergy = prevBandEnergies[band];
     const onsetRaw = Math.max(0, currentEnergy - prevEnergy);
-    bandOnsets[band] = bandEnvelopes[band].process(onsetRaw);
-    bandEnergies[band] = currentEnergy;
+    bandOnsetsOutput[band] = bandEnvelopes[band].process(onsetRaw);
+    bandEnergiesOutput[band] = currentEnergy;
   }
 
   // Update previous band energies
@@ -278,10 +287,10 @@ function analyze(
     raw,
     thresholds: audioThresholds,
     spectrum,
-    bandOnsets,
-    bandEnergies,
+    bandOnsets: bandOnsetsOutput,
+    bandEnergies: bandEnergiesOutput,
     bandCount: clampedBandCount,
-    peakHistory: [...peakHistory],
+    peakHistory, // No spread - consumer just reads it
   };
 }
 
@@ -298,14 +307,8 @@ onmessage = (e: MessageEvent<WorkerInput>) => {
         message.bandCount,
         message.timestamp
       );
-      // Transfer ownership of typed arrays for zero-copy
-      postMessage(result, {
-        transfer: [
-          result.spectrum.buffer as ArrayBuffer,
-          result.bandOnsets.buffer as ArrayBuffer,
-          result.bandEnergies.buffer as ArrayBuffer,
-        ],
-      });
+      // Structured clone - we reuse buffers so can't transfer ownership
+      postMessage(result);
       break;
     }
     case "reset":

@@ -61,6 +61,17 @@ export interface ProducerModeState {
   setProgress: (path: string, progress: number) => void;
   resetTween: (path: string, currentValue: number) => void;
   resetAllTweens: () => void;
+
+  // Batch methods for performance
+  batchStartTweens: (
+    params: Array<{
+      path: string;
+      targetValue: number;
+      duration: number;
+      ease: EaseFunction;
+    }>
+  ) => void;
+  batchEndTweens: (paths: string[], finalValues: Record<string, number>) => void;
 }
 
 export interface PresetParameter {

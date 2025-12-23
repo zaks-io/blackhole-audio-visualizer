@@ -38,11 +38,10 @@ export function BottomControlBar({
   recordingDuration,
   onRecordToggle,
 }: BottomControlBarProps) {
-  const {
-    isOpen: isProducerModeOpen,
-    toggleOpen: toggleProducerMode,
-    setOpen: setProducerModeOpen,
-  } = useProducerMode();
+  // Use selectors to avoid re-renders from unrelated state changes
+  const isProducerModeOpen = useProducerMode((s) => s.isOpen);
+  const toggleProducerMode = useProducerMode((s) => s.toggleOpen);
+  const setProducerModeOpen = useProducerMode((s) => s.setOpen);
   const { isSceneEditorOpen, openSceneEditor, closeSceneEditor } = useSceneControls();
   const isAdmin = useIsAdmin();
   const { controlBarCollapsed, setControlBarCollapsed, setDevControlsVisible } = useUIState();

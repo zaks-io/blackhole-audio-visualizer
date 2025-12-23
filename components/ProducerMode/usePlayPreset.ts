@@ -1,11 +1,7 @@
 import { useRef, useCallback, useEffect } from "react";
 import gsap from "gsap";
-import {
-  useVisualizationControls,
-  setAnimatingValue,
-  clearAnimatingValue,
-} from "@/hooks/useVisualizationControls";
-import { useProducerMode } from "./useProducerMode";
+import { useVisualizationControls } from "@/hooks/useVisualizationControls";
+import { callGPUSetter } from "@/lib/gpuSetterRegistry";
 import { usePresets } from "./usePresets";
 import type { Preset } from "./types";
 import type { ColorPaletteId } from "@/components/ColorModeSystem";
@@ -18,7 +14,6 @@ interface TweenRef {
 
 export function usePlayPreset() {
   const vizStore = useVisualizationControls;
-  const { setTargetValue, setDuration, setEase, setIsTweening, setProgress } = useProducerMode();
   const activePresetId = usePresets((s) => s.activePresetId);
   const presets = usePresets((s) => s.presets);
 
@@ -51,11 +46,8 @@ export function usePlayPreset() {
         // Skip if value is already at target
         if (Math.abs(param.value - startValue) < 0.001) continue;
 
-        setTargetValue(param.path, param.value);
-        setDuration(param.path, param.duration);
-        setEase(param.path, param.ease);
-        setIsTweening(param.path, true);
-        setProgress(param.path, 0);
+        // No Zustand updates during playback - callGPUSetter handles animation
+        // State is synced via batchEndTweens on completion
 
         const state = { value: startValue, progress: 0 };
 
@@ -72,19 +64,18 @@ export function usePlayPreset() {
           duration: durationInSeconds,
           ease: param.ease,
           onUpdate: () => {
-            setAnimatingValue(param.path, state.value);
+            // Direct GPU update - bypasses React state for performance
+            callGPUSetter(param.path, state.value);
           },
           onComplete: () => {
-            clearAnimatingValue(param.path);
+            // Sync final value to visualization store
             vizStore.getState().setByPath(param.path, state.value);
-            setIsTweening(param.path, false);
-            setProgress(param.path, 0);
             tweensRef.current = tweensRef.current.filter((t) => t.path !== param.path);
 
+            // All tweens complete - batch update producer mode state
             if (tweensRef.current.length === 0) {
               isPlayingRef.current = false;
               if (onCompleteRef.current) {
-                // Use queueMicrotask to avoid synchronous callback issues
                 queueMicrotask(() => {
                   if (onCompleteRef.current) {
                     onCompleteRef.current();
@@ -113,7 +104,7 @@ export function usePlayPreset() {
         }
       }
     },
-    [vizStore, stopAll, setTargetValue, setDuration, setEase, setIsTweening, setProgress]
+    [vizStore, stopAll]
   );
 
   const playActive = useCallback(() => {

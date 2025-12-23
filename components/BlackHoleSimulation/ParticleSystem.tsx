@@ -8,7 +8,7 @@ import { DEFAULT_TEXTURE_SIZE } from "@/lib/gpu/verletPhysics";
 import particleVertexShader from "@/shaders/particles/particleVertex.glsl";
 import particleFragmentShader from "@/shaders/particles/particleFragment.glsl";
 import { getAllColors } from "@/components/ColorModeSystem";
-import { useVisualizationControls, getAnimatedState } from "@/hooks/useVisualizationControls";
+import { useVisualizationControls } from "@/hooks/useVisualizationControls";
 
 const DEFAULT_ALL_COLORS = getAllColors();
 
@@ -34,6 +34,7 @@ interface ParticleSystemProps {
   getAudioData: () => ParticleAudioData;
   audioEnabled: boolean;
   getBlackHoleData: () => BlackHoleData;
+  enableHistory?: boolean;
 }
 
 export function ParticleSystem({
@@ -42,6 +43,7 @@ export function ParticleSystem({
   getAudioData,
   audioEnabled,
   getBlackHoleData,
+  enableHistory = true,
 }: ParticleSystemProps) {
   // Read texture size only on mount - changing it requires full rebuild
   const textureSize = useVisualizationControls.getState().textureSize || DEFAULT_TEXTURE_SIZE;
@@ -79,7 +81,7 @@ export function ParticleSystem({
     setLifetimeMax,
     setLifetimeGravityMultiplier,
     setBlackHoles,
-  } = useGPUCompute(textureSize);
+  } = useGPUCompute(textureSize, { enableHistory });
 
   const materialRef = useRef<THREE.ShaderMaterial>(null);
   const prevFirstColorRef = useRef<string>(allColors[0]);
@@ -243,7 +245,7 @@ export function ParticleSystem({
   );
 
   useFrame(() => {
-    const state = getAnimatedState();
+    const state = useVisualizationControls.getState();
     const iscoRadius = state.eventHorizonRadius * state.iscoRatio;
 
     if (materialRef.current) {

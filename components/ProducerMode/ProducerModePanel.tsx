@@ -22,8 +22,13 @@ import { PALETTE_IDS, PALETTES, type ColorPaletteId } from "@/components/ColorMo
 import { useVisualizationControls } from "@/hooks/useVisualizationControls";
 
 export function ProducerModePanel() {
-  const { isOpen, setOpen, globalDuration, globalEase, setGlobalDuration, setGlobalEase } =
-    useProducerMode();
+  // Use selectors to avoid re-renders from unrelated state changes
+  const isOpen = useProducerMode((s) => s.isOpen);
+  const setOpen = useProducerMode((s) => s.setOpen);
+  const globalDuration = useProducerMode((s) => s.globalDuration);
+  const globalEase = useProducerMode((s) => s.globalEase);
+  const setGlobalDuration = useProducerMode((s) => s.setGlobalDuration);
+  const setGlobalEase = useProducerMode((s) => s.setGlobalEase);
   const colorPalette = useVisualizationControls((s) => s.colorPalette);
   const setColorPalette = useVisualizationControls((s) => s.set);
 

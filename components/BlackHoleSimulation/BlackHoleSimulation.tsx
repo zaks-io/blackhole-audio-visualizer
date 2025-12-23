@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, useMemo } from "react";
+import { useRef, useEffect, useMemo, useCallback } from "react";
 import { Environment } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { useShallow } from "zustand/shallow";
@@ -45,6 +45,10 @@ interface BlackHoleSimulationProps {
   cameraMode: CameraModeProps;
   colorMode: ColorModeProps;
   resolutionScale?: number;
+  perfFlags?: {
+    noStars?: boolean;
+    noHistory?: boolean;
+  };
 }
 
 export function BlackHoleSimulation({
@@ -54,6 +58,7 @@ export function BlackHoleSimulation({
   cameraMode,
   colorMode,
   resolutionScale = 1,
+  perfFlags,
 }: BlackHoleSimulationProps) {
   // Use grouped selectors with shallow comparison to avoid unnecessary re-renders
   // Only subscribe to values that affect the render output
@@ -159,6 +164,26 @@ export function BlackHoleSimulation({
   const hfcDecayCoef = useRef(Math.exp(-1 / (0.15 * 60))); // 150ms decay at 60fps
   const spawnDecayCoef = useRef(Math.exp(-1 / (0.1 * 60))); // 100ms decay at 60fps
 
+  // Cached audio data object - updated in-place to avoid per-frame allocations
+  const scaledOnsetsRef = useRef(new Float32Array(36));
+  const audioDataRef = useRef<{
+    bandEnergies: Float32Array;
+    bandOnsets: Float32Array;
+    bandCount: number;
+    spectrum?: Float32Array;
+    hfcBoost: number;
+    spawnBurst: number;
+    beatIntensity: number;
+  }>({
+    bandEnergies: new Float32Array(36),
+    bandOnsets: scaledOnsetsRef.current,
+    bandCount: 0,
+    spectrum: new Float32Array(128),
+    hfcBoost: 0,
+    spawnBurst: 1,
+    beatIntensity: 0,
+  });
+
   useFrame((state) => {
     // Use getState() to avoid subscriptions for runtime-only values
     const store = useVisualizationControls.getState();
@@ -254,35 +279,36 @@ export function BlackHoleSimulation({
       if (store.autoColorChange) {
         colorMode.processBeat(beat, state.clock.elapsedTime);
       }
+
+      // Update cached audio data in-place (avoid per-frame object allocation)
+      const scaledOnsets = scaledOnsetsRef.current;
+      for (let i = 0; i < analysis.bandOnsets.length; i++) {
+        scaledOnsets[i] = Math.min(analysis.bandOnsets[i], 1.0) * store.audioGain;
+      }
+      const audioData = audioDataRef.current;
+      audioData.bandEnergies = analysis.bandEnergies;
+      audioData.bandOnsets = scaledOnsets;
+      audioData.bandCount = analysis.bandCount;
+      audioData.spectrum = analysis.spectrum;
+      audioData.hfcBoost = (hfcBoostRef.current * store.hfcVelocityBoost) / 0.3;
+      audioData.spawnBurst = spawnBurstRef.current;
+      audioData.beatIntensity = beatIntensityRef.current;
     } else {
       beatIntensityRef.current = 0;
       hfcBoostRef.current = 0;
       spawnBurstRef.current = 1;
+
+      // Update cached audio data for disabled state
+      const audioData = audioDataRef.current;
+      audioData.hfcBoost = 0;
+      audioData.spawnBurst = 1;
+      audioData.beatIntensity = 0;
     }
   });
 
-  const scaledOnsetsRef = useRef(new Float32Array(36));
-
-  const getAudioData = () => {
-    // Use getState() to avoid subscriptions for runtime-only values
-    const store = useVisualizationControls.getState();
-    const analysis = getAnalysis();
-    // Apply gain to all band onsets (reuse buffer to avoid GC)
-    // Clamp individual onsets before gain to prevent spikes
-    const scaledOnsets = scaledOnsetsRef.current;
-    for (let i = 0; i < analysis.bandOnsets.length; i++) {
-      scaledOnsets[i] = Math.min(analysis.bandOnsets[i], 1.0) * store.audioGain;
-    }
-    return {
-      bandEnergies: analysis.bandEnergies,
-      bandOnsets: scaledOnsets,
-      bandCount: analysis.bandCount,
-      spectrum: analysis.spectrum,
-      hfcBoost: (hfcBoostRef.current * store.hfcVelocityBoost) / 0.3, // Normalize to control range
-      spawnBurst: spawnBurstRef.current,
-      beatIntensity: beatIntensityRef.current, // Synchronized beat for particles
-    };
-  };
+  // Memoized callbacks to avoid per-render allocations
+  const getAudioData = useCallback(() => audioDataRef.current, []);
+  const getBlackHoleData = useCallback(() => blackHoleDataRef.current!, []);
 
   const skyboxPath = SKYBOX_OPTIONS[skyboxControls.skybox] || "";
 
@@ -292,13 +318,15 @@ export function BlackHoleSimulation({
     <>
       <color attach="background" args={["#000000"]} />
       {isProceduralStars ? (
-        <StarField
-          key={skyboxControls.starDensity}
-          beatIntensityRef={beatIntensityRef}
-          starCount={skyboxControls.starDensity}
-          brightnessBoost={skyboxControls.starBrightness}
-          resolutionScale={resolutionScale}
-        />
+        perfFlags?.noStars ? null : (
+          <StarField
+            key={skyboxControls.starDensity}
+            beatIntensityRef={beatIntensityRef}
+            starCount={skyboxControls.starDensity}
+            brightnessBoost={skyboxControls.starBrightness}
+            resolutionScale={resolutionScale}
+          />
+        )
       ) : (
         skyboxPath && <Environment files={skyboxPath} background />
       )}
@@ -309,10 +337,16 @@ export function BlackHoleSimulation({
         paletteOffset={colorMode.paletteOffset}
         getAudioData={getAudioData}
         audioEnabled={isAudioConnected}
-        getBlackHoleData={() => blackHoleDataRef.current!}
+        getBlackHoleData={getBlackHoleData}
+        enableHistory={!perfFlags?.noHistory}
       />
       {Array.from({ length: blackHoleCount }, (_, i) => (
-        <BlackHole key={i} beatIntensityRef={beatIntensityRef} index={i} />
+        <BlackHole
+          key={i}
+          beatIntensityRef={beatIntensityRef}
+          blackHoleDataRef={blackHoleDataRef}
+          index={i}
+        />
       ))}
 
       {/* Emitter position indicators - only calculated when shown */}

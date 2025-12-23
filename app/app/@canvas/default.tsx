@@ -41,6 +41,19 @@ export default function CanvasSlot() {
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Perf/bisection flags (URL-driven so we can test prod + Electron builds)
+  const perfFlags = useMemo(() => {
+    if (typeof window === "undefined") {
+      return { noPostFX: false, noStars: false, noHistory: false };
+    }
+    const params = new URLSearchParams(window.location.search);
+    return {
+      noPostFX: params.has("noPostFX"),
+      noStars: params.has("noStars"),
+      noHistory: params.has("noHistory"),
+    };
+  }, []);
+
   // Build playlist for scene player
   const scenePlaylist: PlaylistWithPresets | null = useMemo(() => {
     if (!scene?.playlist) return null;
@@ -143,7 +156,7 @@ export default function CanvasSlot() {
             gl={{
               antialias: true,
               alpha: false,
-              preserveDrawingBuffer: true,
+              preserveDrawingBuffer: false,
               powerPreference: "high-performance",
             }}
             dpr={effectiveDpr}
@@ -159,8 +172,14 @@ export default function CanvasSlot() {
               cameraMode={cameraMode}
               colorMode={colorMode}
               resolutionScale={effectiveDpr / 2}
+              perfFlags={perfFlags}
             />
-            <PostProcessing getAnalysis={audio.getAnalysis} isAudioConnected={audio.isConnected} />
+            {!perfFlags.noPostFX && (
+              <PostProcessing
+                getAnalysis={audio.getAnalysis}
+                isAudioConnected={audio.isConnected}
+              />
+            )}
             <FPSTracker />
           </Canvas>
         </div>

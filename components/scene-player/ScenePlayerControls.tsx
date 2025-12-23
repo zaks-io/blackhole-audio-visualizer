@@ -36,11 +36,10 @@ function ScenePlayerControlsComponent({
   getRecordingStream,
 }: ScenePlayerControlsProps) {
   const [isInfoOpen, setIsInfoOpen] = useState(false);
-  const {
-    isOpen: isProducerModeOpen,
-    toggleOpen: toggleProducerMode,
-    setOpen: setProducerModeOpen,
-  } = useProducerMode();
+  // Use selectors to avoid re-renders from unrelated state changes
+  const isProducerModeOpen = useProducerMode((s) => s.isOpen);
+  const toggleProducerMode = useProducerMode((s) => s.toggleOpen);
+  const setProducerModeOpen = useProducerMode((s) => s.setOpen);
   const { controlBarCollapsed, setControlBarCollapsed, setDevControlsVisible } = useUIState();
   const { openSceneEditor, closeSceneEditor, isSceneEditorOpen } = useSceneControls();
   const isAdmin = useIsAdmin();

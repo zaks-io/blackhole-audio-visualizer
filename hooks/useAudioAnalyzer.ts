@@ -135,10 +135,9 @@ function startAnalysisLoop() {
 
       const bandCount = Math.floor(useVisualizationControls.getState().emitterCount);
 
-      const dataCopy = new Uint8Array(frequencyData);
       const message: WorkerInput = {
         type: "analyze",
-        frequencyData: dataCopy,
+        frequencyData: frequencyData, // postMessage will clone this
         sampleRate: audioContext?.sampleRate ?? 48000,
         fftSize: analyserNode.fftSize,
         bandCount,

@@ -1,6 +1,7 @@
 import { useRef, useCallback, useEffect } from "react";
 import gsap from "gsap";
 import { useVisualizationControls, pathToKey } from "@/hooks/useVisualizationControls";
+import { callGPUSetter } from "@/lib/gpuSetterRegistry";
 import { useProducerMode } from "./useProducerMode";
 import { DEFAULT_DURATION, DEFAULT_EASE } from "./producerConfig";
 import type { ParameterConfig } from "./types";
@@ -10,13 +11,19 @@ export function useProducerTween(config: ParameterConfig) {
   const producerStore = useProducerMode;
   const stateKey = pathToKey[config.path];
   const currentValue = useVisualizationControls((s) => s[stateKey]) as number;
-  const { tweenStates, initParameter, setTargetValue, setIsTweening, setProgress, resetTween } =
-    useProducerMode();
+
+  // Use selectors for functions to avoid re-renders on state changes
+  const initParameter = useProducerMode((s) => s.initParameter);
+  const setTargetValue = useProducerMode((s) => s.setTargetValue);
+  const setIsTweening = useProducerMode((s) => s.setIsTweening);
+  const setProgress = useProducerMode((s) => s.setProgress);
+  const resetTween = useProducerMode((s) => s.resetTween);
+
+  // Only subscribe to the specific param's state
+  const paramState = useProducerMode((s) => s.tweenStates[config.path]);
 
   const tweenRef = useRef<gsap.core.Tween | null>(null);
   const tweenState = useRef({ value: 0, progress: 0 });
-
-  const paramState = tweenStates[config.path];
 
   useEffect(() => {
     initParameter(config.path, currentValue);
@@ -64,9 +71,12 @@ export function useProducerTween(config: ParameterConfig) {
         duration,
         ease,
         onUpdate: () => {
-          vizStore.getState().setByPath(config.path, tweenState.current.value);
+          // Direct GPU update - bypasses React state for performance
+          callGPUSetter(config.path, tweenState.current.value);
         },
         onComplete: () => {
+          // Sync final value to Zustand store on completion
+          vizStore.getState().setByPath(config.path, targetValue);
           setIsTweening(config.path, false);
           setProgress(config.path, 0);
           resetTween(config.path, targetValue);

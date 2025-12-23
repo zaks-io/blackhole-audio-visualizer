@@ -14,6 +14,7 @@ import {
   createInitialVelocityTexture,
 } from "@/lib/gpu/verletPhysics";
 import { useVisualizationControls } from "@/hooks/useVisualizationControls";
+import { registerGPUSetter, clearGPUSetters } from "@/lib/gpuSetterRegistry";
 import { PALETTE_OFFSETS } from "@/components/ColorModeSystem";
 import positionFragmentShader from "@/shaders/simulation/positionFragment.glsl";
 import velocityFragmentShader from "@/shaders/simulation/velocityFragment.glsl";
@@ -22,7 +23,11 @@ import copyTextureShader from "@/shaders/simulation/copyTexture.glsl";
 const MAX_BANDS = 36;
 const SPECTRUM_SIZE = 128; // FFT bins to send to GPU
 
-export function useGPUCompute(textureSize: number = DEFAULT_TEXTURE_SIZE) {
+export function useGPUCompute(
+  textureSize: number = DEFAULT_TEXTURE_SIZE,
+  options?: { enableHistory?: boolean }
+) {
+  const enableHistory = options?.enableHistory ?? true;
   const { gl } = useThree();
   const gpuComputeRef = useRef<GPUComputationRenderer | null>(null);
   const positionVariableRef = useRef<Variable | null>(null);
@@ -284,41 +289,49 @@ export function useGPUCompute(textureSize: number = DEFAULT_TEXTURE_SIZE) {
     positionVariableRef.current = positionVariable;
     velocityVariableRef.current = velocityVariable;
 
-    // Create position history render targets for motion blur trails
-    const rtOptions: THREE.RenderTargetOptions = {
-      wrapS: THREE.ClampToEdgeWrapping,
-      wrapT: THREE.ClampToEdgeWrapping,
-      minFilter: THREE.NearestFilter,
-      magFilter: THREE.NearestFilter,
-      format: THREE.RGBAFormat,
-      type: THREE.FloatType,
-      depthBuffer: false,
-    };
-    const history1RT = new THREE.WebGLRenderTarget(textureSize, textureSize, rtOptions);
-    const history2RT = new THREE.WebGLRenderTarget(textureSize, textureSize, rtOptions);
-    positionHistory1RTRef.current = history1RT;
-    positionHistory2RTRef.current = history2RT;
+    if (enableHistory) {
+      // Create position history render targets for motion blur trails
+      const rtOptions: THREE.RenderTargetOptions = {
+        wrapS: THREE.ClampToEdgeWrapping,
+        wrapT: THREE.ClampToEdgeWrapping,
+        minFilter: THREE.NearestFilter,
+        magFilter: THREE.NearestFilter,
+        format: THREE.RGBAFormat,
+        type: THREE.FloatType,
+        depthBuffer: false,
+      };
+      const history1RT = new THREE.WebGLRenderTarget(textureSize, textureSize, rtOptions);
+      const history2RT = new THREE.WebGLRenderTarget(textureSize, textureSize, rtOptions);
+      positionHistory1RTRef.current = history1RT;
+      positionHistory2RTRef.current = history2RT;
 
-    // Create copy material and scene for shifting history textures
-    const copyMaterial = new THREE.ShaderMaterial({
-      uniforms: {
-        tSource: { value: null },
-        resolution: { value: new THREE.Vector2(textureSize, textureSize) },
-      },
-      vertexShader: `void main() { gl_Position = vec4(position, 1.0); }`,
-      fragmentShader: copyTextureShader,
-      depthTest: false,
-      depthWrite: false,
-    });
-    copyMaterialRef.current = copyMaterial;
+      // Create copy material and scene for shifting history textures
+      const copyMaterial = new THREE.ShaderMaterial({
+        uniforms: {
+          tSource: { value: null },
+          resolution: { value: new THREE.Vector2(textureSize, textureSize) },
+        },
+        vertexShader: `void main() { gl_Position = vec4(position, 1.0); }`,
+        fragmentShader: copyTextureShader,
+        depthTest: false,
+        depthWrite: false,
+      });
+      copyMaterialRef.current = copyMaterial;
 
-    const copyScene = new THREE.Scene();
-    const copyPlane = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), copyMaterial);
-    copyScene.add(copyPlane);
-    copySceneRef.current = copyScene;
+      const copyScene = new THREE.Scene();
+      const copyPlane = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), copyMaterial);
+      copyScene.add(copyPlane);
+      copySceneRef.current = copyScene;
 
-    const copyCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-    copyCameraRef.current = copyCamera;
+      const copyCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+      copyCameraRef.current = copyCamera;
+    } else {
+      positionHistory1RTRef.current = null;
+      positionHistory2RTRef.current = null;
+      copyMaterialRef.current = null;
+      copySceneRef.current = null;
+      copyCameraRef.current = null;
+    }
 
     return () => {
       // Dispose GPUComputationRenderer and its internal render targets
@@ -344,7 +357,7 @@ export function useGPUCompute(textureSize: number = DEFAULT_TEXTURE_SIZE) {
       copySceneRef.current = null;
       copyCameraRef.current = null;
     };
-  }, [gl, textures]);
+  }, [gl, textures, enableHistory, textureSize]);
 
   useFrame((state, delta) => {
     if (!gpuComputeRef.current || !positionVariableRef.current || !velocityVariableRef.current) {
@@ -370,30 +383,32 @@ export function useGPUCompute(textureSize: number = DEFAULT_TEXTURE_SIZE) {
       spectrumDirtyRef.current = false;
     }
 
-    // Shift position history ring buffer BEFORE physics compute
-    // Order: history2 <- history1, history1 <- prevPosition
-    const copyMaterial = copyMaterialRef.current;
-    const copyScene = copySceneRef.current;
-    const copyCamera = copyCameraRef.current;
-    const history1RT = positionHistory1RTRef.current;
-    const history2RT = positionHistory2RTRef.current;
+    if (enableHistory) {
+      // Shift position history ring buffer BEFORE physics compute
+      // Order: history2 <- history1, history1 <- prevPosition
+      const copyMaterial = copyMaterialRef.current;
+      const copyScene = copySceneRef.current;
+      const copyCamera = copyCameraRef.current;
+      const history1RT = positionHistory1RTRef.current;
+      const history2RT = positionHistory2RTRef.current;
 
-    if (copyMaterial && copyScene && copyCamera && history1RT && history2RT) {
-      // Copy history1 -> history2
-      copyMaterial.uniforms.tSource.value = history1RT.texture;
-      gl.setRenderTarget(history2RT);
-      gl.render(copyScene, copyCamera);
+      if (copyMaterial && copyScene && copyCamera && history1RT && history2RT) {
+        // Copy history1 -> history2
+        copyMaterial.uniforms.tSource.value = history1RT.texture;
+        gl.setRenderTarget(history2RT);
+        gl.render(copyScene, copyCamera);
 
-      // Copy prevPosition (alternate RT) -> history1
-      const prevPosTexture = gpuComputeRef.current.getAlternateRenderTarget(
-        positionVariableRef.current
-      ).texture;
-      copyMaterial.uniforms.tSource.value = prevPosTexture;
-      gl.setRenderTarget(history1RT);
-      gl.render(copyScene, copyCamera);
+        // Copy prevPosition (alternate RT) -> history1
+        const prevPosTexture = gpuComputeRef.current.getAlternateRenderTarget(
+          positionVariableRef.current
+        ).texture;
+        copyMaterial.uniforms.tSource.value = prevPosTexture;
+        gl.setRenderTarget(history1RT);
+        gl.render(copyScene, copyCamera);
 
-      // Reset render target
-      gl.setRenderTarget(null);
+        // Reset render target
+        gl.setRenderTarget(null);
+      }
     }
 
     // KICK-DRIFT-KICK (Leapfrog) Integration:
@@ -690,6 +705,50 @@ export function useGPUCompute(textureSize: number = DEFAULT_TEXTURE_SIZE) {
     },
     []
   );
+
+  // Register GPU setters for direct GSAP → GPU communication during tweens
+  useEffect(() => {
+    // Map preset paths to GPU setter functions
+    registerGPUSetter("Black Hole.eventHorizonRadius", setEventHorizon);
+    registerGPUSetter("Physics.gravity", setGravitationalParameter);
+    registerGPUSetter("Physics.timeScale", setTimeScale);
+    registerGPUSetter("Physics.softening", setSoftening);
+    registerGPUSetter("Physics.orbitDecay", setOrbitDecay);
+    registerGPUSetter("Physics.iscoStrength", setISCOStrength);
+    registerGPUSetter("Physics.lifetimeGracePeriod", setLifetimeGracePeriod);
+    registerGPUSetter("Physics.lifetimeMax", setLifetimeMax);
+    registerGPUSetter("Physics.lifetimeGravityMultiplier", setLifetimeGravityMultiplier);
+    registerGPUSetter("Emitters.emitRadius", setEmissionRadius);
+    registerGPUSetter("Emitters.emitterCount", setEmitterCount);
+    registerGPUSetter("Emitters.emitterAngle", setEmitterAngle);
+    registerGPUSetter("Emitters.emitterTilt", setEmitterTilt);
+    registerGPUSetter("Emitters.inwardAngle", setInwardAngle);
+    registerGPUSetter("Emitters.spawnRate", setSpawnRate);
+    registerGPUSetter("Emitters.emitterSpread", setEmitterSpread);
+    registerGPUSetter("Audio.amplitude", setAudioAmplitude);
+    registerGPUSetter("Audio.beatRepulsion", setBeatRepulsion);
+
+    return () => clearGPUSetters();
+  }, [
+    setEventHorizon,
+    setGravitationalParameter,
+    setTimeScale,
+    setSoftening,
+    setOrbitDecay,
+    setISCOStrength,
+    setLifetimeGracePeriod,
+    setLifetimeMax,
+    setLifetimeGravityMultiplier,
+    setEmissionRadius,
+    setEmitterCount,
+    setEmitterAngle,
+    setEmitterTilt,
+    setInwardAngle,
+    setSpawnRate,
+    setEmitterSpread,
+    setAudioAmplitude,
+    setBeatRepulsion,
+  ]);
 
   return {
     getPositionTexture,

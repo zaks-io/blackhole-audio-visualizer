@@ -111,6 +111,40 @@ export const useProducerMode = create<ProducerModeState>()(
       resetAllTweens: () => {
         set({ tweenStates: {} });
       },
+
+      // Batch methods to avoid multiple Zustand updates
+      batchStartTweens: (params) => {
+        set((state) => {
+          const newTweenStates = { ...state.tweenStates };
+          for (const param of params) {
+            newTweenStates[param.path] = {
+              targetValue: param.targetValue,
+              duration: param.duration,
+              ease: param.ease,
+              isTweening: true,
+              progress: 0,
+            };
+          }
+          return { tweenStates: newTweenStates };
+        });
+      },
+
+      batchEndTweens: (paths, finalValues) => {
+        set((state) => {
+          const newTweenStates = { ...state.tweenStates };
+          for (const path of paths) {
+            if (newTweenStates[path]) {
+              newTweenStates[path] = {
+                ...newTweenStates[path],
+                targetValue: finalValues[path] ?? newTweenStates[path].targetValue,
+                isTweening: false,
+                progress: 0,
+              };
+            }
+          }
+          return { tweenStates: newTweenStates };
+        });
+      },
     }),
     {
       name: "producer-mode",

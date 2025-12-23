@@ -124,10 +124,9 @@ function startSceneAnalysisLoop() {
 
       const bandCount = Math.floor(useVisualizationControls.getState().emitterCount);
 
-      const dataCopy = new Uint8Array(sceneFrequencyData);
       const message: WorkerInput = {
         type: "analyze",
-        frequencyData: dataCopy,
+        frequencyData: sceneFrequencyData, // postMessage structured clone handles copying
         sampleRate: sceneAudioContext?.sampleRate ?? 48000,
         fftSize: sceneAnalyserNode.fftSize,
         bandCount,
