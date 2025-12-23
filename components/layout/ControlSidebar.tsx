@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, type RefObject } from "react";
-import { Settings } from "lucide-react";
+import { Settings, X } from "lucide-react";
+import { useUIState } from "@/hooks/useUIState";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { VisualizationControls } from "@/components/controls";
 import { AudioDebugTab } from "./AudioDebugTab";
@@ -13,13 +14,22 @@ interface ControlSidebarProps {
 
 export function ControlSidebar({ analysisRef }: ControlSidebarProps) {
   const [activeTab, setActiveTab] = useState("controls");
+  const setDevControlsVisible = useUIState((s) => s.setDevControlsVisible);
 
   return (
     <div className="h-screen w-80 flex flex-col border-l border-white/10 glass-panel-solid">
       {/* Header */}
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-white/5">
-        <Settings className="h-4 w-4 text-primary" />
-        <span className="text-sm font-medium">Developer Controls</span>
+      <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
+        <div className="flex items-center gap-2">
+          <Settings className="h-4 w-4 text-primary" />
+          <span className="text-sm font-medium">Developer Controls</span>
+        </div>
+        <button
+          onClick={() => setDevControlsVisible(false)}
+          className="h-6 w-6 flex items-center justify-center rounded hover:bg-white/10 text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <X className="h-4 w-4" />
+        </button>
       </div>
 
       {/* Tabs */}
