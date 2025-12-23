@@ -12,6 +12,7 @@ uniform float uEmitterTilt;
 uniform float uParticlesPerSecond;
 uniform float uTotalParticles;
 uniform float uLifetimeMax;
+uniform float uEmitterSpread;
 uniform bool uDoDrift;
 uniform sampler2D uBandOnsetsTexture;
 uniform float uBandOnsetMax;
@@ -86,7 +87,8 @@ void main() {
             // Tiny arc offset to break banding, plus user-controlled spread
             float h1 = fract(sin(dot(uv, vec2(12.9898, 78.233))) * 43758.5453);
             float baseArc = (h1 - 0.5) * 0.05; // minimal base to break patterns
-            float spawnAngle = angle + baseArc;
+            float userSpread = (h1 - 0.5) * uEmitterSpread * 0.5;
+            float spawnAngle = angle + baseArc + userSpread;
             float spawnX = rad * cos(spawnAngle);
             float spawnZ = rad * sin(spawnAngle);
             pos = vec3(spawnX, y, spawnZ);

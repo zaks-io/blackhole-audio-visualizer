@@ -148,6 +148,7 @@ export function useGPUCompute(textureSize: number = DEFAULT_TEXTURE_SIZE) {
     positionVariable.material.uniforms.uSpectrumSize = { value: SPECTRUM_SIZE };
     positionVariable.material.uniforms.uAudioAmplitude = { value: 1.0 };
     positionVariable.material.uniforms.uSpawnBurst = { value: 1.0 };
+    positionVariable.material.uniforms.uEmitterSpread = { value: 0.0 };
 
     // Multi-black hole uniforms for position shader
     const bhPos = [
@@ -229,6 +230,7 @@ export function useGPUCompute(textureSize: number = DEFAULT_TEXTURE_SIZE) {
       initial.eventHorizonRadius * initial.iscoRatio;
     velocityVariable.material.uniforms.uISCOStrength.value = initial.iscoStrength;
     velocityVariable.material.uniforms.uEmitterSpread.value = initial.emitterSpread;
+    positionVariable.material.uniforms.uEmitterSpread.value = initial.emitterSpread;
     velocityVariable.material.uniforms.uBeatRepulsion.value = initial.beatRepulsion;
     positionVariable.material.uniforms.uAudioAmplitude.value = initial.amplitude;
 
@@ -525,6 +527,9 @@ export function useGPUCompute(textureSize: number = DEFAULT_TEXTURE_SIZE) {
   const setEmitterSpread = useCallback((value: number) => {
     if (velocityVariableRef.current) {
       velocityVariableRef.current.material.uniforms.uEmitterSpread.value = value;
+    }
+    if (positionVariableRef.current) {
+      positionVariableRef.current.material.uniforms.uEmitterSpread.value = value;
     }
   }, []);
 
