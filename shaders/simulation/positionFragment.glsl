@@ -86,7 +86,7 @@ void main() {
 
             // Beat-reactive Y offset - oscillates up and down based on frequency energy
             float audioEnergy = spectrumValue * 15.0;
-            float oscillation = sin(uTime * 8.0 + emitterIndex * 0.5);
+            float oscillation = -sin(uTime * 8.0 + emitterIndex * 0.5);
             float y = tiltAmount + audioEnergy * oscillation * uAudioAmplitude;
 
             // Always-on temporal + spatial de-correlation:

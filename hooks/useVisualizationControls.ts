@@ -205,7 +205,7 @@ const DEFAULT_STATE: VisualizationControlsState = {
   vignetteOffset: 0.5,
   vignetteDarkness: 0.5,
   hfcVelocityBoost: 0.2,
-  spawnBurstMultiplier: 2.0,
+  spawnBurstMultiplier: 15.0,
 };
 
 export const useVisualizationControls = create<VisualizationControlsStore>((set, get) => ({
