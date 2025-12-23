@@ -14,6 +14,7 @@ import {
   Circle,
   Subtitles,
   Info,
+  HelpCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,6 +35,7 @@ import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { RecordingsManagerDialog } from "./RecordingsManagerDialog";
 import { ReleasesManagerDialog } from "./ReleasesManagerDialog";
 import { DownloadDialog } from "./DownloadDialog";
+import { HelpDialog } from "./HelpModal";
 
 const RESOLUTION_LABELS: Record<Resolution, string> = {
   auto: "Fill",
@@ -147,6 +149,15 @@ export function SettingsMenu({
             <ChevronRight className="h-4 w-4 text-muted-foreground" />
           </button>
         </DownloadDialog>
+        <HelpDialog>
+          <button className="flex items-center justify-between w-full text-left px-2 py-1.5 hover:bg-accent rounded-sm">
+            <div className="flex items-center gap-2">
+              <HelpCircle className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm">Help</span>
+            </div>
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          </button>
+        </HelpDialog>
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>
             <Monitor className="h-4 w-4 text-muted-foreground" />
