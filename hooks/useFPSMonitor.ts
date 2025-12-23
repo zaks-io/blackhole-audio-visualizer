@@ -13,8 +13,8 @@ interface FPSState {
   historyIndex: number;
   historyVersion: number;
   lastDeltaMs: number;
-  spikeCount: number; // rolling window spikes (last ~60s)
-  maxDeltaMs: number; // rolling window max delta (last ~60s)
+  spikeCount: number; // rolling window spikes (last ~60s), deltaMs > SPIKE_THRESHOLD_MS
+  maxDeltaMs: number; // rolling window max frame delta (last ~60s)
   windowSpikes: Uint16Array;
   windowMaxDelta: Float32Array;
   windowIndex: number;
@@ -27,9 +27,10 @@ interface FPSState {
     maxDeltaSinceLast: number
   ) => void;
   resetSpikes: () => void;
+  getLow1Percent: () => number;
 }
 
-export const useFPSStore = create<FPSState>((set) => ({
+export const useFPSStore = create<FPSState>((set, get) => ({
   fps: 60,
   history: (() => {
     const arr = new Float32Array(HISTORY_SIZE);
@@ -60,7 +61,6 @@ export const useFPSStore = create<FPSState>((set) => ({
       // Rolling window update (no allocations)
       const wi = state.windowIndex;
       const oldSpikes = state.windowSpikes[wi];
-      const oldMax = state.windowMaxDelta[wi];
       state.windowSpikes[wi] = spikesSinceLast;
       state.windowMaxDelta[wi] = maxDeltaSinceLast;
 
@@ -68,20 +68,17 @@ export const useFPSStore = create<FPSState>((set) => ({
       const filled = state.windowFilled || nextWindowIndex === 0;
       const spikeSum = state.windowSpikeSum - oldSpikes + spikesSinceLast;
 
-      // Maintain rolling max. If we overwrote the previous max, recompute across the window.
-      let rollingMax = state.maxDeltaMs;
+      // Maintain rolling max of the last ~60s of spike deltas.
+      // Once the window is filled, we recompute each update for correctness/stability.
+      // (WINDOW_SAMPLES=900 @ ~15Hz => ~13.5k float compares/sec, negligible.)
+      let rollingMax = 0;
       if (!filled) {
-        rollingMax = Math.max(rollingMax, maxDeltaSinceLast);
-      } else if (maxDeltaSinceLast >= rollingMax) {
-        rollingMax = maxDeltaSinceLast;
-      } else if (oldMax >= rollingMax) {
-        // Recompute (WINDOW_SAMPLES is small enough; this runs only when we evict the current max)
-        let m = 0;
+        rollingMax = Math.max(state.maxDeltaMs, maxDeltaSinceLast);
+      } else {
         for (let i = 0; i < WINDOW_SAMPLES; i++) {
           const v = state.windowMaxDelta[i];
-          if (v > m) m = v;
+          if (v > rollingMax) rollingMax = v;
         }
-        rollingMax = m;
       }
 
       return {
@@ -109,6 +106,26 @@ export const useFPSStore = create<FPSState>((set) => ({
         windowSpikeSum: 0,
       };
     }),
+  getLow1Percent: () => {
+    const state = get();
+    // Copy active window values to sort
+    const count = state.windowFilled ? WINDOW_SAMPLES : state.windowIndex;
+    if (count === 0) return 0;
+
+    // Create a temp array of the valid samples
+    const samples = new Float32Array(count);
+    for (let i = 0; i < count; i++) {
+      samples[i] = state.windowMaxDelta[i];
+    }
+
+    // Sort descending to find high latency frames
+    samples.sort((a, b) => b - a);
+
+    // 99th percentile (top 1% worst frames)
+    // Index 0 is the worst. Index N * 0.01 is the 99th percentile.
+    const index = Math.floor(count * 0.01);
+    return samples[index] || 0;
+  },
 }));
 
 export function FPSTracker() {
@@ -121,11 +138,13 @@ export function FPSTracker() {
     const now = performance.now();
     const deltaMs = delta * 1000;
 
+    // Track max frame delta in the current ~66ms bucket (always updates; not only spikes)
+    if (deltaMs > maxDeltaSinceLastRef.current) {
+      maxDeltaSinceLastRef.current = deltaMs;
+    }
+
     if (deltaMs > SPIKE_THRESHOLD_MS) {
       spikesSinceLastRef.current += 1;
-      if (deltaMs > maxDeltaSinceLastRef.current) {
-        maxDeltaSinceLastRef.current = deltaMs;
-      }
     }
 
     // Update at ~15fps to reduce overhead
