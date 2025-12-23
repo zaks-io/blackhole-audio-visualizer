@@ -105,11 +105,12 @@ void main() {
         float baseElevJitter = (hash2(uv, uTime + 100.0) - 0.5) * 0.05 * uEmitterSpread;
         float baseSpeedJitter = (hash2(uv, uTime + 200.0) - 0.5) * 0.2 * uEmitterSpread;
 
-        // Always-on micro-jitter (time-varying) to break phase locking even when uEmitterSpread = 0
-        float microAngleJitter = (hash2(uv, 10000.0 + timeSeed) - 0.5) * BASE_LAUNCH_ANGLE_JITTER;
-        float microElevJitter  = (hash2(uv, 11000.0 + timeSeed) - 0.5) * BASE_LAUNCH_ELEV_JITTER;
-        float microSpeedJitter = (hash2(uv, 12000.0 + timeSeed) - 0.5) * BASE_LAUNCH_SPEED_JITTER;
-        float microRadialJitter = (hash2(uv, 13000.0 + timeSeed) - 0.5) * BASE_LAUNCH_RADIAL_JITTER;
+        // Micro-jitter scales with orbital decay - when decay is 0, no jitter for stable orbits
+        float jitterScale = clamp(uOrbitDecay / 5.0, 0.0, 1.0);
+        float microAngleJitter = (hash2(uv, 10000.0 + timeSeed) - 0.5) * BASE_LAUNCH_ANGLE_JITTER * jitterScale;
+        float microElevJitter  = (hash2(uv, 11000.0 + timeSeed) - 0.5) * BASE_LAUNCH_ELEV_JITTER * jitterScale;
+        float microSpeedJitter = (hash2(uv, 12000.0 + timeSeed) - 0.5) * BASE_LAUNCH_SPEED_JITTER * jitterScale;
+        float microRadialJitter = (hash2(uv, 13000.0 + timeSeed) - 0.5) * BASE_LAUNCH_RADIAL_JITTER * jitterScale;
 
         // Horizontal jitter - vary launch angle in orbital plane
         float angleJitter = baseAngleJitter + (rand1 - 0.5) * uEmitterSpread + microAngleJitter;
@@ -145,8 +146,10 @@ void main() {
         vec3 nearestDir = vec3(0.0);
 
         // Lifetime decay: particles get heavier after grace period
+        // Scale by orbital decay - when decay is 0, no gravity boost for stable orbits
         float decayProgress = smoothstep(uLifetimeGracePeriod, uLifetimeMax, lifetime);
-        float gravityMultiplier = 1.0 + (uLifetimeGravityMultiplier - 1.0) * decayProgress;
+        float orbitDecayFactor = clamp(uOrbitDecay / 5.0, 0.0, 1.0);
+        float gravityMultiplier = 1.0 + (uLifetimeGravityMultiplier - 1.0) * decayProgress * orbitDecayFactor;
 
         for (int i = 0; i < MAX_BLACK_HOLES; i++) {
             if (i >= uBlackHoleCount) break;
@@ -173,8 +176,7 @@ void main() {
         // Apply gravity half-step kick
         vel += totalAccel * uDeltaTime * 0.5;
 
-        // Always-on micro-turbulence: time-varying, lane-aware, and mostly tangential.
-        // This breaks long-lived, phase-locked banding patterns even when emitterSpread=0.
+        // Micro-turbulence scales with orbital decay - when decay is 0, no turbulence for stable orbits
         float emitterIndexKick = floor(hash2(uv, 100.0) * uEmitterCount);
         float tStep = floor(uTime * 12.0); // update noise ~12 Hz to avoid per-frame shimmer
         float seed = tStep * 97.0 + emitterIndexKick * 31.0;
@@ -185,7 +187,7 @@ void main() {
         ) - 0.5;
         vec3 nDir = normalize(n + vec3(1e-3));
         vec3 tangentNoise = normalize(cross(nDir, normalize(vel + vec3(1e-3))));
-        vel += tangentNoise * (BASE_KICK_TURBULENCE * uDeltaTime * 0.5);
+        vel += tangentNoise * (BASE_KICK_TURBULENCE * uDeltaTime * 0.5 * orbitDecayFactor);
 
         // Beat-reactive repulsion from nearest black hole
         if (uBeatRepulsion > 0.0 && uBeatIntensity > 0.0 && nearestDist > 0.1) {
@@ -295,7 +297,7 @@ void main() {
             else if (lobeDepth > lobeThreshold) {
                 // DRIFT ZONE - deep in lobe but outside ISCO
                 float driftStrength = (lobeDepth - lobeThreshold) / (1.0 - lobeThreshold);
-                driftStrength *= uISCOStrength * 2.0;
+                driftStrength *= uISCOStrength * 2.0 * orbitDecayFactor;
                 vel += toDominant * driftStrength * uDeltaTime;
             }
             // L-point speed cap only - no damping (damping traps particles at barycenter)

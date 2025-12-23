@@ -25,8 +25,10 @@ export function createInitialPositionTexture(
     data[i4 + 1] = 0;
     data[i4 + 2] = 0;
 
-    // Random spawn times in 0 to -1 range (1-second spread at rate)
-    data[i4 + 3] = -Math.random();
+    // Shuffle spawn times to decorrelate from texture position (which affects emitter assignment)
+    // Knuth multiplicative hash spreads particles evenly across time AND emitters
+    const shuffled = ((i * 2654435761) >>> 0) % particleCount;
+    data[i4 + 3] = -(shuffled / particleCount);
   }
 
   const texture = new THREE.DataTexture(
