@@ -115,14 +115,19 @@ export function PresetSelector({ compact = false }: PresetSelectorProps) {
   }, [isLoading, mode, selectedPresetId, allPresets, setMode, setSelectedPresetId]);
 
   const handleValueChange = (value: string) => {
-    if (isLuckyPlaying) {
+    const switchingToLucky = value === "feeling-lucky";
+    if (!switchingToLucky && isLuckyPlaying) {
       triggerStop();
     }
-    stopAll();
+    // If we're already running Feeling Lucky and re-select it, don't kill tweens.
+    if (!switchingToLucky || !isLuckyPlaying) {
+      stopAll();
+    }
 
     if (value === "feeling-lucky") {
       setMode("feeling-lucky");
       setSelectedPresetId(null);
+      triggerPlay();
     } else if (value === "none") {
       setMode("none");
       setSelectedPresetId(null);
@@ -130,18 +135,6 @@ export function PresetSelector({ compact = false }: PresetSelectorProps) {
       const preset = allPresets.find((p) => p._id === value);
       setMode("preset");
       setSelectedPresetId(value);
-      if (preset) {
-        playPreset(convexPresetToPreset(preset));
-        if (preset.cameraMode) {
-          cameraMode.setMode(preset.cameraMode as CameraMode);
-        }
-      }
-    }
-  };
-
-  const handlePlayPauseToggle = () => {
-    if (mode === "preset" && selectedPresetId) {
-      const preset = allPresets.find((p) => p._id === selectedPresetId);
       if (preset) {
         playPreset(convexPresetToPreset(preset));
         if (preset.cameraMode) {
@@ -237,91 +230,81 @@ export function PresetSelector({ compact = false }: PresetSelectorProps) {
         </Select>
       </div>
 
-      {mode === "preset" && (
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={handlePlayPauseToggle}
-          disabled={!selectedPresetId}
-          className="h-10 w-10 rounded-full"
-        >
-          <Play className="h-4 w-4" />
-        </Button>
-      )}
-
-      {mode === "feeling-lucky" && (
-        <>
-          <div className="relative">
-            {feelingLucky.state.isPlaying && (
-              <svg
-                className="absolute inset-0 -rotate-90 pointer-events-none"
-                width="40"
-                height="40"
-                viewBox="0 0 40 40"
-              >
-                <circle
-                  cx="20"
-                  cy="20"
-                  r="18"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  className="text-primary/30"
-                />
-                <circle
-                  key={feelingLucky.state.cycleKey}
-                  cx="20"
-                  cy="20"
-                  r="18"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeDasharray={2 * Math.PI * 18}
-                  strokeDashoffset={2 * Math.PI * 18}
-                  className="text-primary animate-progress-ring"
-                  style={{
-                    animationPlayState: feelingLucky.state.isPaused ? "paused" : "running",
-                  }}
-                />
-              </svg>
-            )}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => {
-                if (!feelingLucky.state.isPlaying) {
-                  triggerPlay();
-                } else if (feelingLucky.state.isPaused) {
-                  feelingLucky.resume();
-                } else {
-                  feelingLucky.pause();
-                }
-              }}
-              className={cn(
-                "h-10 w-10 rounded-full",
-                feelingLucky.state.isPlaying && !feelingLucky.state.isPaused && "bg-white/10"
-              )}
+      {/* Always show Feeling Lucky controls: the play button always starts/controls Feeling Lucky */}
+      <>
+        <div className="relative">
+          {feelingLucky.state.isPlaying && (
+            <svg
+              className="absolute inset-0 -rotate-90 pointer-events-none"
+              width="40"
+              height="40"
+              viewBox="0 0 40 40"
             >
-              {!feelingLucky.state.isPlaying || feelingLucky.state.isPaused ? (
-                <Play className="h-4 w-4" />
-              ) : (
-                <Pause className="h-4 w-4" />
-              )}
-            </Button>
-          </div>
+              <circle
+                cx="20"
+                cy="20"
+                r="18"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                className="text-primary/30"
+              />
+              <circle
+                key={feelingLucky.state.cycleKey}
+                cx="20"
+                cy="20"
+                r="18"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeDasharray={2 * Math.PI * 18}
+                strokeDashoffset={2 * Math.PI * 18}
+                className="text-primary animate-progress-ring"
+                style={{
+                  animationPlayState: feelingLucky.state.isPaused ? "paused" : "running",
+                }}
+              />
+            </svg>
+          )}
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => feelingLucky.skip()}
-            disabled={!feelingLucky.state.isPlaying}
-            className="h-10 w-10 rounded-full"
+            onClick={() => {
+              if (!feelingLucky.state.isPlaying) {
+                // Ensure the Feeling Lucky engine is allowed to run (it stops itself when mode != feeling-lucky).
+                setMode("feeling-lucky");
+                setSelectedPresetId(null);
+                triggerPlay();
+              } else if (feelingLucky.state.isPaused) {
+                feelingLucky.resume();
+              } else {
+                feelingLucky.pause();
+              }
+            }}
+            className={cn(
+              "h-10 w-10 rounded-full",
+              feelingLucky.state.isPlaying && !feelingLucky.state.isPaused && "bg-white/10"
+            )}
           >
-            <SkipForward className="h-4 w-4" />
+            {!feelingLucky.state.isPlaying || feelingLucky.state.isPaused ? (
+              <Play className="h-4 w-4" />
+            ) : (
+              <Pause className="h-4 w-4" />
+            )}
           </Button>
-        </>
-      )}
+        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => feelingLucky.skip()}
+          disabled={!feelingLucky.state.isPlaying}
+          className="h-10 w-10 rounded-full"
+        >
+          <SkipForward className="h-4 w-4" />
+        </Button>
+      </>
     </div>
   );
 }

@@ -83,6 +83,7 @@ export function MobileOverflowMenu() {
     selectedPresetId,
     setSelectedPresetId,
     isLuckyPlaying,
+    triggerPlay,
     triggerStop,
   } = usePresetSelector();
   const cameraMode = useCameraMode();
@@ -103,10 +104,14 @@ export function MobileOverflowMenu() {
     presetId: string | null,
     newMode: "none" | "preset" | "feeling-lucky"
   ) => {
-    if (isLuckyPlaying) {
+    const switchingToLucky = newMode === "feeling-lucky";
+    if (!switchingToLucky && isLuckyPlaying) {
       triggerStop();
     }
-    stopAll();
+    // If we're already running Feeling Lucky and re-select it, don't kill tweens.
+    if (!switchingToLucky || !isLuckyPlaying) {
+      stopAll();
+    }
     setPresetMode(newMode);
     setSelectedPresetId(presetId);
 
@@ -118,6 +123,8 @@ export function MobileOverflowMenu() {
           cameraMode.setMode(preset.cameraMode as CameraMode);
         }
       }
+    } else if (newMode === "feeling-lucky") {
+      triggerPlay();
     }
   };
 
