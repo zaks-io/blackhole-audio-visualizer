@@ -83,11 +83,7 @@ export default function CanvasSlot() {
     sceneAudioElement: scenePlayer.audioElement,
   });
 
-  // Treat paused scene playback as "audio inactive" so analysis-driven visuals settle to silence.
-  const isAudioActive =
-    mode === "scene"
-      ? audio.isConnected && scenePlayer.state.isPlaying && !scenePlayer.state.isPaused
-      : audio.isConnected;
+  const isAudioActive = audio.isConnected;
 
   // Resolution configuration
   const resolutionConfig = useMemo(

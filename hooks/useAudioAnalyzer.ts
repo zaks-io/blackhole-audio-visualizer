@@ -299,7 +299,15 @@ export function useAudioAnalyzer(options: UseAudioAnalyzerOptions = {}) {
     isConnected = false;
 
     worker?.postMessage({ type: "reset" });
-    analysisRef.current = { ...DEFAULT_ANALYSIS };
+    analysisRef.current = {
+      ...DEFAULT_ANALYSIS,
+      spectrum: analysisBuffers.spectrum,
+      bandOnsets: analysisBuffers.bandOnsets,
+      bandEnergies: analysisBuffers.bandEnergies,
+    };
+    analysisBuffers.spectrum.fill(0);
+    analysisBuffers.bandOnsets.fill(0);
+    analysisBuffers.bandEnergies.fill(0);
   }, []);
 
   const getAnalysis = useCallback((): AnalyzedAudio => {

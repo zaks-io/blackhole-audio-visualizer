@@ -232,7 +232,15 @@ export function useAudioElementAnalyzer(
     sceneConnectedElement = null;
 
     sceneWorker?.postMessage({ type: "reset" });
-    sceneAnalysisRef.current = { ...DEFAULT_ANALYSIS };
+    sceneAnalysisRef.current = {
+      ...DEFAULT_ANALYSIS,
+      spectrum: sceneAnalysisBuffers.spectrum,
+      bandOnsets: sceneAnalysisBuffers.bandOnsets,
+      bandEnergies: sceneAnalysisBuffers.bandEnergies,
+    };
+    sceneAnalysisBuffers.spectrum.fill(0);
+    sceneAnalysisBuffers.bandOnsets.fill(0);
+    sceneAnalysisBuffers.bandEnergies.fill(0);
     setSceneConnected(false);
   }, [setSceneConnected]);
 
