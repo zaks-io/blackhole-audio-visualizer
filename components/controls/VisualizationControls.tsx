@@ -55,7 +55,7 @@ export function VisualizationControls() {
           max={1024}
           step={128}
         />
-        <SliderControl controlKey="pointSize" label="Point Size" min={0.1} max={20} step={0.1} />
+        <SliderControl controlKey="pointSize" label="Point Size" min={0.1} max={5} step={0.1} />
         <SliderControl controlKey="brightness" label="Brightness" min={0.1} max={5} step={0.1} />
         <SliderControl controlKey="alpha" label="Opacity" min={0.01} max={1.0} step={0.01} />
         <SliderControl controlKey="maxDistance" label="Max Distance" min={5} max={150} step={1} />

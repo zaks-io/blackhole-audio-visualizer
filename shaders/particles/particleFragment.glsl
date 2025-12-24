@@ -28,5 +28,6 @@ void main() {
 
     float finalAlpha = shapeAlpha * uAlpha;
 
-    gl_FragColor = vec4(vColor * uBrightness, finalAlpha);
+    vec3 finalColor = min(vColor * uBrightness, vec3(1.5));
+    gl_FragColor = vec4(finalColor, finalAlpha);
 }

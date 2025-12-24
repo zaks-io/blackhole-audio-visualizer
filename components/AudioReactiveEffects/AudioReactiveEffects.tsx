@@ -2,8 +2,8 @@
 
 import { useRef, useCallback } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Bloom, ChromaticAberration, Vignette } from "@react-three/postprocessing";
-import { BlendFunction } from "postprocessing";
+import { Bloom, ChromaticAberration, Vignette, ToneMapping } from "@react-three/postprocessing";
+import { BlendFunction, ToneMappingMode } from "postprocessing";
 import { Vector2 } from "three";
 import { useShallow } from "zustand/shallow";
 import { useVisualizationControls } from "@/hooks/useVisualizationControls";
@@ -167,13 +167,14 @@ export function AudioReactiveEffects({ getAnalysis, isAudioConnected }: AudioRea
 
   return (
     <>
+      <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
       <Bloom
         ref={bloomRefCallback}
         intensity={bloomEnabled ? initialBloomIntensity : 0}
         luminanceThreshold={0.3}
         luminanceSmoothing={0.9}
         mipmapBlur
-        levels={5}
+        levels={3}
       />
       <ChromaticAberration
         ref={chromaticRefCallback}

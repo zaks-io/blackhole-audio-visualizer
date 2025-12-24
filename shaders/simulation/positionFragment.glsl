@@ -139,7 +139,7 @@ void main() {
 
             // Apply beat pulse to recycling radius to match visual black hole size
             float pulse = 1.0 + uBeatIntensity * uBeatPulse;
-            float radius = uBlackHoleRadius[i] * 0.35 * pulse;
+            float radius = uBlackHoleRadius[i] * 0.25 * pulse;
 
             // Check if new position is inside (handles slow particles)
             if (length(newPos - uBlackHolePos[i]) < radius) {

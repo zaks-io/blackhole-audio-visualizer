@@ -310,7 +310,7 @@ Given a song's composition plan with sections, moods, and timing, create synchro
 - "Black Hole.eventHorizonRadius": 0.5-20, default 5 (central sphere size)
 
 ### Particles
-- "Particles.pointSize": 0.1-20, default 1.0 (particle size)
+- "Particles.pointSize": 0.1-5, default 1.0 (particle size)
 
 ### Physics
 - "Physics.gravity": 1000-1000000, default 100000 (pull strength - higher needs more orbitDecay)
