@@ -14,11 +14,32 @@ export async function generateMetadata({ params }: WatchPageProps): Promise<Meta
     recordingId: id as Id<"recordings">,
   });
 
-  const recording = preloadedRecording._valueJSON as { name?: string; description?: string } | null;
+  const recording = preloadedRecording._valueJSON as {
+    name?: string;
+    description?: string;
+    thumbnailUrl?: string;
+  } | null;
+
+  const title = recording?.name ?? "Recording";
+  const description = recording?.description ?? "Watch this recording";
 
   return {
-    title: recording?.name ?? "Recording",
-    description: recording?.description ?? "Watch this recording",
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: "video.other",
+      images: recording?.thumbnailUrl
+        ? [{ url: recording.thumbnailUrl, width: 1280, height: 720 }]
+        : [],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: recording?.thumbnailUrl ? [recording.thumbnailUrl] : [],
+    },
   };
 }
 

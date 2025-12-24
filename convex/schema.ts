@@ -58,6 +58,7 @@ export default defineSchema({
   recordings: defineTable({
     r2SourceKey: v.string(),
     r2HlsPath: v.optional(v.string()),
+    r2ThumbnailPath: v.optional(v.string()),
     transcodingStatus: v.union(
       v.literal("uploaded"),
       v.literal("pending"),

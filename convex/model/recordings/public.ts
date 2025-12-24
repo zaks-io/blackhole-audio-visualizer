@@ -110,6 +110,7 @@ export const submitTranscodingJob = action({
 
     const sourceUrl = `${process.env.R2_PUBLIC_URL}/${recording.r2SourceKey}`;
     const hlsPath = `hls/${recordingId}`;
+    const thumbnailPath = `thumbnails/${recordingId}.jpg`;
     const webhookUrl = `${process.env.CONVEX_SITE_URL}/api/coconut-webhook?token=${recording.webhookToken}`;
 
     const jobPayload = {
@@ -135,9 +136,16 @@ export const submitTranscodingJob = action({
           hls: {
             path: `/${hlsPath}`,
             playlist_name: "master",
-            variants:
-              "mp4:480p::quality=5,maxrate=4000k mp4:720p::quality=5,maxrate=7500k mp4:1080p::quality=5,maxrate=15000k",
           },
+          variants: [
+            "mp4:480p::quality=4,maxrate=6000k",
+            "mp4:720p::quality=4,maxrate=12000k",
+            "mp4:1080p::quality=4,maxrate=20000k",
+          ],
+        },
+        "jpg:1280x720": {
+          path: `/${thumbnailPath}`,
+          offsets: [1],
         },
       },
     };
@@ -168,6 +176,7 @@ export const submitTranscodingJob = action({
       status: "processing",
       coconutJobId: job.id,
       r2HlsPath: hlsPath,
+      r2ThumbnailPath: thumbnailPath,
     });
 
     return { jobId: job.id };
@@ -188,8 +197,8 @@ export const retryTranscodingJob = action({
     });
 
     if (!recording) throw new Error("Recording not found");
-    if (recording.transcodingStatus !== "failed") {
-      throw new Error("Can only retry failed jobs");
+    if (recording.transcodingStatus !== "failed" && recording.transcodingStatus !== "completed") {
+      throw new Error("Can only retry failed or completed jobs");
     }
 
     const webhookToken = crypto.randomUUID();
@@ -200,6 +209,7 @@ export const retryTranscodingJob = action({
 
     const sourceUrl = `${process.env.R2_PUBLIC_URL}/${recording.r2SourceKey}`;
     const hlsPath = `hls/${recordingId}`;
+    const thumbnailPath = `thumbnails/${recordingId}.jpg`;
     const webhookUrl = `${process.env.CONVEX_SITE_URL}/api/coconut-webhook?token=${webhookToken}`;
 
     const jobPayload = {
@@ -225,9 +235,16 @@ export const retryTranscodingJob = action({
           hls: {
             path: `/${hlsPath}`,
             playlist_name: "master",
-            variants:
-              "mp4:480p::quality=5,maxrate=4000k mp4:720p::quality=5,maxrate=7500k mp4:1080p::quality=5,maxrate=15000k",
           },
+          variants: [
+            "mp4:480p::quality=4,maxrate=6000k",
+            "mp4:720p::quality=4,maxrate=12000k",
+            "mp4:1080p::quality=4,maxrate=20000k",
+          ],
+        },
+        "jpg:1280x720": {
+          path: `/${thumbnailPath}`,
+          offsets: [1],
         },
       },
     };
@@ -258,6 +275,7 @@ export const retryTranscodingJob = action({
       status: "processing",
       coconutJobId: job.id,
       r2HlsPath: hlsPath,
+      r2ThumbnailPath: thumbnailPath,
       transcodingError: undefined,
     });
 
@@ -336,6 +354,9 @@ export const getRecordingById = query({
         recording.transcodingStatus === "completed" && recording.r2HlsPath
           ? `${process.env.R2_PUBLIC_URL}/${recording.r2HlsPath}/master.m3u8`
           : undefined,
+      thumbnailUrl: recording.r2ThumbnailPath
+        ? `${process.env.R2_PUBLIC_URL}/${recording.r2ThumbnailPath}`
+        : undefined,
     };
   },
 });

@@ -39,6 +39,7 @@ export const updateTranscodingStatus = internalMutation({
     ),
     coconutJobId: v.optional(v.string()),
     r2HlsPath: v.optional(v.string()),
+    r2ThumbnailPath: v.optional(v.string()),
     transcodingError: v.optional(v.string()),
     clearWebhookToken: v.optional(v.boolean()),
   },
@@ -46,6 +47,7 @@ export const updateTranscodingStatus = internalMutation({
     const patch: Record<string, unknown> = { transcodingStatus: args.status };
     if (args.coconutJobId !== undefined) patch.coconutJobId = args.coconutJobId;
     if (args.r2HlsPath !== undefined) patch.r2HlsPath = args.r2HlsPath;
+    if (args.r2ThumbnailPath !== undefined) patch.r2ThumbnailPath = args.r2ThumbnailPath;
     if (args.transcodingError !== undefined) patch.transcodingError = args.transcodingError;
     if (args.clearWebhookToken) patch.webhookToken = undefined;
     await ctx.db.patch(args.recordingId, patch);

@@ -13,6 +13,7 @@ import {
   RotateCcw,
   Download,
   Play,
+  MoreHorizontal,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,6 +23,22 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
@@ -58,6 +75,7 @@ export function RecordingsManagerDialog({ children }: RecordingsManagerDialogPro
   const [uploadProgress, setUploadProgress] = useState(0);
   const [retryingId, setRetryingId] = useState<string | null>(null);
   const [transcodingId, setTranscodingId] = useState<string | null>(null);
+  const [confirmRetranscodeId, setConfirmRetranscodeId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const {
@@ -89,6 +107,13 @@ export function RecordingsManagerDialog({ children }: RecordingsManagerDialogPro
       console.error("Retry failed:", error);
     } finally {
       setRetryingId(null);
+    }
+  };
+
+  const handleConfirmRetranscode = async () => {
+    if (confirmRetranscodeId) {
+      await handleRetry(confirmRetranscodeId);
+      setConfirmRetranscodeId(null);
     }
   };
 
@@ -352,14 +377,6 @@ export function RecordingsManagerDialog({ children }: RecordingsManagerDialogPro
                         </Button>
                       </>
                     )}
-                    {recording.sourceUrl && (
-                      <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5" asChild>
-                        <a href={recording.sourceUrl} download>
-                          <Download className="h-3 w-3" />
-                          Download Original
-                        </a>
-                      </Button>
-                    )}
                     {recording.transcodingStatus === "failed" && (
                       <Button
                         variant="outline"
@@ -409,6 +426,34 @@ export function RecordingsManagerDialog({ children }: RecordingsManagerDialogPro
                         {recording.transcodingStatus === "pending" ? "Waiting..." : "Processing..."}
                       </span>
                     )}
+                    {(recording.sourceUrl || recording.transcodingStatus === "completed") && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" size="sm" className="h-7 w-7 p-0">
+                            <MoreHorizontal className="h-3 w-3" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          {recording.sourceUrl && (
+                            <DropdownMenuItem asChild>
+                              <a href={recording.sourceUrl} download>
+                                <Download className="h-4 w-4" />
+                                Download Original
+                              </a>
+                            </DropdownMenuItem>
+                          )}
+                          {recording.transcodingStatus === "completed" && (
+                            <DropdownMenuItem
+                              onClick={() => setConfirmRetranscodeId(recording._id)}
+                              disabled={retryingId === recording._id}
+                            >
+                              <RotateCcw className="h-4 w-4" />
+                              {retryingId === recording._id ? "Retranscoding..." : "Retranscode"}
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
                   </div>
                 </div>
               ))}
@@ -416,6 +461,24 @@ export function RecordingsManagerDialog({ children }: RecordingsManagerDialogPro
           )}
         </div>
       </DialogContent>
+
+      <AlertDialog
+        open={!!confirmRetranscodeId}
+        onOpenChange={(open) => !open && setConfirmRetranscodeId(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Retranscode Recording</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will regenerate the video and thumbnail. The process may take a few minutes.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmRetranscode}>Retranscode</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }

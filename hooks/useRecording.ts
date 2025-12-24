@@ -8,10 +8,11 @@ interface RecordingState {
   error: string | null;
 }
 
-function downloadRecording(blob: Blob) {
+function downloadRecording(blob: Blob, mimeType: string) {
   const url = URL.createObjectURL(blob);
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-  const filename = `visualization-${timestamp}.webm`;
+  const extension = mimeType.startsWith("video/mp4") ? "mp4" : "webm";
+  const filename = `visualization-${timestamp}.${extension}`;
 
   const a = document.createElement("a");
   a.href = url;
@@ -44,11 +45,16 @@ export function useRecording(fps = 60, videoBitsPerSecond = 100_000_000) {
 
   const startRecording = useCallback(
     (canvas: HTMLCanvasElement, audioStream: MediaStream | null) => {
-      const vpCodecs = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"];
-      const mimeType = vpCodecs.find((codec) => MediaRecorder.isTypeSupported(codec));
+      const codecs = [
+        'video/mp4; codecs="avc1.42E01E,mp4a.40.2"', // H264 + AAC (Chrome 2024+, Safari)
+        "video/webm;codecs=vp9,opus", // VP9 fallback
+        "video/webm;codecs=vp8,opus", // VP8 fallback
+        "video/webm", // WebM fallback
+      ];
+      const mimeType = codecs.find((codec) => MediaRecorder.isTypeSupported(codec));
 
       if (!mimeType) {
-        setState((prev) => ({ ...prev, error: "WebM recording not supported in this browser" }));
+        setState((prev) => ({ ...prev, error: "Video recording not supported in this browser" }));
         return false;
       }
 
@@ -78,7 +84,7 @@ export function useRecording(fps = 60, videoBitsPerSecond = 100_000_000) {
 
       mediaRecorder.onstop = () => {
         const blob = new Blob(chunksRef.current, { type: mimeType });
-        downloadRecording(blob);
+        downloadRecording(blob, mimeType);
         cleanupInterval();
       };
 
