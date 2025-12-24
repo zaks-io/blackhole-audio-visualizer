@@ -1,9 +1,10 @@
 "use client";
 
 import type { MutableRefObject } from "react";
-import { useRef } from "react";
+import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
+import { useVisualizationControls } from "@/hooks/useVisualizationControls";
 
 interface BlackHoleData {
   positions: THREE.Vector3[];
@@ -17,26 +18,75 @@ interface BlackHoleProps {
   index: number;
 }
 
+const coronaVertexShader = /* glsl */ `
+  varying vec3 vWorldPosition;
+  varying vec3 vWorldNormal;
+
+  void main() {
+    vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+    vWorldPosition = worldPosition.xyz;
+    vWorldNormal = normalize(mat3(modelMatrix) * normal);
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+`;
+
+const coronaFragmentShader = /* glsl */ `
+  varying vec3 vWorldPosition;
+  varying vec3 vWorldNormal;
+
+  uniform vec3 uGlowColor;
+  uniform float uGlowIntensity;
+  uniform float uFresnelPower;
+
+  void main() {
+    vec3 viewDir = normalize(cameraPosition - vWorldPosition);
+    vec3 normal = normalize(vWorldNormal);
+    float fresnel = pow(1.0 - abs(dot(viewDir, normal)), uFresnelPower);
+    vec3 color = uGlowColor * fresnel * uGlowIntensity;
+    gl_FragColor = vec4(color, 1.0);
+  }
+`;
+
 export function BlackHole({ blackHoleDataRef, index }: BlackHoleProps) {
   const meshRef = useRef<THREE.Mesh>(null);
+  const materialRef = useRef<THREE.ShaderMaterial>(null);
+
+  const uniforms = useMemo(
+    () => ({
+      uGlowColor: { value: new THREE.Color(0.6, 0.6, 0.65) },
+      uGlowIntensity: { value: 0.8 },
+      uFresnelPower: { value: 2.0 },
+    }),
+    []
+  );
 
   useFrame(() => {
-    if (!meshRef.current || !blackHoleDataRef.current) return;
+    if (!meshRef.current || !blackHoleDataRef.current || !materialRef.current) return;
 
     const bhData = blackHoleDataRef.current;
+    const { coronaIntensity, coronaPower } = useVisualizationControls.getState();
+
+    materialRef.current.uniforms.uGlowIntensity.value = coronaIntensity;
+    materialRef.current.uniforms.uFresnelPower.value = coronaPower;
 
     if (index < bhData.count) {
+      meshRef.current.visible = true;
       meshRef.current.position.copy(bhData.positions[index]);
-      // Radius already includes pulse from BlackHoleSimulation
       meshRef.current.scale.setScalar(bhData.radii[index]);
+    } else {
+      meshRef.current.visible = false;
     }
   });
 
   return (
     <mesh ref={meshRef}>
-      {/* Use unit sphere and scale it */}
       <sphereGeometry args={[1, 32, 32]} />
-      <meshBasicMaterial color="#000000" />
+      <shaderMaterial
+        ref={materialRef}
+        vertexShader={coronaVertexShader}
+        fragmentShader={coronaFragmentShader}
+        uniforms={uniforms}
+      />
     </mesh>
   );
 }

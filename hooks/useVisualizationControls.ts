@@ -13,6 +13,8 @@ export interface VisualizationControlsState {
   orbitSpeed: number;
   blackHoleMassMin: number;
   blackHoleMassMax: number;
+  coronaIntensity: number;
+  coronaPower: number;
 
   // Particles
   textureSize: number;
@@ -94,6 +96,8 @@ export const pathToKey: Record<string, keyof VisualizationControlsState> = {
   "Black Hole.orbitSpeed": "orbitSpeed",
   "Black Hole.blackHoleMassMin": "blackHoleMassMin",
   "Black Hole.blackHoleMassMax": "blackHoleMassMax",
+  "Black Hole.coronaIntensity": "coronaIntensity",
+  "Black Hole.coronaPower": "coronaPower",
   "Particles.textureSize": "textureSize",
   "Particles.pointSize": "pointSize",
   "Particles.brightness": "brightness",
@@ -151,6 +155,8 @@ const DEFAULT_STATE: VisualizationControlsState = {
   orbitSpeed: PARAM_DEFAULTS.orbitSpeed,
   blackHoleMassMin: PARAM_DEFAULTS.blackHoleMassMin,
   blackHoleMassMax: PARAM_DEFAULTS.blackHoleMassMax,
+  coronaIntensity: PARAM_DEFAULTS.coronaIntensity,
+  coronaPower: PARAM_DEFAULTS.coronaPower,
   textureSize: PARAM_DEFAULTS.textureSize,
   pointSize: PARAM_DEFAULTS.pointSize,
   brightness: PARAM_DEFAULTS.brightness,

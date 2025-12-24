@@ -175,6 +175,26 @@ export const PARAMS: Record<string, ParameterDef> = {
     label: "Beat Pulse",
     system: true,
   },
+  "Black Hole.coronaIntensity": {
+    min: 0,
+    max: 0.5,
+    default: 0.03,
+    step: 0.01,
+    description: "corona glow brightness",
+    group: "Black Hole",
+    label: "Corona Intensity",
+    system: false,
+  },
+  "Black Hole.coronaPower": {
+    min: 0.5,
+    max: 6,
+    default: 1,
+    step: 0.1,
+    description: "corona edge falloff sharpness",
+    group: "Black Hole",
+    label: "Corona Power",
+    system: false,
+  },
 
   // ===========================================================================
   // PARTICLES
