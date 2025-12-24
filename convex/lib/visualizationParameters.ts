@@ -168,7 +168,7 @@ export const PARAMS: Record<string, ParameterDef> = {
   "Black Hole.beatPulse": {
     min: 0,
     max: 5,
-    default: 2,
+    default: 3,
     step: 0.1,
     description: "beat-reactive pulse intensity",
     group: "Black Hole",
@@ -182,7 +182,7 @@ export const PARAMS: Record<string, ParameterDef> = {
   "Particles.textureSize": {
     min: 128,
     max: 1024,
-    default: 384,
+    default: 512,
     step: 128,
     description: "number of particles",
     group: "Particles",
@@ -212,7 +212,7 @@ export const PARAMS: Record<string, ParameterDef> = {
   "Particles.alpha": {
     min: 0.1,
     max: 1,
-    default: 0.5,
+    default: 0.3,
     step: 0.1,
     description: "particle opacity",
     group: "Particles",
@@ -306,7 +306,7 @@ export const PARAMS: Record<string, ParameterDef> = {
   "Physics.lifetimeGracePeriod": {
     min: 5,
     max: 120,
-    default: 30,
+    default: 10,
     step: 5,
     description: "initial lifetime grace period",
     group: "Physics",
@@ -316,7 +316,7 @@ export const PARAMS: Record<string, ParameterDef> = {
   "Physics.lifetimeMax": {
     min: 5,
     max: 120,
-    default: 60,
+    default: 30,
     step: 5,
     description: "maximum particle lifetime",
     group: "Physics",
@@ -390,7 +390,7 @@ export const PARAMS: Record<string, ParameterDef> = {
   "Emitters.spawnRate": {
     min: 500,
     max: 10000,
-    default: 500,
+    default: 1000,
     step: 500,
     description: "particles per second",
     group: "Emitters",
@@ -482,7 +482,7 @@ export const PARAMS: Record<string, ParameterDef> = {
   "Post-FX.bloomBaseIntensity": {
     min: 0,
     max: 2,
-    default: 0.3,
+    default: 0.2,
     step: 0.1,
     description: "bloom base intensity",
     group: "Post-FX",
@@ -492,7 +492,7 @@ export const PARAMS: Record<string, ParameterDef> = {
   "Post-FX.bloomAudioReactivity": {
     min: 0,
     max: 1,
-    default: 1,
+    default: 0.8,
     step: 0.1,
     description: "bloom audio reactivity",
     group: "Post-FX",
@@ -542,7 +542,7 @@ export const PARAMS: Record<string, ParameterDef> = {
   "Post-FX.spawnBurstMultiplier": {
     min: 1,
     max: 20,
-    default: 15,
+    default: 10,
     step: 0.1,
     description: "bass spawn burst multiplier",
     group: "Post-FX",
