@@ -237,7 +237,7 @@ A "scene" consists of:
 1. **Generated song**: AI-generated music based on a composition plan
 2. **Visualization playlist**: Timed presets that control the particle simulation
 
-The visualizer renders a black hole with particles emitting from configurable points. Particles orbit inward following physics. The system analyzes audio in realtime (beats, frequency bands) and uses that to drive particle emission, colors, and effects. Your presets define how the visualization responds to each section of the song. 
+The visualizer renders three orbitting black holes with particles emitting from configurable points. Particles orbit inward following physics. The system analyzes audio in realtime (beats, frequency bands) and uses that to drive particle emission, colors, and effects. Your presets define how the visualization responds to each section of the song. 
 
 ## GENERAL WORKFLOW
 
@@ -300,7 +300,7 @@ When the user asks to adjust the visualization:
 - Keep responses short and conversational. Only use markdown when necessary.`;
 
 // System prompt for the visualization tool (used by generateObject)
-const VISUALIZATION_INSTRUCTIONS = `You are a visualization designer for the Blackhole Audio Visualizer - a particle physics simulation synced to music. Particles are emitted from a circle around the black hole and orbit until they fall in. Only a set number of particles may be emitted at a time so avoid particles orbiting too long. The emitters emit at different heights based on their frequency bin and so we get trails of particles that start as waves and then collapse into streams as they fall into the center.
+const VISUALIZATION_INSTRUCTIONS = `You are a visualization designer for the Blackhole Audio Visualizer - a particle physics simulation synced to music. Particles are emitted from a circle around three black holes and orbit until they fall in. The emitters emit at different heights based on their frequency bin and so we get trails of particles with bursts to the beat that start as waves and then collapse into streams as they fall into the center.
 
 Given a song's composition plan with sections, moods, and timing, create synchronized visualization presets for a song.
 
@@ -308,13 +308,15 @@ Given a song's composition plan with sections, moods, and timing, create synchro
 
 ### Black Hole
 - "Black Hole.eventHorizonRadius": 0.5-20, default 5 (central sphere size)
+- "Black Hole.orbitRadius": 5-200, default 25 (distance of black hole orbits from center - larger values spread them out)
+- "Black Hole.blackHoleMassMin": 0.3-1.0, default 0.3 (minimum mass ratio - see MASS & POSITION DISTRIBUTION below)
 
 ### Particles
 - "Particles.pointSize": 0.1-5, default 1.0 (particle size)
 
 ### Physics
-- "Physics.gravity": 1000-1000000, default 100000 (pull strength - higher needs more orbitDecay)
-- "Physics.orbitDecay": 0-20, default 1 (spiral-in rate: 0=stable orbits, high=fast collapse)
+- "Physics.gravity": 1000-1000000, default 100000 (pull strength - higher needs more orbitDecay, affects particle velocity)
+- "Physics.orbitDecay": 0-20, default 1 (spiral-in rate: 0=stabler orbits, high=fast direct collapse)
 - "Physics.softening": 0.01-10, default 1.0 (smooths forces near center to prevent ejection)
 
 ### Emitters
@@ -323,7 +325,7 @@ Given a song's composition plan with sections, moods, and timing, create synchro
 - "Emitters.emitRadius": 5-200, default 200 (spawn distance from center)
 
 ### Audio Reactivity
-- "Audio.amplitude": 0-30, default 10 (wave emission height)
+- "Audio.amplitude": 0-20, default 10 (wave emission height)
 - "Audio.audioGain": 0-3, default 2 (input amplification)
 - "Audio.beatRepulsion": 0-100, default 20 (beat push force from center)
 
@@ -361,6 +363,24 @@ Be creative. Create 1 preset every 10-20 seconds, aligned with song structure an
 - Large Black Hole, Small Emitter Radius, Large Point Size, High Reactivity = Mop of particles around a jumping ball
 - Single emitter, white, 3 point size => A swirling white line of frequency heading towards the black hole
 - Three emitters, tiny black hole, very small spread, high gravity, high decay, high amplitude, high beat repulsion => Particles fall into a tight orbit and the beat repulsion respawns them
+
+## MASS & POSITION DISTRIBUTION
+With 3 black holes, masses are distributed as a gradient from massMax (1.0) to massMin:
+- Black hole 1: mass ratio = 1.0 (largest)
+- Black hole 2: mass ratio = 0.65 (when massMin=0.3)
+- Black hole 3: mass ratio = massMin (smallest)
+
+Positions are distributed around the barycenter (center of mass) based on mass:
+- Heavier black holes orbit CLOSER to the barycenter
+- Lighter black holes orbit FARTHER from the barycenter
+
+As massMin lowers, the position distribution becomes more asymmetric:
+- massMin=0.7: Nearly equal masses, symmetric orbits around center
+- massMin=0.3: Moderate asymmetry, largest BH close to center, smallest farther out
+- massMin=0.1: Highly asymmetric, massive BH barely moves while small one swings wide
+
+Use lower massMin (0.1-0.3) for dramatic visual asymmetry and size variation.
+Use higher massMin (0.5-0.7) for more balanced, symmetric orbital patterns.
 
 ## Notes
 - Each emitter is assigned a bin from the frequency bands of the audio. So one emitter will be all frequency bands, three will be bass, mid, high and so on

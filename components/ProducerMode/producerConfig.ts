@@ -12,6 +12,22 @@ export const PRODUCER_PARAMETERS: ParameterGroup[] = [
         max: 20,
         step: 0.5,
       },
+      {
+        path: "Black Hole.orbitRadius",
+        label: "Orbit Radius",
+        description: "Distance of black hole orbits from center",
+        min: 5,
+        max: 200,
+        step: 5,
+      },
+      {
+        path: "Black Hole.blackHoleMassMin",
+        label: "Mass Asymmetry",
+        description: "Minimum mass ratio for outer black holes (creates size variation)",
+        min: 0.3,
+        max: 1,
+        step: 0.1,
+      },
     ],
   },
   {
