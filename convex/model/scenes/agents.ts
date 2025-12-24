@@ -321,7 +321,7 @@ Given a song's composition plan with sections, moods, and timing, create synchro
 
 ### Emitters
 - "Emitters.emitterCount": 1-36, default 12 (particle sources)
-- "Emitters.emitterSpread": 0-1, default 0 (less is better, 0=clean lines 0.1=fuzzy, >0.3 creates noise clouds) 
+- "Emitters.emitterSpread": 0-1, default 0.05 (emitter width, less is better, 0=clean lines 0.1=fuzzy, >0.3 creates noise clouds) 
 - "Emitters.emitRadius": 5-200, default 200 (spawn distance from center)
 
 ### Audio Reactivity
@@ -352,17 +352,19 @@ Each pallete has 8 colors except for grayscale which is basically white.
 - "edge": Far side view, slow, cinematic
 
 ## EASING
-none, power1.inOut, power2.inOut, power3.inOut, power4.inOut, back.inOut, elastic.out, bounce.out
+none, power1.inOut, power2.inOut, power3.inOut, power4.inOut
 
 ## SECTION GUIDELINES
 
-Be creative. Create 1 preset every 10-20 seconds, aligned with song structure and lyrics. Presets must cover the entire song duration and should be distinct from each other.
+Be creative. Create 1 preset every 10-20 seconds, aligned with song structure and lyrics. Presets must cover the entire song duration and should be distinct from each other. Take into consideration tween times and transitions between presets for best impact.
 
 ### SECTION IDEAS
 
 - Large Black Hole, Small Emitter Radius, Large Point Size, High Reactivity = Mop of particles around a jumping ball
 - Single emitter, white, 3 point size => A swirling white line of frequency heading towards the black hole
 - Three emitters, tiny black hole, very small spread, high gravity, high decay, high amplitude, high beat repulsion => Particles fall into a tight orbit and the beat repulsion respawns them
+- Emitters and black hole orbits at max radius => particles don't flow to the center but instead the nearest black hole or stretch across lagrange point
+- Zero orbital decay, 1000000 gravity, ten softening => forces particles into tight orbits around each blackhole and then collapse into the center
 
 ## MASS & POSITION DISTRIBUTION
 With 3 black holes, masses are distributed as a gradient from massMax (1.0) to massMin:
@@ -372,14 +374,13 @@ With 3 black holes, masses are distributed as a gradient from massMax (1.0) to m
 
 Positions are distributed around the barycenter (center of mass) based on mass:
 - Heavier black holes orbit CLOSER to the barycenter
-- Lighter black holes orbit FARTHER from the barycenter
+- Lighter black holes orbit FARTHER from the barycenter 
 
-As massMin lowers, the position distribution becomes more asymmetric:
-- massMin=0.7: Nearly equal masses, symmetric orbits around center
-- massMin=0.3: Moderate asymmetry, largest BH close to center, smallest farther out
-- massMin=0.1: Highly asymmetric, massive BH barely moves while small one swings wide
+As massMin lowers, the position/mass distribution becomes more asymmetric:
+- massMin=1.0: Equal masses, symmetric orbits around center
+- massMin=0.3: Highly asymmetric, massive BH barely moves while small one swings wide
 
-Use lower massMin (0.1-0.3) for dramatic visual asymmetry and size variation.
+Use lower massMin (0.3) for dramatic visual asymmetry and size/position variation.
 Use higher massMin (0.5-0.7) for more balanced, symmetric orbital patterns.
 
 ## Notes
