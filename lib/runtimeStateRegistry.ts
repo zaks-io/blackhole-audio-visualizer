@@ -3,61 +3,63 @@
 // IMPORTANT: Heavy 3D components should ONLY read from runtimeState, never subscribe to Zustand
 
 import type { VisualizationControlsState } from "@/hooks/useVisualizationControls";
+import { PARAM_DEFAULTS } from "@/convex/lib/visualizationParameters";
 
 // Runtime state containing all values that render loops need
 // These values are mutated directly for performance during tweens
+// Numeric defaults come from PARAMS (single source of truth)
 export const runtimeState = {
   // Black Hole
-  eventHorizonRadius: 5,
-  iscoRatio: 3.0,
-  beatPulse: 2,
-  blackHoleCount: 3,
-  orbitRadius: 25,
-  orbitSpeed: 0.3,
-  blackHoleMassMin: 0.3,
-  blackHoleMassMax: 1.0,
+  eventHorizonRadius: PARAM_DEFAULTS.eventHorizonRadius,
+  iscoRatio: PARAM_DEFAULTS.iscoRatio,
+  beatPulse: PARAM_DEFAULTS.beatPulse,
+  blackHoleCount: PARAM_DEFAULTS.blackHoleCount,
+  orbitRadius: PARAM_DEFAULTS.orbitRadius,
+  orbitSpeed: PARAM_DEFAULTS.orbitSpeed,
+  blackHoleMassMin: PARAM_DEFAULTS.blackHoleMassMin,
+  blackHoleMassMax: PARAM_DEFAULTS.blackHoleMassMax,
 
   // Particles / Render
-  pointSize: 1.0,
-  brightness: 1.5,
-  alpha: 0.3,
-  maxDistance: 60,
-  motionBlurTaper: 0.2,
-  motionBlurFade: 0.5,
+  pointSize: PARAM_DEFAULTS.pointSize,
+  brightness: PARAM_DEFAULTS.brightness,
+  alpha: PARAM_DEFAULTS.alpha,
+  maxDistance: PARAM_DEFAULTS.maxDistance,
+  motionBlurTaper: PARAM_DEFAULTS.motionBlurTaper,
+  motionBlurFade: PARAM_DEFAULTS.motionBlurFade,
   colorPaletteOffset: 0, // Palette offset for GPU - updated via callGPUSetter
 
   // Physics
-  gravity: 100000,
-  timeScale: 5.0,
-  softening: 1.0,
-  orbitDecay: 1,
-  iscoStrength: 0.5,
-  lifetimeGracePeriod: 90,
-  lifetimeMax: 60,
-  lifetimeGravityMultiplier: 10,
+  gravity: PARAM_DEFAULTS.gravity,
+  timeScale: PARAM_DEFAULTS.timeScale,
+  softening: PARAM_DEFAULTS.softening,
+  orbitDecay: PARAM_DEFAULTS.orbitDecay,
+  iscoStrength: PARAM_DEFAULTS.iscoStrength,
+  lifetimeGracePeriod: PARAM_DEFAULTS.lifetimeGracePeriod,
+  lifetimeMax: PARAM_DEFAULTS.lifetimeMax,
+  lifetimeGravityMultiplier: PARAM_DEFAULTS.lifetimeGravityMultiplier,
 
   // Emitters
-  emitRadius: 200,
-  emitterCount: 12,
-  emitterAngle: 0,
-  emitterTilt: 0,
-  inwardAngle: 0,
-  spawnRate: 5000,
-  emitterSpread: 0,
+  emitRadius: PARAM_DEFAULTS.emitRadius,
+  emitterCount: PARAM_DEFAULTS.emitterCount,
+  emitterAngle: PARAM_DEFAULTS.emitterAngle,
+  emitterTilt: PARAM_DEFAULTS.emitterTilt,
+  inwardAngle: PARAM_DEFAULTS.inwardAngle,
+  spawnRate: PARAM_DEFAULTS.spawnRate,
+  emitterSpread: PARAM_DEFAULTS.emitterSpread,
 
   // Audio
-  amplitude: 10,
-  audioGain: 2,
-  beatRepulsion: 20,
+  amplitude: PARAM_DEFAULTS.amplitude,
+  audioGain: PARAM_DEFAULTS.audioGain,
+  beatRepulsion: PARAM_DEFAULTS.beatRepulsion,
 
   // Post-Processing
-  bloomBaseIntensity: 1,
-  bloomAudioReactivity: 1,
-  chromaticAudioReactivity: 1,
-  vignetteOffset: 0.5,
-  vignetteDarkness: 0.5,
-  hfcVelocityBoost: 0.2,
-  spawnBurstMultiplier: 15.0,
+  bloomBaseIntensity: PARAM_DEFAULTS.bloomBaseIntensity,
+  bloomAudioReactivity: PARAM_DEFAULTS.bloomAudioReactivity,
+  chromaticAudioReactivity: PARAM_DEFAULTS.chromaticAudioReactivity,
+  vignetteOffset: PARAM_DEFAULTS.vignetteOffset,
+  vignetteDarkness: PARAM_DEFAULTS.vignetteDarkness,
+  hfcVelocityBoost: PARAM_DEFAULTS.hfcVelocityBoost,
+  spawnBurstMultiplier: PARAM_DEFAULTS.spawnBurstMultiplier,
 };
 
 export type RuntimeStateKey = keyof typeof runtimeState;

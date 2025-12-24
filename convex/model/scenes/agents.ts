@@ -4,6 +4,7 @@ import { generateObject, type GenerateObjectResult } from "ai";
 import { components, internal } from "../../_generated/api";
 import { z } from "zod";
 import type { Id, Doc } from "../../_generated/dataModel";
+import { presetSchema, parametersToArray } from "../../lib/visualizationParameters";
 
 if (!process.env.OPENROUTER_API_KEY) {
   throw new Error("OPENROUTER_API_KEY is not set");
@@ -300,34 +301,10 @@ When the user asks to adjust the visualization:
 - Keep responses short and conversational. Only use markdown when necessary.`;
 
 // System prompt for the visualization tool (used by generateObject)
+// Parameter bounds are defined in the Zod schema - LLM sees them directly
 const VISUALIZATION_INSTRUCTIONS = `You are a visualization designer for the Blackhole Audio Visualizer - a particle physics simulation synced to music. Particles are emitted from a circle around three black holes and orbit until they fall in. The emitters emit at different heights based on their frequency bin and so we get trails of particles with bursts to the beat that start as waves and then collapse into streams as they fall into the center.
 
 Given a song's composition plan with sections, moods, and timing, create synchronized visualization presets for a song.
-
-## PARAMETERS (use exact paths)
-
-### Black Hole
-- "Black Hole.eventHorizonRadius": 0.5-20, default 5 (central sphere size)
-- "Black Hole.orbitRadius": 5-200, default 25 (distance of black hole orbits from center - larger values spread them out)
-- "Black Hole.blackHoleMassMin": 0.3-1.0, default 0.3 (minimum mass ratio - see MASS & POSITION DISTRIBUTION below)
-
-### Particles
-- "Particles.pointSize": 0.1-5, default 1.0 (particle size)
-
-### Physics
-- "Physics.gravity": 1000-1000000, default 100000 (pull strength - higher needs more orbitDecay, affects particle velocity)
-- "Physics.orbitDecay": 0-20, default 1 (spiral-in rate: 0=stabler orbits, high=fast direct collapse)
-- "Physics.softening": 0.01-10, default 1.0 (smooths forces near center to prevent ejection)
-
-### Emitters
-- "Emitters.emitterCount": 1-36, default 12 (particle sources)
-- "Emitters.emitterSpread": 0-1, default 0.05 (emitter width, less is better, 0=clean lines 0.1=fuzzy, >0.3 creates noise clouds) 
-- "Emitters.emitRadius": 5-200, default 200 (spawn distance from center)
-
-### Audio Reactivity
-- "Audio.amplitude": 0-20, default 10 (wave emission height)
-- "Audio.audioGain": 0-3, default 2 (input amplification)
-- "Audio.beatRepulsion": 0-100, default 20 (beat push force from center)
 
 ## COLOR PALETTES
 
@@ -388,8 +365,8 @@ Use higher massMin (0.5-0.7) for more balanced, symmetric orbital patterns.
 - Ensure presets cover the entire song duration.
 `;
 
-// Preset parameter schema for visualization
-const presetParameterSchema = z.object({
+// Storage format schema for manual preset updates (path/value/duration/ease array)
+const storedParameterSchema = z.object({
   path: z.string(),
   value: z.number(),
   duration: z.number(),
@@ -398,17 +375,7 @@ const presetParameterSchema = z.object({
 
 // Schema for generateObject output
 const playlistOutputSchema = z.object({
-  presets: z.array(
-    z.object({
-      name: z.string(),
-      startTimeMs: z.number(),
-      endTimeMs: z.number(),
-      sectionName: z.string(),
-      colorPalette: z.string(),
-      parameters: z.array(presetParameterSchema),
-      cameraMode: z.string(),
-    })
-  ),
+  presets: z.array(presetSchema),
 });
 
 type PlaylistOutput = z.infer<typeof playlistOutputSchema>;
@@ -508,14 +475,14 @@ ${args.customInstructions ? `## Custom Instructions\n${args.customInstructions}`
       };
     }
 
-    // Save presets to database
+    // Save presets to database - convert flat parameters object to array format
     const presetIds: Id<"presets">[] = [];
     for (const preset of generatedPresets) {
       const presetId = await ctx.runMutation(internal.model.scenes.public.createPresetForScene, {
         userId: user._id,
         name: preset.name,
         colorPalette: preset.colorPalette,
-        parameters: preset.parameters,
+        parameters: parametersToArray(preset.parameters, preset.duration, preset.ease),
         cameraMode: preset.cameraMode,
       });
       presetIds.push(presetId);
@@ -733,7 +700,7 @@ const updatePresetTool = createTool({
     name: z.string().optional().describe("New name for the preset"),
     colorPalette: z.string().optional().describe("New color palette"),
     parameters: z
-      .array(presetParameterSchema)
+      .array(storedParameterSchema)
       .optional()
       .describe("New visualization parameters (replaces all existing parameters)"),
     cameraMode: z.string().optional().describe("New camera mode (circle, closeup, orbit, edge)"),

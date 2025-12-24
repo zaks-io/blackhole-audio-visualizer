@@ -1,47 +1,6 @@
-export type ColorPaletteId =
-  | "default"
-  // Original palettes
-  | "cool"
-  | "warm"
-  | "neon"
-  | "sunset"
-  | "ocean"
-  | "grayscale"
-  // Cosmic & Space
-  | "nebula-dreams"
-  | "aurora-borealis"
-  | "cosmic-twilight"
-  | "solar-flare"
-  | "lunar-eclipse"
-  | "galactic-core"
-  | "starfield"
-  // Retro & Synthwave
-  | "synthwave-horizon"
-  | "vaporwave"
-  | "cyberpunk-city"
-  | "miami-vice"
-  | "retrowave-outrun"
-  | "electric-arcade"
-  // Nature & Elements
-  | "deep-ocean"
-  | "bioluminescence"
-  | "volcanic-ember"
-  | "autumn-forest"
-  | "arctic-aurora"
-  | "tropical-reef"
-  | "forest-mist"
-  | "desert-dusk"
-  // Soft & Pastel
-  | "cotton-candy"
-  | "pastel-dreams"
-  | "lavender-haze"
-  | "rose-gold"
-  | "bubblegum-pop"
-  // Monochrome & Minimal
-  | "midnight-blue"
-  | "crimson-noir"
-  | "emerald-depths"
-  | "amber-glow";
+// ColorPaletteId is imported from the single source of truth
+import { type ColorPaletteId } from "@/convex/lib/visualizationParameters";
+export type { ColorPaletteId };
 
 export interface ColorPalette {
   id: ColorPaletteId;

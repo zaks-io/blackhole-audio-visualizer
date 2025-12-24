@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import type { ColorPaletteId } from "@/components/ColorModeSystem";
 import { syncFromStore } from "@/lib/runtimeStateRegistry";
+import { PARAM_DEFAULTS } from "@/convex/lib/visualizationParameters";
 
 export interface VisualizationControlsState {
   // Black Hole
@@ -141,71 +142,61 @@ export const pathToKey: Record<string, keyof VisualizationControlsState> = {
 };
 
 const DEFAULT_STATE: VisualizationControlsState = {
-  // Black Hole defaults
-  eventHorizonRadius: 5,
-  iscoRatio: 3.0,
-  beatPulse: 2,
-  blackHoleCount: 3,
-  orbitRadius: 25,
-  orbitSpeed: 0.3,
-  blackHoleMassMin: 0.3,
-  blackHoleMassMax: 1.0,
+  // Numeric defaults from PARAMS (single source of truth)
+  eventHorizonRadius: PARAM_DEFAULTS.eventHorizonRadius,
+  iscoRatio: PARAM_DEFAULTS.iscoRatio,
+  beatPulse: PARAM_DEFAULTS.beatPulse,
+  blackHoleCount: PARAM_DEFAULTS.blackHoleCount,
+  orbitRadius: PARAM_DEFAULTS.orbitRadius,
+  orbitSpeed: PARAM_DEFAULTS.orbitSpeed,
+  blackHoleMassMin: PARAM_DEFAULTS.blackHoleMassMin,
+  blackHoleMassMax: PARAM_DEFAULTS.blackHoleMassMax,
+  textureSize: PARAM_DEFAULTS.textureSize,
+  pointSize: PARAM_DEFAULTS.pointSize,
+  brightness: PARAM_DEFAULTS.brightness,
+  alpha: PARAM_DEFAULTS.alpha,
+  maxDistance: PARAM_DEFAULTS.maxDistance,
+  motionBlurTaper: PARAM_DEFAULTS.motionBlurTaper,
+  motionBlurFade: PARAM_DEFAULTS.motionBlurFade,
+  gravity: PARAM_DEFAULTS.gravity,
+  timeScale: PARAM_DEFAULTS.timeScale,
+  softening: PARAM_DEFAULTS.softening,
+  orbitDecay: PARAM_DEFAULTS.orbitDecay,
+  iscoStrength: PARAM_DEFAULTS.iscoStrength,
+  lifetimeGracePeriod: PARAM_DEFAULTS.lifetimeGracePeriod,
+  lifetimeMax: PARAM_DEFAULTS.lifetimeMax,
+  lifetimeGravityMultiplier: PARAM_DEFAULTS.lifetimeGravityMultiplier,
+  emitRadius: PARAM_DEFAULTS.emitRadius,
+  emitterCount: PARAM_DEFAULTS.emitterCount,
+  emitterAngle: PARAM_DEFAULTS.emitterAngle,
+  emitterTilt: PARAM_DEFAULTS.emitterTilt,
+  inwardAngle: PARAM_DEFAULTS.inwardAngle,
+  spawnRate: PARAM_DEFAULTS.spawnRate,
+  emitterSpread: PARAM_DEFAULTS.emitterSpread,
+  starDensity: PARAM_DEFAULTS.starDensity,
+  starBrightness: PARAM_DEFAULTS.starBrightness,
+  amplitude: PARAM_DEFAULTS.amplitude,
+  onsetDecay: PARAM_DEFAULTS.onsetDecay,
+  audioGain: PARAM_DEFAULTS.audioGain,
+  beatRepulsion: PARAM_DEFAULTS.beatRepulsion,
+  bloomBaseIntensity: PARAM_DEFAULTS.bloomBaseIntensity,
+  bloomAudioReactivity: PARAM_DEFAULTS.bloomAudioReactivity,
+  chromaticAudioReactivity: PARAM_DEFAULTS.chromaticAudioReactivity,
+  vignetteOffset: PARAM_DEFAULTS.vignetteOffset,
+  vignetteDarkness: PARAM_DEFAULTS.vignetteDarkness,
+  hfcVelocityBoost: PARAM_DEFAULTS.hfcVelocityBoost,
+  spawnBurstMultiplier: PARAM_DEFAULTS.spawnBurstMultiplier,
 
-  // Particles defaults
-  textureSize: 512,
-  pointSize: 1.0,
-  brightness: 1.5,
-  alpha: 0.3,
-  maxDistance: 60,
+  // Non-numeric defaults (not in PARAMS)
   colorPalette: "grayscale" as ColorPaletteId,
   motionBlurScale: 0.5,
   motionBlurLength: 8.0,
-  motionBlurTaper: 0.2,
-  motionBlurFade: 0.5,
-
-  // Physics defaults
-  gravity: 100000,
-  timeScale: 5.0,
-  softening: 1.0,
-  orbitDecay: 1,
-  iscoStrength: 0.5,
-  lifetimeGracePeriod: 90,
-  lifetimeMax: 60,
-  lifetimeGravityMultiplier: 10,
-
-  // Emitters defaults
-  emitRadius: 200,
-  emitterCount: 12,
-  emitterAngle: 0,
-  emitterTilt: 0,
-  inwardAngle: 0,
-  spawnRate: 5000,
-  emitterSpread: 0,
   showEmitters: false,
-
-  // Skybox defaults
   skybox: "Procedural Stars",
-  starDensity: 20000,
-  starBrightness: 0.2,
-
-  // Audio defaults
-  amplitude: 10,
-  onsetDecay: 0.92,
-  audioGain: 2,
-  beatRepulsion: 20,
   autoColorChange: true,
-
-  // Post-Processing defaults
   bloomEnabled: true,
-  bloomBaseIntensity: 1,
-  bloomAudioReactivity: 1,
   chromaticEnabled: true,
-  chromaticAudioReactivity: 1,
   vignetteEnabled: true,
-  vignetteOffset: 0.5,
-  vignetteDarkness: 0.5,
-  hfcVelocityBoost: 0.2,
-  spawnBurstMultiplier: 15.0,
 };
 
 export const useVisualizationControls = create<VisualizationControlsStore>((set, get) => ({
