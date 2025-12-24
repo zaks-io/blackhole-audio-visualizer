@@ -172,6 +172,7 @@ export function BlackHoleSimulation({
   const spawnBurstRef = useRef(1);
   const hfcDecayCoef = useRef(Math.exp(-1 / (0.15 * 60))); // 150ms decay at 60fps
   const spawnDecayCoef = useRef(Math.exp(-1 / (0.1 * 60))); // 100ms decay at 60fps
+  const beatHistoryRef = useRef<number[]>([0, 0, 0, 0]); // 4-frame rolling average for beat smoothing
 
   // Cached audio data object - updated in-place to avoid per-frame allocations
   const scaledOnsetsRef = useRef(new Float32Array(36));
@@ -284,6 +285,7 @@ export function BlackHoleSimulation({
         beatIntensityRef.current *= 0.85;
         hfcBoostRef.current *= 0.85;
         spawnBurstRef.current = 1 + (spawnBurstRef.current - 1) * 0.85;
+        beatHistoryRef.current = beatHistoryRef.current.map((v) => v * 0.85);
       } else {
         // Use bass peak detection for beat intensity, or fall back to band onsets
         // Clamp onsets to prevent audio glitch spikes before gain multiplication
@@ -293,7 +295,11 @@ export function BlackHoleSimulation({
           1.0
         );
         const beat = Math.max(bassBeat * 0.8, onsetBeat) * (audioGain ?? 1);
-        beatIntensityRef.current = Math.min(beat, 0.75);
+        const clampedBeat = Math.min(beat, 0.75);
+        const history = beatHistoryRef.current;
+        history.push(clampedBeat);
+        history.shift();
+        beatIntensityRef.current = history.reduce((a, b) => a + b, 0) / history.length;
 
         // HFC boost - envelope follow the raw HFC with attack/decay
         const hfcTarget = analysis.raw.hfc;
