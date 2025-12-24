@@ -1,22 +1,10 @@
-varying float vDistance;
-varying vec3 vPosition;
 varying vec3 vColor;
 varying vec2 vUV;
-varying float vStreakRatio;
 
-uniform float uMaxDistance;
 uniform float uBrightness;
 uniform float uAlpha;
-uniform float uMotionBlurTaper;
-uniform float uMotionBlurFade;
 
 void main() {
-    // Distance fades
-    float effectiveRadius = 0.0;
-    float fadeStart = 2.0;
-    float distanceFade = smoothstep(effectiveRadius, fadeStart, vDistance);
-    float horizonAlpha = step(effectiveRadius, vDistance);
-
     // UV.y: 0 = tail, 1 = head
     float t = vUV.y;
 
@@ -24,26 +12,21 @@ void main() {
     float x = vUV.x - 0.5;
 
     // Simple soft teardrop: ellipse that tapers toward tail
-    // Use polar-ish distance from center, stretched along y
-    float centerY = 0.5;  // Center of shape - equal room front/back
-    float dy = (t - centerY) * 1.0;  // Balanced vertical
-    float dx = x * 3.0;  // Tighter horizontal
+    float centerY = 0.5;
+    float dy = (t - centerY) * 1.0;
+    float dx = x * 3.0;
 
     // Elliptical distance
     float dist = length(vec2(dx, dy));
 
-    // Soft falloff - steeper to avoid edge cropping
+    // Soft falloff
     float shapeAlpha = exp(-dist * dist * 14.0);
 
     // Extra fade toward tail
     float tailFade = smoothstep(0.0, 0.3, t);
     shapeAlpha *= tailFade;
 
-    // Brightness with depth
-    float depthT = clamp(vDistance / uMaxDistance, 0.0, 1.0);
-    float brightness = uBrightness * (1.0 + (1.0 - depthT) * 0.3);
+    float finalAlpha = shapeAlpha * uAlpha;
 
-    float finalAlpha = shapeAlpha * horizonAlpha * distanceFade * uAlpha;
-
-    gl_FragColor = vec4(vColor * brightness, finalAlpha);
+    gl_FragColor = vec4(vColor * uBrightness, finalAlpha);
 }

@@ -44,7 +44,7 @@ export function VisualizationControls() {
           step={0.5}
         />
         <SliderControl controlKey="iscoRatio" label="ISCO Ratio" min={2.0} max={20.0} step={1.0} />
-        <SliderControl controlKey="beatPulse" label="Beat Pulse" min={0} max={2} step={0.1} />
+        <SliderControl controlKey="beatPulse" label="Beat Pulse" min={0} max={5} step={0.1} />
       </ControlSection>
 
       <ControlSection title="Particles" id="particles">

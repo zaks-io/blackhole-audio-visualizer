@@ -24,6 +24,7 @@ uniform float uOrbitDecay;
 // Multi-black hole uniforms
 uniform vec3 uBlackHolePos[MAX_BLACK_HOLES];
 uniform float uBlackHoleMass[MAX_BLACK_HOLES];
+uniform float uBlackHoleRadius[MAX_BLACK_HOLES];
 uniform int uBlackHoleCount;
 
 // 1D hash that explicitly breaks grid correlation by combining x and y
@@ -198,7 +199,8 @@ void main() {
 
         // Orbital decay: reduce tangential velocity (angular momentum loss)
         // This creates natural spiral motion instead of radial spokes
-        if (uOrbitDecay > 0.0 && nearestDist > uEventHorizon) {
+        float nearestRadius = uBlackHoleRadius[nearestIdx];
+        if (uOrbitDecay > 0.0 && nearestDist > nearestRadius) {
             float radialVel = dot(vel, nearestDir);
             vec3 tangentialVel = vel - nearestDir * radialVel;
 
@@ -267,11 +269,12 @@ void main() {
             float bhISCORadius = uISCORadius * sqrt(massRatio) * 0.5 + uISCORadius * 0.5;
 
             float lobeThreshold = 0.3;
+            float bhEventHorizon = uBlackHoleRadius[dominantIdx];
 
-            if (lobeDepth > lobeThreshold && distToDominant < bhISCORadius && distToDominant > uEventHorizon) {
+            if (lobeDepth > lobeThreshold && distToDominant < bhISCORadius && distToDominant > bhEventHorizon) {
                 // ISCO CAPTURE ZONE - spiral dynamics toward dominant BH
 
-                float iscoDepth = 1.0 - (distToDominant - uEventHorizon) / (bhISCORadius - uEventHorizon);
+                float iscoDepth = 1.0 - (distToDominant - bhEventHorizon) / (bhISCORadius - bhEventHorizon);
                 iscoDepth = clamp(iscoDepth, 0.0, 1.0);
 
                 // Scale effect by both lobe depth and ISCO depth
@@ -314,8 +317,9 @@ void main() {
         }
         else if (uBlackHoleCount == 1 && uISCOStrength > 0.0) {
             // Single black hole: Original ISCO physics
-            if (nearestDist < uISCORadius && nearestDist > uEventHorizon) {
-                float iscoDepth = 1.0 - (nearestDist - uEventHorizon) / (uISCORadius - uEventHorizon);
+            float singleBHRadius = uBlackHoleRadius[0];
+            if (nearestDist < uISCORadius && nearestDist > singleBHRadius) {
+                float iscoDepth = 1.0 - (nearestDist - singleBHRadius) / (uISCORadius - singleBHRadius);
                 iscoDepth = clamp(iscoDepth, 0.0, 1.0);
 
                 float orbitalSpeed = sqrt(uBlackHoleMass[0] / (nearestDist + uSoftening));

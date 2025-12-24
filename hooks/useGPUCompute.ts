@@ -155,6 +155,8 @@ export function useGPUCompute(
     positionVariable.material.uniforms.uAudioAmplitude = { value: 1.0 };
     positionVariable.material.uniforms.uSpawnBurst = { value: 1.0 };
     positionVariable.material.uniforms.uEmitterSpread = { value: 0.0 };
+    positionVariable.material.uniforms.uBeatIntensity = { value: 0.0 };
+    positionVariable.material.uniforms.uBeatPulse = { value: 2.0 };
 
     // Multi-black hole uniforms for position shader
     const bhPos = [
@@ -202,6 +204,7 @@ export function useGPUCompute(
     // Multi-black hole uniforms for velocity shader
     velocityVariable.material.uniforms.uBlackHolePos = { value: bhPos };
     velocityVariable.material.uniforms.uBlackHoleMass = { value: bhMass };
+    velocityVariable.material.uniforms.uBlackHoleRadius = { value: bhRadius };
     velocityVariable.material.uniforms.uBlackHoleCount = { value: 1 };
 
     // IMPORTANT: Initialize uniforms from the visualization store immediately.
@@ -687,6 +690,18 @@ export function useGPUCompute(
     }
   }, []);
 
+  const setPositionBeatIntensity = useCallback((value: number) => {
+    if (positionVariableRef.current) {
+      positionVariableRef.current.material.uniforms.uBeatIntensity.value = value;
+    }
+  }, []);
+
+  const setPositionBeatPulse = useCallback((value: number) => {
+    if (positionVariableRef.current) {
+      positionVariableRef.current.material.uniforms.uBeatPulse.value = value;
+    }
+  }, []);
+
   const setLifetimeGracePeriod = useCallback((value: number) => {
     if (velocityVariableRef.current) {
       velocityVariableRef.current.material.uniforms.uLifetimeGracePeriod.value = value;
@@ -744,6 +759,7 @@ export function useGPUCompute(
       if (velocityVariableRef.current) {
         velocityVariableRef.current.material.uniforms.uBlackHolePos.value = targetPos;
         velocityVariableRef.current.material.uniforms.uBlackHoleMass.value = targetMass;
+        velocityVariableRef.current.material.uniforms.uBlackHoleRadius.value = targetRadius;
         velocityVariableRef.current.material.uniforms.uBlackHoleCount.value = clampedCount;
       }
     },
@@ -822,6 +838,8 @@ export function useGPUCompute(
     setPaletteOffset,
     setHFCBoost,
     setSpawnBurst,
+    setPositionBeatIntensity,
+    setPositionBeatPulse,
     setLifetimeGracePeriod,
     setLifetimeMax,
     setLifetimeGravityMultiplier,

@@ -77,6 +77,8 @@ export function ParticleSystem({
     setPaletteOffset,
     setHFCBoost,
     setSpawnBurst,
+    setPositionBeatIntensity,
+    setPositionBeatPulse,
     setLifetimeGracePeriod,
     setLifetimeMax,
     setLifetimeGravityMultiplier,
@@ -103,6 +105,7 @@ export function ParticleSystem({
     emitterSpread: number;
     amplitude: number;
     beatRepulsion: number;
+    beatPulse: number;
     lifetimeGracePeriod: number;
     lifetimeMax: number;
     lifetimeGravityMultiplier: number;
@@ -364,6 +367,7 @@ export function ParticleSystem({
         emitterSpread: state.emitterSpread,
         amplitude: state.amplitude,
         beatRepulsion: state.beatRepulsion,
+        beatPulse: state.beatPulse,
         lifetimeGracePeriod: state.lifetimeGracePeriod,
         lifetimeMax: state.lifetimeMax,
         lifetimeGravityMultiplier: state.lifetimeGravityMultiplier,
@@ -385,6 +389,7 @@ export function ParticleSystem({
       setEmitterSpread(state.emitterSpread);
       setAudioAmplitude(state.amplitude);
       setBeatRepulsion(state.beatRepulsion);
+      setPositionBeatPulse(state.beatPulse);
       setLifetimeGracePeriod(state.lifetimeGracePeriod);
       setLifetimeMax(state.lifetimeMax);
       setLifetimeGravityMultiplier(state.lifetimeGravityMultiplier);
@@ -454,6 +459,10 @@ export function ParticleSystem({
         prev.beatRepulsion = state.beatRepulsion;
         setBeatRepulsion(state.beatRepulsion);
       }
+      if (prev.beatPulse !== state.beatPulse) {
+        prev.beatPulse = state.beatPulse;
+        setPositionBeatPulse(state.beatPulse);
+      }
       if (prev.lifetimeGracePeriod !== state.lifetimeGracePeriod) {
         prev.lifetimeGracePeriod = state.lifetimeGracePeriod;
         setLifetimeGracePeriod(state.lifetimeGracePeriod);
@@ -509,6 +518,7 @@ export function ParticleSystem({
       if (Math.abs(beat - prev.beatIntensity) > AUDIO_THRESHOLDS.beatIntensity) {
         prev.beatIntensity = beat;
         setBeatIntensity(beat);
+        setPositionBeatIntensity(beat);
       }
 
       const derivedIsco = iscoRadius * (1 + beat * state.beatPulse);
@@ -536,6 +546,7 @@ export function ParticleSystem({
       // These are constant in disabled mode; only force on transition.
       if (audioTransitioned) {
         setBeatIntensity(0);
+        setPositionBeatIntensity(0);
         setHFCBoost(0);
         setSpawnBurst(1);
         // Clear spectrum so spawn-time audioEnergy doesn't keep oscillating after pause.

@@ -21,6 +21,8 @@ uniform sampler2D uSpectrumTexture;
 uniform float uSpectrumSize;
 uniform float uAudioAmplitude;
 uniform float uSpawnBurst;
+uniform float uBeatIntensity;
+uniform float uBeatPulse;
 
 // Multi-black hole uniforms
 uniform vec3 uBlackHolePos[MAX_BLACK_HOLES];
@@ -133,10 +135,11 @@ void main() {
 
         for (int i = 0; i < MAX_BLACK_HOLES; i++) {
             if (i >= uBlackHoleCount) break;
-
-            // Recycle very close to center (matches fragment shader effectiveRadius=0, fadeStart=2)
-            float radius = 0.5;
             if (uBlackHoleRadius[i] <= 0.0) continue;
+
+            // Apply beat pulse to recycling radius to match visual black hole size
+            float pulse = 1.0 + uBeatIntensity * uBeatPulse;
+            float radius = uBlackHoleRadius[i] * 0.35 * pulse;
 
             // Check if new position is inside (handles slow particles)
             if (length(newPos - uBlackHolePos[i]) < radius) {

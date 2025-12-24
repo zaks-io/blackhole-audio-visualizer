@@ -1,5 +1,3 @@
-#define MAX_BLACK_HOLES 4
-
 uniform sampler2D texturePosition;
 uniform sampler2D texturePrevPosition;
 uniform sampler2D textureHistory1;
@@ -8,16 +6,11 @@ uniform sampler2D textureVelocity;
 uniform sampler2D uColorLUT;
 uniform float uColorLUTSize;
 uniform float uBaseSize;
-uniform vec3 uBlackHolePos[MAX_BLACK_HOLES];
-uniform int uBlackHoleCount;
 
 attribute vec2 reference;
 
-varying float vDistance;
-varying vec3 vPosition;
 varying vec3 vColor;
 varying vec2 vUV;
-varying float vStreakRatio;
 
 // Catmull-Rom spline - smooth curve through all 4 points
 vec3 catmullRom(vec3 p0, vec3 p1, vec3 p2, vec3 p3, float t) {
@@ -59,13 +52,10 @@ void main() {
     float colorIndex = velData.w;
 
     vUV = uv;
-    vPosition = p3;
 
     // Hide unspawned particles
     if (lifetime < 0.0) {
         gl_Position = vec4(0.0, 0.0, -1000.0, 1.0);
-        vStreakRatio = 1.0;
-        vDistance = 99999.0;
         vColor = vec3(0.0);
         return;
     }
@@ -82,14 +72,6 @@ void main() {
         p2 = p3;
     }
 
-    // Distance to nearest black hole
-    float nearestDist = 99999.0;
-    for (int i = 0; i < MAX_BLACK_HOLES; i++) {
-        if (i >= uBlackHoleCount) break;
-        nearestDist = min(nearestDist, length(p3 - uBlackHolePos[i]));
-    }
-    vDistance = nearestDist;
-
     // Color from LUT
     float idx = clamp(floor(colorIndex + 0.5), 0.0, uColorLUTSize - 1.0);
     vColor = texture2D(uColorLUT, vec2((idx + 0.5) / uColorLUTSize, 0.5)).rgb;
@@ -99,10 +81,6 @@ void main() {
 
     // Position along the curve using ACTUAL historical positions
     vec3 curvePos = catmullRom(p0, p1, p2, p3, t);
-
-    // Compute total trail length for streak ratio (used by fragment shader)
-    float totalDist = length(p3 - p2) + length(p2 - p1) + length(p1 - p0);
-    vStreakRatio = 1.0 + totalDist * 0.1;
 
     // Transform curve position to view space
     vec4 viewPos = modelViewMatrix * vec4(curvePos, 1.0);
