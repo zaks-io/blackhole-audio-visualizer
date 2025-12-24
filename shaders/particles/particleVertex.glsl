@@ -6,6 +6,7 @@ uniform sampler2D textureVelocity;
 uniform sampler2D uColorLUT;
 uniform float uColorLUTSize;
 uniform float uBaseSize;
+uniform float uResolutionScale;
 
 attribute vec2 reference;
 
@@ -22,6 +23,36 @@ vec3 catmullRom(vec3 p0, vec3 p1, vec3 p2, vec3 p3, float t) {
         (2.0 * p0 - 5.0 * p1 + 4.0 * p2 - p3) * t2 +
         (-p0 + 3.0 * p1 - 3.0 * p2 + p3) * t3
     );
+}
+
+// Evaluate a tail->head polycurve over the 4 history samples using 3 Catmull-Rom segments.
+// - seg 0 covers p0 -> p1 (clamped endpoints)
+// - seg 1 covers p1 -> p2 (standard interior segment)
+// - seg 2 covers p2 -> p3 (clamped endpoints)
+vec3 evalTrailCurve(vec3 p0, vec3 p1, vec3 p2, vec3 p3, float t01) {
+    float tClamped = clamp(t01, 0.0, 1.0);
+    // Map [0,1] -> [0,3) so we get 3 segments. Guard t=1.0.
+    float segf = min(tClamped * 3.0, 2.999999);
+    float seg = floor(segf); // 0,1,2
+    float u = segf - seg;    // local segment parameter [0,1)
+
+    vec3 a;
+    vec3 b;
+    vec3 c;
+    vec3 d;
+
+    if (seg < 0.5) {
+        // p0 -> p1
+        a = p0; b = p0; c = p1; d = p2;
+    } else if (seg < 1.5) {
+        // p1 -> p2
+        a = p0; b = p1; c = p2; d = p3;
+    } else {
+        // p2 -> p3
+        a = p1; b = p2; c = p3; d = p3;
+    }
+
+    return catmullRom(a, b, c, d, u);
 }
 
 void main() {
@@ -69,28 +100,36 @@ void main() {
     // t: 0 = tail (p0), 1 = head (p3)
     float t = position.y + 0.5;
 
-    // Position along the curve using ACTUAL historical positions
-    vec3 curvePos = catmullRom(p0, p1, p2, p3, t);
+    // Position along the curve using ACTUAL historical positions.
+    // NOTE: Standard Catmull-Rom(p0,p1,p2,p3,t) covers p1->p2, not p0->p3.
+    // We explicitly build a 3-segment polycurve to span tail->head.
+    vec3 curvePos = evalTrailCurve(p0, p1, p2, p3, t);
 
     // Transform curve position to view space
     vec4 viewPos = modelViewMatrix * vec4(curvePos, 1.0);
 
-    // Get ribbon direction in view space
-    vec3 ribbonDir = p3 - p0;
-    float ribbonLen = length(ribbonDir);
-    if (ribbonLen < 0.001) {
-        ribbonDir = velocity;
-        ribbonLen = length(ribbonDir);
+    // Local tangent in view space (finite difference on the same polycurve).
+    // This ensures the streak width is oriented correctly even on curved/off-axis trails.
+    float dt = 1.0 / 96.0;
+    float t0 = max(0.0, t - dt);
+    float t1 = min(1.0, t + dt);
+    vec3 curvePos0 = evalTrailCurve(p0, p1, p2, p3, t0);
+    vec3 curvePos1 = evalTrailCurve(p0, p1, p2, p3, t1);
+    vec3 tangentWorld = curvePos1 - curvePos0;
+    float tangentLen = length(tangentWorld);
+    if (tangentLen < 0.001) {
+        tangentWorld = velocity;
+        tangentLen = length(tangentWorld);
     }
-    if (ribbonLen > 0.001) {
-        ribbonDir = ribbonDir / ribbonLen;
+    if (tangentLen > 0.001) {
+        tangentWorld = tangentWorld / tangentLen;
     } else {
-        ribbonDir = vec3(0.0, 0.0, 1.0);
+        tangentWorld = vec3(0.0, 0.0, 1.0);
     }
-    vec3 ribbonDirView = mat3(modelViewMatrix) * ribbonDir;
+    vec3 tangentView = mat3(modelViewMatrix) * tangentWorld;
 
     // Project onto screen plane (XY in view space) and get perpendicular
-    vec2 screenDir = ribbonDirView.xy;
+    vec2 screenDir = tangentView.xy;
     float screenLen = length(screenDir);
 
     vec3 rightView;
@@ -103,7 +142,8 @@ void main() {
     }
 
     // Width in view space - scale with uBaseSize
-    float baseWidth = uBaseSize * 1.0;
+    // Global width trim so trails read more like thin star streaks at typical pointSize values.
+    float baseWidth = uBaseSize * max(uResolutionScale, 0.0001) * 0.65;
     float taperT = pow(t, 0.5);
     float halfW = baseWidth * (0.3 + 0.7 * taperT);
 

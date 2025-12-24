@@ -36,6 +36,7 @@ interface ParticleSystemProps {
   audioEnabled: boolean;
   getBlackHoleData: () => BlackHoleData;
   enableHistory?: boolean;
+  resolutionScale?: number;
 }
 
 export function ParticleSystem({
@@ -44,6 +45,7 @@ export function ParticleSystem({
   audioEnabled,
   getBlackHoleData,
   enableHistory = true,
+  resolutionScale = 1,
 }: ParticleSystemProps) {
   // Read texture size only on mount - changing it requires full rebuild
   const textureSize = useVisualizationControls.getState().textureSize || DEFAULT_TEXTURE_SIZE;
@@ -113,6 +115,7 @@ export function ParticleSystem({
   const prevAudioEnabledRef = useRef<boolean>(audioEnabled);
   const prevDisabledEmitterCountRef = useRef<number>(-1);
   const prevDisabledIscoRadiusRef = useRef<number | null>(null);
+  const prevResolutionScaleRef = useRef<number>(resolutionScale);
 
   // Threshold-based dirty checking for audio uniforms to reduce GPU updates
   const AUDIO_THRESHOLDS = {
@@ -236,6 +239,7 @@ export function ParticleSystem({
       textureHistory2: { value: null as THREE.Texture | null },
       textureVelocity: { value: null as THREE.Texture | null },
       uBaseSize: { value: initialControls.pointSize },
+      uResolutionScale: { value: resolutionScale },
       uMotionBlurTaper: { value: initialControls.motionBlurTaper },
       uMotionBlurFade: { value: initialControls.motionBlurFade },
       uBrightness: { value: initialControls.brightness },
@@ -254,7 +258,7 @@ export function ParticleSystem({
       uBlackHoleCount: { value: 1 },
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [colorLUT]
+    [colorLUT, resolutionScale]
   );
 
   useFrame(() => {
@@ -263,6 +267,12 @@ export function ParticleSystem({
     const iscoRadius = state.eventHorizonRadius * state.iscoRatio;
 
     if (materialRef.current) {
+      // Resolution scale is derived from Canvas DPR/resolution selection; update only if changed.
+      if (prevResolutionScaleRef.current !== resolutionScale) {
+        prevResolutionScaleRef.current = resolutionScale;
+        materialRef.current.uniforms.uResolutionScale.value = resolutionScale;
+      }
+
       const posTexture = getPositionTexture();
       const prevPosTexture = getPrevPositionTexture();
       const history1Texture = getPositionHistory1Texture();

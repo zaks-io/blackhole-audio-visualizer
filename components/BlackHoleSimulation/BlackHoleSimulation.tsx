@@ -374,6 +374,7 @@ export function BlackHoleSimulation({
         audioEnabled={isAudioConnected}
         getBlackHoleData={getBlackHoleData}
         enableHistory={!perfFlags?.noHistory}
+        resolutionScale={resolutionScale}
       />
       {Array.from({ length: blackHoleCount }, (_, i) => (
         <BlackHole key={i} blackHoleDataRef={blackHoleDataRef} index={i} />
