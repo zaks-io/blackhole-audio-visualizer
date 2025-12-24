@@ -115,9 +115,10 @@ export const submitTranscodingJob = action({
     const jobPayload = {
       input: { url: sourceUrl },
       storage: {
-        service: "s3",
-        region: "us-west-2",
+        service: "s3other",
+        region: "auto",
         bucket: process.env.R2_BUCKET_NAME,
+        force_path_style: true,
         credentials: {
           access_key_id: process.env.R2_ACCESS_KEY_ID,
           secret_access_key: process.env.R2_SECRET_ACCESS_KEY,
@@ -202,9 +203,10 @@ export const retryTranscodingJob = action({
     const jobPayload = {
       input: { url: sourceUrl },
       storage: {
-        service: "s3",
-        region: "us-west-2",
+        service: "s3other",
+        region: "auto",
         bucket: process.env.R2_BUCKET_NAME,
+        force_path_style: true,
         credentials: {
           access_key_id: process.env.R2_ACCESS_KEY_ID,
           secret_access_key: process.env.R2_SECRET_ACCESS_KEY,
