@@ -59,6 +59,7 @@ export default defineSchema({
     r2SourceKey: v.string(),
     r2HlsPath: v.optional(v.string()),
     transcodingStatus: v.union(
+      v.literal("uploaded"),
       v.literal("pending"),
       v.literal("processing"),
       v.literal("completed"),

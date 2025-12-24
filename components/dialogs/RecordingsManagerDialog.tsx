@@ -12,6 +12,7 @@ import {
   Loader2,
   RotateCcw,
   Download,
+  Play,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,13 +35,14 @@ interface RecordingsManagerDialogProps {
 
 function StatusBadge({ status }: { status: string }) {
   const statusConfig: Record<string, { label: string; className: string }> = {
+    uploaded: { label: "Uploaded", className: "bg-zinc-500/20 text-zinc-400" },
     pending: { label: "Pending", className: "bg-yellow-500/20 text-yellow-500" },
     processing: { label: "Processing", className: "bg-blue-500/20 text-blue-500" },
     completed: { label: "Ready", className: "bg-green-500/20 text-green-500" },
     failed: { label: "Failed", className: "bg-red-500/20 text-red-500" },
   };
 
-  const config = statusConfig[status] ?? statusConfig.pending;
+  const config = statusConfig[status] ?? statusConfig.uploaded;
 
   return (
     <span className={cn("px-2 py-0.5 rounded-full text-xs", config.className)}>{config.label}</span>
@@ -55,10 +57,17 @@ export function RecordingsManagerDialog({ children }: RecordingsManagerDialogPro
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [retryingId, setRetryingId] = useState<string | null>(null);
+  const [transcodingId, setTranscodingId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const { recordings, isLoading, uploadRecording, deleteRecording, retryTranscoding } =
-    useConvexRecordings();
+  const {
+    recordings,
+    isLoading,
+    uploadRecording,
+    startTranscoding,
+    deleteRecording,
+    retryTranscoding,
+  } = useConvexRecordings();
 
   const handleCopyUrl = async (id: string, url: string) => {
     await navigator.clipboard.writeText(url);
@@ -80,6 +89,17 @@ export function RecordingsManagerDialog({ children }: RecordingsManagerDialogPro
       console.error("Retry failed:", error);
     } finally {
       setRetryingId(null);
+    }
+  };
+
+  const handleStartTranscoding = async (id: string) => {
+    setTranscodingId(id);
+    try {
+      await startTranscoding(id);
+    } catch (error) {
+      console.error("Start transcoding failed:", error);
+    } finally {
+      setTranscodingId(null);
     }
   };
 
@@ -357,6 +377,27 @@ export function RecordingsManagerDialog({ children }: RecordingsManagerDialogPro
                           <>
                             <RotateCcw className="h-3 w-3" />
                             Retry
+                          </>
+                        )}
+                      </Button>
+                    )}
+                    {recording.transcodingStatus === "uploaded" && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs gap-1.5"
+                        onClick={() => handleStartTranscoding(recording._id)}
+                        disabled={transcodingId === recording._id}
+                      >
+                        {transcodingId === recording._id ? (
+                          <>
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                            Starting...
+                          </>
+                        ) : (
+                          <>
+                            <Play className="h-3 w-3" />
+                            Start Transcoding
                           </>
                         )}
                       </Button>

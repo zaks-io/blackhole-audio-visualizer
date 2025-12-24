@@ -66,9 +66,13 @@ export function useConvexRecordings() {
       xhr.send(file);
     });
 
-    await submitTranscodingJobAction({ recordingId });
-
     return { recordingId };
+  };
+
+  const startTranscoding = async (recordingId: string) => {
+    return submitTranscodingJobAction({
+      recordingId: recordingId as Id<"recordings">,
+    });
   };
 
   const deleteRecording = async (recordingId: string) => {
@@ -88,6 +92,7 @@ export function useConvexRecordings() {
     isLoading: authLoading || (isAuthenticated && recordings === undefined),
     isAuthenticated,
     uploadRecording,
+    startTranscoding,
     deleteRecording,
     retryTranscoding,
   };

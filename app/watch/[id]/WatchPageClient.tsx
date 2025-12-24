@@ -10,7 +10,7 @@ interface Recording {
   _id: Id<"recordings">;
   name: string;
   description?: string;
-  transcodingStatus: "pending" | "processing" | "completed" | "failed";
+  transcodingStatus: "uploaded" | "pending" | "processing" | "completed" | "failed";
   transcodingError?: string;
   hlsUrl?: string;
 }
@@ -41,6 +41,9 @@ export function WatchPageClient({ recording: initialRecording }: WatchPageClient
               <Loader2 className="h-4 w-4 animate-spin" />
               <p>Waiting to process...</p>
             </div>
+          )}
+          {recording.transcodingStatus === "uploaded" && (
+            <p className="text-muted-foreground">Video not yet transcoded for streaming.</p>
           )}
           {recording.transcodingStatus === "failed" && (
             <p className="text-red-500">Processing failed: {recording.transcodingError}</p>

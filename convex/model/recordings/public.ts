@@ -41,7 +41,7 @@ export const createPendingRecording = mutation({
 
     const recordingId = await ctx.db.insert("recordings", {
       r2SourceKey: "",
-      transcodingStatus: "pending",
+      transcodingStatus: "uploaded",
       webhookToken,
       name: args.name,
       description: args.description,
