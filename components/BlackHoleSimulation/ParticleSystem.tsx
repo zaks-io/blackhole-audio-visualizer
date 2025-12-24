@@ -129,8 +129,12 @@ export function ParticleSystem({
       const params = new URLSearchParams(window.location.search);
       const enabled = params.get("debugParticles");
       if (enabled && enabled !== "0") setDebugMode(1);
+
+      // Only enable 'd' shortcut when debug param is present
+      if (!params.has("debug")) return;
     } catch {
       // Ignore (non-browser env)
+      return;
     }
 
     const onKeyDown = (e: KeyboardEvent) => {

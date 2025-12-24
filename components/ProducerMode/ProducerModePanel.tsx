@@ -1,62 +1,17 @@
 "use client";
 
-import { memo } from "react";
-import { X, SlidersHorizontal, Palette, Timer } from "lucide-react";
+import { X, SlidersHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { useProducerMode } from "./useProducerMode";
-import { TweenSlider } from "./TweenSlider";
-import { DurationPicker } from "./DurationPicker";
-import { EasingPicker } from "./EasingPicker";
 import { PresetControls } from "./PresetControls";
 import { PlaylistTab } from "./PlaylistTab";
-import { PRODUCER_PARAMETERS } from "./producerConfig";
-import { PALETTE_IDS, PALETTES, type ColorPaletteId } from "@/components/ColorModeSystem";
-import { useVisualizationControls } from "@/hooks/useVisualizationControls";
-
-// Pre-compute flattened parameters at module level to avoid recalculating on every render
-const ALL_PARAMETERS = PRODUCER_PARAMETERS.flatMap((group) => group.parameters);
-
-// Isolated component for color palette selection - prevents parent re-renders when palette changes
-const ColorPaletteSelector = memo(function ColorPaletteSelector() {
-  const colorPalette = useVisualizationControls((s) => s.colorPalette);
-  const setColorPalette = useVisualizationControls((s) => s.set);
-
-  return (
-    <Select
-      value={colorPalette}
-      onValueChange={(value) => setColorPalette("colorPalette", value as ColorPaletteId)}
-    >
-      <SelectTrigger size="sm" className="w-24 h-6 text-xs">
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        {PALETTE_IDS.map((id) => (
-          <SelectItem key={id} value={id} className="text-xs">
-            {PALETTES[id].name}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  );
-});
+import { ParameterEditor } from "@/components/ParameterEditor";
 
 export function ProducerModePanel() {
-  // Use selectors to avoid re-renders from unrelated state changes
   const isOpen = useProducerMode((s) => s.isOpen);
   const setOpen = useProducerMode((s) => s.setOpen);
-  const globalDuration = useProducerMode((s) => s.globalDuration);
-  const globalEase = useProducerMode((s) => s.globalEase);
-  const setGlobalDuration = useProducerMode((s) => s.setGlobalDuration);
-  const setGlobalEase = useProducerMode((s) => s.setGlobalEase);
 
   return (
     <div
@@ -94,34 +49,9 @@ export function ProducerModePanel() {
             {/* Preset Controls */}
             <PresetControls />
 
-            {/* Global settings */}
-            <div className="px-3 py-2 border-b border-white/5 space-y-2">
-              {/* Color Palette */}
-              <div className="flex items-center gap-2">
-                <Palette className="h-3.5 w-3.5 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground flex-1">Palette</span>
-                <ColorPaletteSelector />
-              </div>
-
-              {/* Duration & Easing */}
-              <div className="flex items-center gap-2">
-                <Timer className="h-3.5 w-3.5 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground flex-1">Timing</span>
-                <div className="flex items-center gap-1">
-                  <DurationPicker value={globalDuration} onChange={setGlobalDuration} />
-                  <span className="text-xs text-muted-foreground/60 w-8">{globalDuration}s</span>
-                  <EasingPicker value={globalEase} onChange={setGlobalEase} />
-                </div>
-              </div>
-            </div>
-
-            {/* Parameter list (flat) */}
+            {/* Parameter Editor */}
             <div className="flex-1 overflow-y-auto px-3 py-2 scrollbar-thin">
-              <div className="space-y-3">
-                {ALL_PARAMETERS.map((param) => (
-                  <TweenSlider key={param.path} config={param} />
-                ))}
-              </div>
+              <ParameterEditor mode="preset" />
             </div>
 
             {/* Footer hint */}

@@ -106,9 +106,9 @@ export const PARAMS: Record<string, ParameterDef> = {
     system: true,
   },
   "Black Hole.orbitRadius": {
-    min: 5,
+    min: 25,
     max: 200,
-    default: 25,
+    default: 200,
     step: 5,
     description: "distance of black hole orbits from center",
     group: "Black Hole",
@@ -286,8 +286,8 @@ export const PARAMS: Record<string, ParameterDef> = {
   "Physics.orbitDecay": {
     min: 0,
     max: 20,
-    default: 1,
-    step: 0.5,
+    default: 0,
+    step: 0.1,
     description: "spiral-in rate: 0=stable, high=fast collapse",
     group: "Physics",
     label: "Orbital Decay",
@@ -306,7 +306,7 @@ export const PARAMS: Record<string, ParameterDef> = {
   "Physics.lifetimeGracePeriod": {
     min: 5,
     max: 120,
-    default: 90,
+    default: 20,
     step: 5,
     description: "initial lifetime grace period",
     group: "Physics",
@@ -314,9 +314,9 @@ export const PARAMS: Record<string, ParameterDef> = {
     system: true,
   },
   "Physics.lifetimeMax": {
-    min: 30,
+    min: 5,
     max: 120,
-    default: 60,
+    default: 30,
     step: 5,
     description: "maximum particle lifetime",
     group: "Physics",

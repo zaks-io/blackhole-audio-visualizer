@@ -4,7 +4,7 @@ import { useState, type RefObject } from "react";
 import { Settings, X } from "lucide-react";
 import { useUIState } from "@/hooks/useUIState";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { DeveloperControls } from "@/components/controls";
+import { ParameterEditor } from "@/components/ParameterEditor";
 import { AudioDebugTab } from "./AudioDebugTab";
 import type { AnalyzedAudio } from "@/hooks/useAudioAnalyzer";
 
@@ -44,7 +44,7 @@ export function ControlSidebar({ analysisRef }: ControlSidebarProps) {
         </TabsList>
 
         <TabsContent value="controls" className="flex-1 overflow-y-auto px-4 py-2 scrollbar-thin">
-          <DeveloperControls />
+          <ParameterEditor mode="dev" />
         </TabsContent>
 
         <TabsContent value="audio" className="flex-1 overflow-y-auto px-4 py-2 scrollbar-thin">
