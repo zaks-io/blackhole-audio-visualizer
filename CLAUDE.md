@@ -114,3 +114,7 @@ convex/model/{modelName}/
 ## Platform Detection
 
 `lib/platform.ts` exports `isElectron()`, `isWeb()`, `getSystemAudioStream()`. Electron exposes `window.electronAPI` for IPC (audio loopback, screen permission).
+
+## Git Commits
+
+Always include `convex/_generated/` files in commits. These are required for Convex to work correctly and must be committed with any schema or function changes.
