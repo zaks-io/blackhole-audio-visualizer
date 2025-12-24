@@ -96,6 +96,15 @@ void main() {
         p2 = p3;
     }
 
+    // Collapse history if spawning from recycled state (history at origin, current is not)
+    float distFromOrigin = length(p3);
+    bool historyAtOrigin = length(p0) < 0.5 || length(p1) < 0.5 || length(p2) < 0.5;
+    if (distFromOrigin > 1.0 && historyAtOrigin) {
+        p0 = p3;
+        p1 = p3;
+        p2 = p3;
+    }
+
     // Color from LUT
     float idx = clamp(floor(colorIndex + 0.5), 0.0, uColorLUTSize - 1.0);
     vColor = texture2D(uColorLUT, vec2((idx + 0.5) / uColorLUTSize, 0.5)).rgb;
