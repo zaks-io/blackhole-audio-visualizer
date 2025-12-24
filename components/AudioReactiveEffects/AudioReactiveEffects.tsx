@@ -9,6 +9,7 @@ import { useShallow } from "zustand/shallow";
 import { useVisualizationControls } from "@/hooks/useVisualizationControls";
 import { runtimeState } from "@/lib/runtimeStateRegistry";
 import { useUIState } from "@/hooks/useUIState";
+import { useFPSStore } from "@/hooks/useFPSMonitor";
 import type { AnalyzedAudio } from "@/hooks/useAudioAnalyzer";
 
 interface AudioReactiveEffectsProps {
@@ -70,6 +71,7 @@ export function AudioReactiveEffects({ getAnalysis, isAudioConnected }: AudioRea
 
   // Cache previous bloom threshold to avoid unnecessary updates
   const prevBloomThreshold = useRef(0.3);
+  const prevBloomLevels = useRef(3);
 
   const chromaticPeak = 0.012;
 
@@ -85,6 +87,15 @@ export function AudioReactiveEffects({ getAnalysis, isAudioConnected }: AudioRea
   const vignetteRefCallback = useCallback((effect: unknown) => {
     vignetteInstance = effect;
   }, []);
+
+  // Compute bloom levels based on particle size and FPS for performance
+  const computeBloomLevels = (pointSize: number, fps: number): number => {
+    if (fps < 50) return 1;
+    if (fps < 55) return 2;
+    if (pointSize >= 3.5) return 1;
+    if (pointSize >= 2.0) return 2;
+    return 3;
+  };
 
   useFrame(() => {
     // Read from runtimeState instead of store for performance during tweens
@@ -140,6 +151,14 @@ export function AudioReactiveEffects({ getAnalysis, isAudioConnected }: AudioRea
           prevBloomThreshold.current = newThreshold;
           bloomInstance.luminanceMaterial.threshold = newThreshold;
         }
+      }
+
+      // Reduce bloom levels for large particles to maintain performance
+      const fps = useFPSStore.getState().fps;
+      const targetLevels = computeBloomLevels(runtimeState.pointSize, fps);
+      if (targetLevels !== prevBloomLevels.current) {
+        prevBloomLevels.current = targetLevels;
+        bloomInstance.mipmapBlurPass.levels = targetLevels;
       }
     }
 
