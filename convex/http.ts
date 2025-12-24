@@ -65,7 +65,7 @@ http.route({
     if (payload.event === "job.completed") {
       const status = payload.data?.status;
 
-      if (status === "completed") {
+      if (status === "job.completed") {
         await ctx.runMutation(internal.model.recordings.internal.updateTranscodingStatus, {
           recordingId: recording._id,
           status: "completed",
