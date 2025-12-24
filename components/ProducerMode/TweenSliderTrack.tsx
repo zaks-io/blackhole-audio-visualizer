@@ -75,6 +75,12 @@ export function TweenSliderTrack({
         isDragging.current = true;
       }}
       onValueChange={([value]) => onTargetChange(value)}
+      onValueCommit={([value]) => {
+        // Commit reliably for mouse/touch + keyboard interactions.
+        // Also prevents the global pointerup fallback from double-firing.
+        isDragging.current = false;
+        onCommit?.(value);
+      }}
       disabled={disabled}
     >
       <SliderPrimitive.Track className="relative h-2 w-full grow overflow-hidden rounded-full bg-white/10">
