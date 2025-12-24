@@ -17,6 +17,19 @@ export function createInitialPositionTexture(
   const particleCount = textureSize * textureSize;
   const data = new Float32Array(particleCount * 4);
 
+  // Deterministic pseudo-random in [0,1). We avoid perfect stratification because it creates
+  // visibly regular spacing/banding when lots of particles converge into thin streams.
+  const rand01 = (i: number) => {
+    // splitmix32-ish hash
+    let x = (i + 1) >>> 0;
+    x ^= x >>> 16;
+    x = Math.imul(x, 0x7feb352d);
+    x ^= x >>> 15;
+    x = Math.imul(x, 0x846ca68b);
+    x ^= x >>> 16;
+    return (x >>> 0) / 4294967296;
+  };
+
   for (let i = 0; i < particleCount; i++) {
     const i4 = i * 4;
 
@@ -25,10 +38,10 @@ export function createInitialPositionTexture(
     data[i4 + 1] = 0;
     data[i4 + 2] = 0;
 
-    // Shuffle spawn times to decorrelate from texture position (which affects emitter assignment)
-    // Knuth multiplicative hash spreads particles evenly across time AND emitters
-    const shuffled = ((i * 2654435761) >>> 0) % particleCount;
-    data[i4 + 3] = -(shuffled / particleCount);
+    // Randomize initial queue position (negative lifetime = waiting).
+    // NOTE: previous implementation used a permutation (perfectly even spacing),
+    // which can create unnatural, static banding/lanes at high density.
+    data[i4 + 3] = -rand01(i);
   }
 
   const texture = new THREE.DataTexture(

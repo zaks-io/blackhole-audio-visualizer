@@ -7,6 +7,8 @@ uniform sampler2D uColorLUT;
 uniform float uColorLUTSize;
 uniform float uBaseSize;
 uniform float uResolutionScale;
+uniform float uDebugMode;
+uniform vec2 uViewport;
 
 attribute vec2 reference;
 
@@ -97,6 +99,16 @@ void main() {
     float idx = clamp(floor(colorIndex + 0.5), 0.0, uColorLUTSize - 1.0);
     vColor = texture2D(uColorLUT, vec2((idx + 0.5) / uColorLUTSize, 0.5)).rgb;
 
+    // Debug visualization: show fractional parts of position at different scales.
+    // Use this to detect quantization (steppy bands) vs correlated randomness.
+    float dbg = floor(uDebugMode + 0.5);
+    if (dbg >= 1.0) {
+        float scale = 1.0;
+        if (dbg >= 2.0) scale = 10.0;
+        if (dbg >= 3.0) scale = 100.0;
+        vColor = fract(abs(p3) * scale);
+    }
+
     // t: 0 = tail (p0), 1 = head (p3)
     float t = position.y + 0.5;
 
@@ -146,6 +158,12 @@ void main() {
     float baseWidth = uBaseSize * max(uResolutionScale, 0.0001) * 0.65;
     float taperT = pow(t, 0.5);
     float halfW = baseWidth * (0.3 + 0.7 * taperT);
+
+    // Prevent subpixel “holes”/moiré by enforcing a minimum screen-space width.
+    // Convert 1 pixel to view-space units at this depth using projectionMatrix and viewport height.
+    float projY = projectionMatrix[1][1]; // f = 1/tan(fov/2)
+    float viewPerPixel = (2.0 * max(0.001, -viewPos.z)) / (max(1.0, uViewport.y) * projY);
+    halfW = max(halfW, viewPerPixel * 0.75); // ~0.75 px minimum half-width
 
     // Offset vertex position in view space along the billboard right vector
     vec3 offsetViewPos = viewPos.xyz + rightView * position.x * halfW;

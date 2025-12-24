@@ -1,5 +1,9 @@
 #define MAX_BLACK_HOLES 4
 
+precision highp float;
+precision highp int;
+precision highp sampler2D;
+
 uniform float uTime;
 uniform float uDeltaTime;
 uniform float uGM;
@@ -23,6 +27,7 @@ uniform float uAudioAmplitude;
 uniform float uSpawnBurst;
 uniform float uBeatIntensity;
 uniform float uBeatPulse;
+uniform float uDither;
 
 // Multi-black hole uniforms
 uniform vec3 uBlackHolePos[MAX_BLACK_HOLES];
@@ -30,15 +35,19 @@ uniform float uBlackHoleMass[MAX_BLACK_HOLES];
 uniform float uBlackHoleRadius[MAX_BLACK_HOLES];
 uniform int uBlackHoleCount;
 
-// 1D hash that explicitly breaks grid correlation by combining x and y
+// Lattice-safe hash (Dave Hoskins style). Works well when inputs are integer texel coords.
+float hash13(vec3 p3) {
+    p3 = fract(p3 * 0.1031);
+    p3 += dot(p3, p3.yzx + 33.33);
+    return fract((p3.x + p3.y) * p3.z);
+}
+
 float hash(vec2 p) {
-    float n = p.x * 127.1 + p.y * 311.7;
-    return fract(sin(n) * 43758.5453);
+    return hash13(vec3(p, 0.0));
 }
 
 float hash2(vec2 p, float seed) {
-    float n = p.x * 127.1 + p.y * 311.7 + seed * 573.9;
-    return fract(sin(n) * 43758.5453);
+    return hash13(vec3(p, seed));
 }
 
 // Always-on spawn decorrelation (independent of uEmitterSpread).
@@ -48,6 +57,7 @@ const float BASE_SPAWN_RADIAL_JITTER = 0.01; // 1% of uEmissionRadius
 
 void main() {
     vec2 uv = gl_FragCoord.xy / resolution.xy;
+    vec2 ip = gl_FragCoord.xy; // integer texel coords (as floats) for PRNG seeding
 
     vec4 posData = texture2D(texturePosition, uv);
     vec4 velData = texture2D(textureVelocity, uv);
@@ -70,8 +80,12 @@ void main() {
         lifetime += dt * (uParticlesPerSecond / uTotalParticles) * uSpawnBurst;
 
         if (lifetime >= 0.0) {
+            // De-quantize spawn timing: use a per-particle sub-frame time for spawn computations.
+            // This prevents “beads/grid points” that appear when many particles compress into thin streams.
+            float spawnTime = uTime - hash2(ip, 9100.0) * uDeltaTime;
+
             // Pick which emitter this particle spawns from
-            float emitterIndex = floor(hash2(uv, 100.0) * uEmitterCount);
+            float emitterIndex = floor(hash2(ip, 100.0) * uEmitterCount);
             float baseAngle = emitterIndex * 6.28318530718 / uEmitterCount;
 
             float angle = baseAngle + uEmitterAngle;
@@ -89,30 +103,31 @@ void main() {
 
             // Beat-reactive Y offset - oscillates up and down based on frequency energy
             float audioEnergy = spectrumValue * 15.0;
-            // Add per-particle time offset to fill gaps between discrete spawn frames
-            float timeJitter = hash2(uv, 5000.0) * 0.125; // Up to 1/8 second offset (one oscillation cycle)
-            float oscillation = -sin((uTime - timeJitter) * 8.0 + emitterIndex * 0.5);
+            // IMPORTANT: de-phase per-particle vertical oscillation to avoid phase-locked banding.
+            // Using a full random phase removes static “lanes” even when emitter spread is 0.
+            float phase = hash2(ip, 5000.0) * 6.28318530718;
+            float oscillation = -sin(spawnTime * 8.0 + phase + emitterIndex * 0.5);
             float y = tiltAmount + audioEnergy * oscillation * uAudioAmplitude;
 
             // Always-on temporal + spatial de-correlation:
             // - time-varying per-particle angle jitter breaks phase-locked lanes
             // - uEmitterSpread remains an extra user-controlled intensifier
-            float timeSeed = uTime * 17.0 + emitterIndex * 13.0;
-            float hJitter = hash2(uv, 1000.0 + timeSeed);
+            float timeSeed = spawnTime * 17.0 + emitterIndex * 13.0;
+            float hJitter = hash2(ip, 1000.0 + timeSeed);
             float baseAngleJitter = (hJitter - 0.5) * BASE_SPAWN_ANGLE_JITTER;
 
             // Small time-varying arc offset (kept modest to preserve spokes)
-            float hArc = hash2(uv, 2000.0 + timeSeed);
+            float hArc = hash2(ip, 2000.0 + timeSeed);
             float baseArc = (hArc - 0.5) * 0.02;
 
             // User-controlled spread (time-varying so it doesn't lock)
-            float hSpread = hash2(uv, 3000.0 + timeSeed);
+            float hSpread = hash2(ip, 3000.0 + timeSeed);
             float userSpread = (hSpread - 0.5) * uEmitterSpread * 0.5;
 
             float spawnAngle = angle + baseArc + baseAngleJitter + userSpread;
 
             // Subtle radial jitter breaks perfect circular quantization without destroying spoke structure
-            float hRad = hash2(uv, 4000.0 + timeSeed);
+            float hRad = hash2(ip, 4000.0 + timeSeed);
             float spawnRad = rad + (hRad - 0.5) * (BASE_SPAWN_RADIAL_JITTER * rad);
 
             float spawnX = spawnRad * cos(spawnAngle);
@@ -178,7 +193,7 @@ void main() {
 
         if (shouldRecycle) {
             // HIT BLACK HOLE or MAX LIFETIME: recycle to emitter queue
-            float recycleRand = hash2(uv, uTime + 500.0);
+            float recycleRand = hash2(ip, uTime + 500.0);
             if (uParticlesPerSecond <= 0.0) {
                 lifetime = 0.0;  // Instant respawn
             } else {
@@ -189,6 +204,17 @@ void main() {
             // No collision: commit new position
             pos = newPos;
             lifetime += uDeltaTime;
+
+            // Micro-dither in world space to prevent static lattice alignment.
+            // Time is quantized to avoid per-frame shimmer; magnitude is intentionally tiny.
+            float tStep = floor(uTime * 10.0); // 10 Hz
+            float seed = 9000.0 + tStep * 13.0;
+            vec3 n = vec3(
+                hash2(ip, seed + 1.0),
+                hash2(ip, seed + 2.0),
+                hash2(ip, seed + 3.0)
+            ) - 0.5;
+            pos += n * uDither;
         }
     }
 

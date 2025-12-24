@@ -1,5 +1,9 @@
 #define MAX_BLACK_HOLES 4
 
+precision highp float;
+precision highp int;
+precision highp sampler2D;
+
 uniform float uTime;
 uniform float uDeltaTime;
 uniform float uGM;
@@ -27,15 +31,19 @@ uniform float uBlackHoleMass[MAX_BLACK_HOLES];
 uniform float uBlackHoleRadius[MAX_BLACK_HOLES];
 uniform int uBlackHoleCount;
 
-// 1D hash that explicitly breaks grid correlation by combining x and y
+// Lattice-safe hash (Dave Hoskins style). Works well when inputs are integer texel coords.
+float hash13(vec3 p3) {
+    p3 = fract(p3 * 0.1031);
+    p3 += dot(p3, p3.yzx + 33.33);
+    return fract((p3.x + p3.y) * p3.z);
+}
+
 float hash(vec2 p) {
-    float n = p.x * 127.1 + p.y * 311.7;
-    return fract(sin(n) * 43758.5453);
+    return hash13(vec3(p, 0.0));
 }
 
 float hash2(vec2 p, float seed) {
-    float n = p.x * 127.1 + p.y * 311.7 + seed * 573.9;
-    return fract(sin(n) * 43758.5453);
+    return hash13(vec3(p, seed));
 }
 
 // Always-on launch decorrelation (independent of uEmitterSpread).
@@ -50,6 +58,7 @@ const float BASE_KICK_TURBULENCE = 0.35; // acceleration-ish magnitude (scaled b
 
 void main() {
     vec2 uv = gl_FragCoord.xy / resolution.xy;
+    vec2 ip = gl_FragCoord.xy; // integer texel coords (as floats) for PRNG seeding
 
     vec4 posData = texture2D(texturePosition, uv);
     vec4 velData = texture2D(textureVelocity, uv);
@@ -61,7 +70,7 @@ void main() {
 
     if (lifetime < 0.0) {
         // Compute emitter index consistently with position shader (same hash seed)
-        float emitterIndex = floor(hash2(uv, 100.0) * uEmitterCount);
+        float emitterIndex = floor(hash2(ip, 100.0) * uEmitterCount);
 
         // WAITING: compute color index based on current palette
         colorIndex = mod(emitterIndex, 8.0) + uPaletteOffset;
@@ -92,26 +101,26 @@ void main() {
         vec3 tangent = normalize(cross(up, r_hat));
 
         // Emitter index (matches position shader) so our time seeding is lane-aware
-        float emitterIndex = floor(hash2(uv, 100.0) * uEmitterCount);
+        float emitterIndex = floor(hash2(ip, 100.0) * uEmitterCount);
         float timeSeed = uTime * 19.0 + emitterIndex * 7.0;
 
         // Generate random values with different seeds
-        float rand1 = hash2(uv, 1.0);
-        float rand2 = hash2(uv, 2.0);
-        float rand3 = hash2(uv, 3.0);
-        float rand4 = hash2(uv, 4.0);
+        float rand1 = hash2(ip, 1.0);
+        float rand2 = hash2(ip, 2.0);
+        float rand3 = hash2(ip, 3.0);
+        float rand4 = hash2(ip, 4.0);
 
         // All jitter now scales with uEmitterSpread - when spread is 0, no jitter
-        float baseAngleJitter = (hash2(uv, uTime) - 0.5) * 0.1 * uEmitterSpread;
-        float baseElevJitter = (hash2(uv, uTime + 100.0) - 0.5) * 0.05 * uEmitterSpread;
-        float baseSpeedJitter = (hash2(uv, uTime + 200.0) - 0.5) * 0.2 * uEmitterSpread;
+        float baseAngleJitter = (hash2(ip, uTime) - 0.5) * 0.1 * uEmitterSpread;
+        float baseElevJitter = (hash2(ip, uTime + 100.0) - 0.5) * 0.05 * uEmitterSpread;
+        float baseSpeedJitter = (hash2(ip, uTime + 200.0) - 0.5) * 0.2 * uEmitterSpread;
 
         // Micro-jitter scales with orbital decay - when decay is 0, no jitter for stable orbits
         float jitterScale = clamp(uOrbitDecay / 5.0, 0.0, 1.0);
-        float microAngleJitter = (hash2(uv, 10000.0 + timeSeed) - 0.5) * BASE_LAUNCH_ANGLE_JITTER * jitterScale;
-        float microElevJitter  = (hash2(uv, 11000.0 + timeSeed) - 0.5) * BASE_LAUNCH_ELEV_JITTER * jitterScale;
-        float microSpeedJitter = (hash2(uv, 12000.0 + timeSeed) - 0.5) * BASE_LAUNCH_SPEED_JITTER * jitterScale;
-        float microRadialJitter = (hash2(uv, 13000.0 + timeSeed) - 0.5) * BASE_LAUNCH_RADIAL_JITTER * jitterScale;
+        float microAngleJitter = (hash2(ip, 10000.0 + timeSeed) - 0.5) * BASE_LAUNCH_ANGLE_JITTER * jitterScale;
+        float microElevJitter  = (hash2(ip, 11000.0 + timeSeed) - 0.5) * BASE_LAUNCH_ELEV_JITTER * jitterScale;
+        float microSpeedJitter = (hash2(ip, 12000.0 + timeSeed) - 0.5) * BASE_LAUNCH_SPEED_JITTER * jitterScale;
+        float microRadialJitter = (hash2(ip, 13000.0 + timeSeed) - 0.5) * BASE_LAUNCH_RADIAL_JITTER * jitterScale;
 
         // Horizontal jitter - vary launch angle in orbital plane
         float angleJitter = baseAngleJitter + (rand1 - 0.5) * uEmitterSpread + microAngleJitter;
@@ -178,13 +187,13 @@ void main() {
         vel += totalAccel * uDeltaTime * 0.5;
 
         // Micro-turbulence scales with orbital decay - when decay is 0, no turbulence for stable orbits
-        float emitterIndexKick = floor(hash2(uv, 100.0) * uEmitterCount);
+        float emitterIndexKick = floor(hash2(ip, 100.0) * uEmitterCount);
         float tStep = floor(uTime * 12.0); // update noise ~12 Hz to avoid per-frame shimmer
         float seed = tStep * 97.0 + emitterIndexKick * 31.0;
         vec3 n = vec3(
-            hash2(uv, 14000.0 + seed),
-            hash2(uv, 15000.0 + seed),
-            hash2(uv, 16000.0 + seed)
+            hash2(ip, 14000.0 + seed),
+            hash2(ip, 15000.0 + seed),
+            hash2(ip, 16000.0 + seed)
         ) - 0.5;
         vec3 nDir = normalize(n + vec3(1e-3));
         vec3 tangentNoise = normalize(cross(nDir, normalize(vel + vec3(1e-3))));

@@ -47,6 +47,7 @@ export function useGPUCompute(
   const copyMaterialRef = useRef<THREE.ShaderMaterial | null>(null);
   const copySceneRef = useRef<THREE.Scene | null>(null);
   const copyCameraRef = useRef<THREE.Camera | null>(null);
+  const loggedCapsRef = useRef(false);
 
   const textures = useMemo(() => {
     const initialPosition = createInitialPositionTexture(textureSize, EMISSION_RADIUS);
@@ -71,20 +72,26 @@ export function useGPUCompute(
     bandOnsetsTexture.needsUpdate = true;
 
     // Create spectrum texture for raw FFT data (per-particle frequency sampling)
-    const spectrumData = new Uint8Array(SPECTRUM_SIZE * 4);
+    // IMPORTANT: This must be float to avoid visible banding/lanes caused by 8-bit quantization.
+    // The simulation uses spectrum values to set spawn-time vertical energy; bytes create discrete steps.
+    const spectrumData = new Float32Array(SPECTRUM_SIZE * 4);
     for (let i = 0; i < SPECTRUM_SIZE; i++) {
       spectrumData[i * 4 + 0] = 0;
       spectrumData[i * 4 + 1] = 0;
       spectrumData[i * 4 + 2] = 0;
-      spectrumData[i * 4 + 3] = 255;
+      spectrumData[i * 4 + 3] = 1;
     }
     const spectrumTexture = new THREE.DataTexture(
       spectrumData,
       SPECTRUM_SIZE,
       1,
       THREE.RGBAFormat,
-      THREE.UnsignedByteType
+      THREE.FloatType
     );
+    spectrumTexture.magFilter = THREE.NearestFilter;
+    spectrumTexture.minFilter = THREE.NearestFilter;
+    spectrumTexture.wrapS = THREE.ClampToEdgeWrapping;
+    spectrumTexture.wrapT = THREE.ClampToEdgeWrapping;
     spectrumTexture.needsUpdate = true;
 
     return { initialPosition, initialVelocity, bandOnsetsTexture, spectrumTexture };
@@ -93,12 +100,31 @@ export function useGPUCompute(
   useEffect(() => {
     const gpuCompute = new GPUComputationRenderer(textureSize, textureSize, gl);
 
-    if (!gl.capabilities.isWebGL2) {
-      const ext = gl.extensions.get("OES_texture_float");
-      if (!ext) {
-        console.error("Float textures not supported");
-        return;
-      }
+    // Make compute RT type explicit and log float RT support once (helps diagnose lattice/quantization artifacts).
+    // WebGL2 float render targets require EXT_color_buffer_float. If unavailable, we deliberately fall back.
+    const isWebGL2 = gl.capabilities.isWebGL2;
+    const ctx = gl.getContext();
+    const extColorBufferFloat = isWebGL2 ? ctx.getExtension("EXT_color_buffer_float") : null;
+    const extOesFloatTex = !isWebGL2 ? gl.extensions.get("OES_texture_float") : null;
+
+    const canRenderFloat = (isWebGL2 && !!extColorBufferFloat) || (!isWebGL2 && !!extOesFloatTex);
+
+    if (canRenderFloat) {
+      gpuCompute.setDataType(THREE.FloatType);
+    } else {
+      gpuCompute.setDataType(THREE.HalfFloatType);
+      console.warn(
+        "[GPUCompute] Float render targets not supported; falling back to HalfFloat. This can introduce visible quantization/banding artifacts."
+      );
+    }
+
+    if (!loggedCapsRef.current && process.env.NODE_ENV !== "production") {
+      loggedCapsRef.current = true;
+      const precision = gl.capabilities.precision;
+      console.log("[GPUCompute] WebGL2:", isWebGL2);
+      console.log("[GPUCompute] precision:", precision);
+      console.log("[GPUCompute] EXT_color_buffer_float:", !!extColorBufferFloat);
+      console.log("[GPUCompute] OES_texture_float:", !!extOesFloatTex);
     }
 
     // Create position texture
@@ -157,6 +183,8 @@ export function useGPUCompute(
     positionVariable.material.uniforms.uEmitterSpread = { value: 0.0 };
     positionVariable.material.uniforms.uBeatIntensity = { value: 0.0 };
     positionVariable.material.uniforms.uBeatPulse = { value: 2.0 };
+    // Very small drift dither to break residual lattice lock without changing the overall aesthetic.
+    positionVariable.material.uniforms.uDither = { value: 0.006 };
 
     // Multi-black hole uniforms for position shader
     const bhPos = [
@@ -294,6 +322,31 @@ export function useGPUCompute(
     if (error !== null) {
       console.error("GPUComputationRenderer error:", error);
       return;
+    }
+
+    if (process.env.NODE_ENV !== "production") {
+      try {
+        const posRT = gpuCompute.getCurrentRenderTarget(positionVariable);
+        const velRT = gpuCompute.getCurrentRenderTarget(velocityVariable);
+        console.log(
+          "[GPUCompute] positionRT.type:",
+          posRT.texture.type,
+          "format:",
+          posRT.texture.format
+        );
+        // @ts-expect-error internalFormat exists at runtime on Three.Texture in modern versions
+        console.log("[GPUCompute] positionRT.internalFormat:", posRT.texture.internalFormat);
+        console.log(
+          "[GPUCompute] velocityRT.type:",
+          velRT.texture.type,
+          "format:",
+          velRT.texture.format
+        );
+        // @ts-expect-error internalFormat exists at runtime on Three.Texture in modern versions
+        console.log("[GPUCompute] velocityRT.internalFormat:", velRT.texture.internalFormat);
+      } catch {
+        // best-effort logging only
+      }
     }
 
     gpuComputeRef.current = gpuCompute;
@@ -620,7 +673,7 @@ export function useGPUCompute(
 
   const setSpectrum = useCallback((spectrum: Float32Array | undefined) => {
     if (!spectrumTextureRef.current) return;
-    const data = spectrumTextureRef.current.image.data as Uint8Array;
+    const data = spectrumTextureRef.current.image.data as Float32Array;
 
     let changed = false;
 
@@ -644,10 +697,9 @@ export function useGPUCompute(
       // Spectrum values are 0-1 normalized
       const val = spectrum[i];
       const clamped = Number.isFinite(val) ? Math.max(0, Math.min(val, 1)) : 0;
-      const next = Math.round(clamped * 255);
       const idx = i * 4;
-      if (data[idx] !== next) {
-        data[idx] = next;
+      if (data[idx] !== clamped) {
+        data[idx] = clamped;
         changed = true;
       }
     }

@@ -4,6 +4,8 @@ varying vec2 vUV;
 uniform float uBrightness;
 uniform float uAlpha;
 
+precision highp float;
+
 void main() {
     // UV.y: 0 = tail, 1 = head
     float t = vUV.y;
@@ -16,11 +18,16 @@ void main() {
     float dy = (t - centerY) * 1.0;
     float dx = x * 3.0;
 
-    // Elliptical distance
-    float dist = length(vec2(dx, dy));
+    // Ellipse implicit function: inside <= 0, boundary = 0
+    float e = dx * dx + dy * dy - 1.0;
+    float aa = fwidth(e);
+    // Analytic edge AA: stable under camera motion and avoids pixel-grid “holes”.
+    // Inside shape: e < 0 => edge ~ 1. Outside: e > 0 => edge ~ 0.
+    float edge = 1.0 - smoothstep(-aa, aa, e);
 
-    // Soft falloff
-    float shapeAlpha = exp(-dist * dist * 14.0);
+    // Soft falloff (inside shape)
+    float dist = length(vec2(dx, dy));
+    float shapeAlpha = exp(-dist * dist * 14.0) * edge;
 
     // Extra fade toward tail
     float tailFade = smoothstep(0.0, 0.3, t);

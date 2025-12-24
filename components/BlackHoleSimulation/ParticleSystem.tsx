@@ -1,7 +1,7 @@
 "use client";
 
-import { useRef, useMemo, useEffect } from "react";
-import { useFrame } from "@react-three/fiber";
+import { useRef, useMemo, useEffect, useState } from "react";
+import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { useGPUCompute } from "@/hooks/useGPUCompute";
 import { DEFAULT_TEXTURE_SIZE } from "@/lib/gpu/verletPhysics";
@@ -47,6 +47,10 @@ export function ParticleSystem({
   enableHistory = true,
   resolutionScale = 1,
 }: ParticleSystemProps) {
+  // Debug: visualize position fractional components to detect quantization.
+  // 0 = off, 1..3 = increasing scale. Toggle with 'd' key, or set URL param ?debugParticles=1
+  const [debugMode, setDebugMode] = useState(0);
+
   // Read texture size only on mount - changing it requires full rebuild
   const textureSize = useVisualizationControls.getState().textureSize || DEFAULT_TEXTURE_SIZE;
   const particleCount = textureSize * textureSize;
@@ -87,6 +91,7 @@ export function ParticleSystem({
     setBlackHoles,
   } = useGPUCompute(textureSize, { enableHistory });
 
+  const { gl, size } = useThree();
   const materialRef = useRef<THREE.ShaderMaterial>(null);
   const prevFirstColorRef = useRef<string>(allColors[0]);
   const emptyOnsetsRef = useRef<Float32Array>(new Float32Array(36));
@@ -116,6 +121,25 @@ export function ParticleSystem({
   const prevDisabledEmitterCountRef = useRef<number>(-1);
   const prevDisabledIscoRadiusRef = useRef<number | null>(null);
   const prevResolutionScaleRef = useRef<number>(resolutionScale);
+  const prevDebugModeRef = useRef<number>(debugMode);
+
+  useEffect(() => {
+    // Initialize from URL param
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const enabled = params.get("debugParticles");
+      if (enabled && enabled !== "0") setDebugMode(1);
+    } catch {
+      // Ignore (non-browser env)
+    }
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key.toLowerCase() !== "d") return;
+      setDebugMode((m) => (m + 1) % 4);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   // Threshold-based dirty checking for audio uniforms to reduce GPU updates
   const AUDIO_THRESHOLDS = {
@@ -247,6 +271,9 @@ export function ParticleSystem({
       uColorLUT: { value: colorLUT.tex },
       uColorLUTSize: { value: colorLUT.size },
       uMaxDistance: { value: initialControls.maxDistance },
+      uDebugMode: { value: 0.0 },
+      // Viewport in *device pixels* for screen-space stabilization / AA.
+      uViewport: { value: new THREE.Vector2(1, 1) },
       uBlackHolePos: {
         value: [
           new THREE.Vector3(0, 0, 0),
@@ -271,6 +298,15 @@ export function ParticleSystem({
       if (prevResolutionScaleRef.current !== resolutionScale) {
         prevResolutionScaleRef.current = resolutionScale;
         materialRef.current.uniforms.uResolutionScale.value = resolutionScale;
+      }
+      // Keep viewport uniform in device pixels (includes DPR) so screen-space math is stable.
+      const dpr = gl.getPixelRatio();
+      materialRef.current.uniforms.uViewport.value.set(size.width * dpr, size.height * dpr);
+
+      // Debug mode toggle (avoid redundant uniform writes)
+      if (prevDebugModeRef.current !== debugMode) {
+        prevDebugModeRef.current = debugMode;
+        materialRef.current.uniforms.uDebugMode.value = debugMode;
       }
 
       const posTexture = getPositionTexture();
@@ -578,6 +614,8 @@ export function ParticleSystem({
         fragmentShader={particleFragmentShader}
         uniforms={uniforms}
         transparent
+        dithering
+        depthTest={false}
         depthWrite={false}
         blending={THREE.AdditiveBlending}
         side={THREE.DoubleSide}
