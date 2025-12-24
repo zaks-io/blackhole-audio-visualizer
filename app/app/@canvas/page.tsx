@@ -47,6 +47,7 @@ export default function CanvasSlot() {
     }))
   );
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+  const [recoveryKey, setRecoveryKey] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Perf/bisection flags (URL-driven so we can test prod + Electron builds)
@@ -161,7 +162,7 @@ export default function CanvasSlot() {
           }
         >
           <Canvas
-            key={resolution}
+            key={`${resolution}-${recoveryKey}`}
             camera={{ position: [0, 90, 150], fov: 60 }}
             gl={{
               antialias: true,
@@ -183,6 +184,7 @@ export default function CanvasSlot() {
               colorMode={colorMode}
               resolutionScale={effectiveDpr / 2}
               perfFlags={perfFlags}
+              onGPUError={() => setRecoveryKey((k) => k + 1)}
             />
             {!perfFlags.noPostFX && (
               <PostProcessing getAnalysis={audio.getAnalysis} isAudioConnected={isAudioActive} />

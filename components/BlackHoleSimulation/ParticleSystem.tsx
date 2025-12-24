@@ -37,6 +37,7 @@ interface ParticleSystemProps {
   getBlackHoleData: () => BlackHoleData;
   enableHistory?: boolean;
   resolutionScale?: number;
+  onGPUError?: () => void;
 }
 
 export function ParticleSystem({
@@ -46,6 +47,7 @@ export function ParticleSystem({
   getBlackHoleData,
   enableHistory = true,
   resolutionScale = 1,
+  onGPUError,
 }: ParticleSystemProps) {
   // Debug: visualize position fractional components to detect quantization.
   // 0 = off, 1..3 = increasing scale. Toggle with 'd' key, or set URL param ?debugParticles=1
@@ -89,7 +91,7 @@ export function ParticleSystem({
     setLifetimeMax,
     setLifetimeGravityMultiplier,
     setBlackHoles,
-  } = useGPUCompute(textureSize, { enableHistory });
+  } = useGPUCompute(textureSize, { enableHistory, onError: onGPUError });
 
   const { gl, size } = useThree();
   const materialRef = useRef<THREE.ShaderMaterial>(null);

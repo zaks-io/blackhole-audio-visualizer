@@ -50,6 +50,7 @@ interface BlackHoleSimulationProps {
     noStars?: boolean;
     noHistory?: boolean;
   };
+  onGPUError?: () => void;
 }
 
 export function BlackHoleSimulation({
@@ -60,6 +61,7 @@ export function BlackHoleSimulation({
   colorMode,
   resolutionScale = 1,
   perfFlags,
+  onGPUError,
 }: BlackHoleSimulationProps) {
   // Use grouped selectors with shallow comparison to avoid unnecessary re-renders
   // Only subscribe to values that affect the render output
@@ -375,6 +377,7 @@ export function BlackHoleSimulation({
         getBlackHoleData={getBlackHoleData}
         enableHistory={!perfFlags?.noHistory}
         resolutionScale={resolutionScale}
+        onGPUError={onGPUError}
       />
       {Array.from({ length: blackHoleCount }, (_, i) => (
         <BlackHole key={i} blackHoleDataRef={blackHoleDataRef} index={i} />

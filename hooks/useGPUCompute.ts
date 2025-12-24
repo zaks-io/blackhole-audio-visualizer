@@ -25,9 +25,10 @@ const SPECTRUM_SIZE = 128; // FFT bins to send to GPU
 
 export function useGPUCompute(
   textureSize: number = DEFAULT_TEXTURE_SIZE,
-  options?: { enableHistory?: boolean }
+  options?: { enableHistory?: boolean; onError?: () => void }
 ) {
   const enableHistory = options?.enableHistory ?? true;
+  const onError = options?.onError;
   const { gl } = useThree();
   const gpuComputeRef = useRef<GPUComputationRenderer | null>(null);
   const positionVariableRef = useRef<Variable | null>(null);
@@ -405,7 +406,9 @@ export function useGPUCompute(
       textures.initialPosition.dispose();
       textures.initialVelocity.dispose();
       textures.bandOnsetsTexture.dispose();
+      textures.spectrumTexture.dispose();
       bandOnsetsTextureRef.current = null;
+      spectrumTextureRef.current = null;
       blackHolePosRef.current = null;
       blackHoleMassRef.current = null;
       blackHoleRadiusRef.current = null;
@@ -475,16 +478,20 @@ export function useGPUCompute(
     }
 
     // KICK-DRIFT-KICK (Leapfrog) Integration:
+    try {
+      // Pass 1: First KICK (half-step velocity update)
+      velocityVariableRef.current.material.uniforms.uDoKick.value = true;
+      positionVariableRef.current.material.uniforms.uDoDrift.value = false;
+      gpuComputeRef.current.compute();
 
-    // Pass 1: First KICK (half-step velocity update)
-    velocityVariableRef.current.material.uniforms.uDoKick.value = true;
-    positionVariableRef.current.material.uniforms.uDoDrift.value = false;
-    gpuComputeRef.current.compute();
-
-    // Pass 2: DRIFT (position update) + Second KICK (half-step velocity update)
-    velocityVariableRef.current.material.uniforms.uDoKick.value = true;
-    positionVariableRef.current.material.uniforms.uDoDrift.value = true;
-    gpuComputeRef.current.compute();
+      // Pass 2: DRIFT (position update) + Second KICK (half-step velocity update)
+      velocityVariableRef.current.material.uniforms.uDoKick.value = true;
+      positionVariableRef.current.material.uniforms.uDoDrift.value = true;
+      gpuComputeRef.current.compute();
+    } catch (e) {
+      console.error("GPU compute failed, triggering recovery:", e);
+      onError?.();
+    }
   });
 
   const getPositionTexture = useCallback((): THREE.Texture | null => {
