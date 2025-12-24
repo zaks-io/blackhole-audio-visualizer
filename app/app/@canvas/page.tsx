@@ -21,11 +21,12 @@ import { useUnifiedPlayer } from "@/hooks/useUnifiedPlayer";
 import type { Resolution } from "@/hooks/useUIState";
 import type { PlaylistWithPresets } from "@/components/ProducerMode/types";
 
+// HACK: +1 pixel on each dimension to ensure recorded video meets target resolution after encoding
 const RESOLUTIONS: Record<Exclude<Resolution, "auto">, { width: number; height: number }> = {
-  "4k": { width: 3840, height: 2160 },
-  "1080": { width: 1920, height: 1080 },
-  "720": { width: 1280, height: 720 },
-  "480": { width: 854, height: 480 },
+  "4k": { width: 3841, height: 2161 },
+  "1080": { width: 1921, height: 1081 },
+  "720": { width: 1281, height: 721 },
+  "480": { width: 855, height: 481 },
 };
 
 export default function CanvasSlot() {
