@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 import { useUIState, type Resolution } from "@/hooks/useUIState";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { RecordingsManagerDialog } from "./RecordingsManagerDialog";
@@ -200,14 +201,24 @@ export function SettingsMenu({
         {onLoopToggle !== undefined && (
           <>
             <DropdownMenuSeparator />
-            <div className="flex items-center justify-between px-2 py-1.5">
+            <div
+              className={cn(
+                "flex items-center justify-between px-2 py-1.5",
+                isRecording && "opacity-50"
+              )}
+            >
               <div className="flex items-center gap-2">
                 <Repeat className="h-4 w-4 text-muted-foreground" />
                 <Label htmlFor="loop" className="text-sm">
                   Loop Playback
                 </Label>
               </div>
-              <Switch id="loop" checked={loopEnabled} onCheckedChange={onLoopToggle} />
+              <Switch
+                id="loop"
+                checked={loopEnabled}
+                onCheckedChange={onLoopToggle}
+                disabled={isRecording}
+              />
             </div>
           </>
         )}

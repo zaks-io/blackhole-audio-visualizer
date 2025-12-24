@@ -12,6 +12,7 @@ interface UseSceneRecordingConfig {
 export function useSceneRecording({ player, getRecordingStream }: UseSceneRecordingConfig) {
   const recording = useRecording();
   const isRecordingRef = useRef(false);
+  const previousLoopStateRef = useRef<boolean | null>(null);
 
   // Keep ref in sync with state
   useEffect(() => {
@@ -25,12 +26,22 @@ export function useSceneRecording({ player, getRecordingStream }: UseSceneRecord
     }
   }, [player.state.status, recording]);
 
+  // Ensure loop stays disabled while recording
+  useEffect(() => {
+    if (recording.isRecording) {
+      player.setLoop(false);
+    }
+  }, [recording.isRecording, player]);
+
   const startRecording = useCallback(() => {
     const canvas = document.querySelector("canvas");
     if (!canvas) {
       console.error("Canvas element not found");
       return;
     }
+
+    // Store current loop state before disabling it
+    previousLoopStateRef.current = player.loopEnabled;
 
     // Disable loop so recording stops at end
     player.setLoop(false);
@@ -56,7 +67,13 @@ export function useSceneRecording({ player, getRecordingStream }: UseSceneRecord
 
   const stopRecording = useCallback(() => {
     recording.stopRecording();
-  }, [recording]);
+
+    // Restore previous loop state after recording stops
+    if (previousLoopStateRef.current !== null) {
+      player.setLoop(previousLoopStateRef.current);
+      previousLoopStateRef.current = null;
+    }
+  }, [recording, player]);
 
   return {
     isRecording: recording.isRecording,
