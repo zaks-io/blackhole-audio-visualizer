@@ -24,16 +24,6 @@ vec3 catmullRom(vec3 p0, vec3 p1, vec3 p2, vec3 p3, float t) {
     );
 }
 
-// Analytical derivative of Catmull-Rom spline (tangent direction)
-vec3 catmullRomDerivative(vec3 p0, vec3 p1, vec3 p2, vec3 p3, float t) {
-    float t2 = t * t;
-    return 0.5 * (
-        (-p0 + p2) +
-        (4.0 * p0 - 10.0 * p1 + 8.0 * p2 - 2.0 * p3) * t +
-        (-3.0 * p0 + 9.0 * p1 - 9.0 * p2 + 3.0 * p3) * t2
-    );
-}
-
 void main() {
     vec4 posData = texture2D(texturePosition, reference);
     vec4 prevPosData = texture2D(texturePrevPosition, reference);
@@ -85,55 +75,32 @@ void main() {
     // Transform curve position to view space
     vec4 viewPos = modelViewMatrix * vec4(curvePos, 1.0);
 
-    // Compute tangent using analytical derivative, blended with overall direction for smoothness
-    vec3 localTangent = catmullRomDerivative(p0, p1, p2, p3, t);
-    vec3 overallDir = p3 - p0;
-    float overallLen = length(overallDir);
-
-    // Blend local tangent with overall direction to reduce twist at segment joints
-    vec3 tangentWorld;
-    if (overallLen > 0.001) {
-        overallDir = overallDir / overallLen;
-        float localLen = length(localTangent);
-        if (localLen > 0.001) {
-            localTangent = localTangent / localLen;
-            // Blend: 50% local detail, 50% overall smoothness
-            tangentWorld = normalize(localTangent * 0.5 + overallDir * 0.5);
-        } else {
-            tangentWorld = overallDir;
-        }
+    // Get ribbon direction in view space
+    vec3 ribbonDir = p3 - p0;
+    float ribbonLen = length(ribbonDir);
+    if (ribbonLen < 0.001) {
+        ribbonDir = velocity;
+        ribbonLen = length(ribbonDir);
+    }
+    if (ribbonLen > 0.001) {
+        ribbonDir = ribbonDir / ribbonLen;
     } else {
-        float localLen = length(localTangent);
-        if (localLen > 0.001) {
-            tangentWorld = localTangent / localLen;
-        } else if (length(velocity) > 0.001) {
-            tangentWorld = normalize(velocity);
-        } else {
-            tangentWorld = vec3(0.0, 0.0, 1.0);
-        }
+        ribbonDir = vec3(0.0, 0.0, 1.0);
     }
+    vec3 ribbonDirView = mat3(modelViewMatrix) * ribbonDir;
 
-    // Transform tangent to view space
-    vec3 tangentView = normalize(mat3(modelViewMatrix) * tangentWorld);
+    // Project onto screen plane (XY in view space) and get perpendicular
+    vec2 screenDir = ribbonDirView.xy;
+    float screenLen = length(screenDir);
 
-    // View direction: from point towards camera (camera is at origin in view space)
-    vec3 viewDir = normalize(-viewPos.xyz);
-
-    // Billboard right vector: perpendicular to both tangent and view direction
-    vec3 rightView = cross(viewDir, tangentView);
-    float rightLen = length(rightView);
-
-    // Handle case where tangent is parallel to view direction
-    if (rightLen < 0.001) {
-        vec3 upView = mat3(modelViewMatrix) * vec3(0.0, 1.0, 0.0);
-        rightView = cross(upView, tangentView);
-        rightLen = length(rightView);
-        if (rightLen < 0.001) {
-            rightView = vec3(1.0, 0.0, 0.0);
-            rightLen = 1.0;
-        }
+    vec3 rightView;
+    if (screenLen > 0.001) {
+        // Rotate 90 degrees in screen space: (x,y) -> (-y,x)
+        rightView = vec3(-screenDir.y, screenDir.x, 0.0) / screenLen;
+    } else {
+        // Ribbon pointing at camera - use screen-right
+        rightView = vec3(1.0, 0.0, 0.0);
     }
-    rightView = rightView / rightLen;
 
     // Width in view space - scale with uBaseSize
     float baseWidth = uBaseSize * 1.0;
