@@ -81,7 +81,7 @@ void main() {
 
         if (lifetime >= 0.0) {
             // De-quantize spawn timing: use a per-particle sub-frame time for spawn computations.
-            // This prevents “beads/grid points” that appear when many particles compress into thin streams.
+            // This prevents "beads/grid points" that appear when many particles compress into thin streams.
             float spawnTime = uTime - hash2(ip, 9100.0) * uDeltaTime;
 
             // Pick which emitter this particle spawns from
@@ -103,10 +103,7 @@ void main() {
 
             // Beat-reactive Y offset - oscillates up and down based on frequency energy
             float audioEnergy = spectrumValue * 15.0;
-            // IMPORTANT: de-phase per-particle vertical oscillation to avoid phase-locked banding.
-            // Using a full random phase removes static “lanes” even when emitter spread is 0.
-            float phase = hash2(ip, 5000.0) * 6.28318530718;
-            float oscillation = -sin(spawnTime * 8.0 + phase + emitterIndex * 0.5);
+            float oscillation = sin(uTime * 2.0 + emitterIndex * 0.5);
             float y = tiltAmount + audioEnergy * oscillation * uAudioAmplitude;
 
             // Always-on temporal + spatial de-correlation:
