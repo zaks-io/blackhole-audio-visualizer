@@ -1,9 +1,4 @@
-import {
-  S3Client,
-  PutObjectCommand,
-  DeleteObjectCommand,
-  ListObjectsV2Command,
-} from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 export function getR2Client(): S3Client {
@@ -37,26 +32,19 @@ export async function deleteR2Object(key: string): Promise<void> {
   );
 }
 
-export async function deleteR2Folder(prefix: string): Promise<void> {
-  const client = getR2Client();
+export async function deleteHlsFiles(hlsPath: string): Promise<void> {
+  // Coconut creates predictable byte-range HLS structure
+  const filesToDelete = [
+    `${hlsPath}/master.m3u8`,
+    `${hlsPath}/media-1/stream.m3u8`,
+    `${hlsPath}/media-1/media.ts`,
+    `${hlsPath}/media-2/stream.m3u8`,
+    `${hlsPath}/media-2/media.ts`,
+    `${hlsPath}/media-3/stream.m3u8`,
+    `${hlsPath}/media-3/media.ts`,
+  ];
 
-  const listResponse = await client.send(
-    new ListObjectsV2Command({
-      Bucket: process.env.R2_BUCKET_NAME!,
-      Prefix: prefix,
-    })
-  );
-
-  if (listResponse.Contents) {
-    for (const object of listResponse.Contents) {
-      if (object.Key) {
-        await client.send(
-          new DeleteObjectCommand({
-            Bucket: process.env.R2_BUCKET_NAME!,
-            Key: object.Key,
-          })
-        );
-      }
-    }
+  for (const key of filesToDelete) {
+    await deleteR2Object(key);
   }
 }
