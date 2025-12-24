@@ -108,8 +108,19 @@ export default function CanvasSlot() {
   }, []);
 
   const { displayWidth, displayHeight, effectiveDpr } = useMemo(() => {
-    if (!resolutionConfig || containerSize.width === 0) {
+    if (containerSize.width === 0) {
       return { displayWidth: undefined, displayHeight: undefined, effectiveDpr: 2 };
+    }
+
+    if (!resolutionConfig) {
+      // Auto mode: round to even dimensions to prevent mipmap flickering
+      const width = Math.floor(containerSize.width / 2) * 2;
+      const height = Math.floor(containerSize.height / 2) * 2;
+      return {
+        displayWidth: width || undefined,
+        displayHeight: height || undefined,
+        effectiveDpr: 2,
+      };
     }
 
     const containerAspect = containerSize.width / containerSize.height;
@@ -143,13 +154,10 @@ export default function CanvasSlot() {
       >
         <div
           ref={canvasContainerRef}
-          className={resolutionConfig ? "" : "w-full h-full"}
+          className={!displayWidth ? "w-full h-full" : ""}
           style={
-            resolutionConfig
-              ? {
-                  width: `${displayWidth}px`,
-                  height: `${displayHeight}px`,
-                }
+            displayWidth && displayHeight
+              ? { width: `${displayWidth}px`, height: `${displayHeight}px` }
               : undefined
           }
         >
