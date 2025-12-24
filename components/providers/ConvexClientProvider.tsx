@@ -26,6 +26,7 @@ export function ConvexClientProvider({ children }: ConvexClientProviderProps) {
         redirect_uri: typeof window !== "undefined" ? `${window.location.origin}/app` : "",
       }}
       useRefreshTokens={true}
+      useRefreshTokensFallback={true}
       cacheLocation="localstorage"
     >
       <ConvexProviderWithAuth0 client={convex}>
