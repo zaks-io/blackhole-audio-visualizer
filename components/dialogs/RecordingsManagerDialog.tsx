@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, type ReactNode } from "react";
+import { toast } from "sonner";
 import {
   Upload,
   Copy,
@@ -76,6 +77,8 @@ export function RecordingsManagerDialog({ children }: RecordingsManagerDialogPro
   const [retryingId, setRetryingId] = useState<string | null>(null);
   const [transcodingId, setTranscodingId] = useState<string | null>(null);
   const [confirmRetranscodeId, setConfirmRetranscodeId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const {
@@ -93,9 +96,23 @@ export function RecordingsManagerDialog({ children }: RecordingsManagerDialogPro
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const handleDelete = async (id: string) => {
-    if (confirm("Delete this recording? This cannot be undone.")) {
-      await deleteRecording(id);
+  const handleDelete = (id: string) => {
+    setConfirmDeleteId(id);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!confirmDeleteId) return;
+    const recording = recordings.find((r) => r._id === confirmDeleteId);
+    setIsDeleting(true);
+    try {
+      await deleteRecording(confirmDeleteId);
+      toast.success(`Deleted "${recording?.name ?? "recording"}"`);
+    } catch (error) {
+      toast.error("Failed to delete recording");
+      console.error("Delete failed:", error);
+    } finally {
+      setIsDeleting(false);
+      setConfirmDeleteId(null);
     }
   };
 
@@ -476,6 +493,38 @@ export function RecordingsManagerDialog({ children }: RecordingsManagerDialogPro
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleConfirmRetranscode}>Retranscode</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={!!confirmDeleteId}
+        onOpenChange={(open) => !open && !isDeleting && setConfirmDeleteId(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Recording</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the recording and all associated files. This cannot be
+              undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete"
+              )}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

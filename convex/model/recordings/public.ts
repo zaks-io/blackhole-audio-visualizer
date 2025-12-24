@@ -1,7 +1,7 @@
 import { mutation, query, action, internalMutation } from "../../_generated/server";
 import { internal } from "../../_generated/api";
 import { v } from "convex/values";
-import { generateUploadUrl, deleteR2Object, deleteR2Folder } from "../../lib/r2";
+import { generateUploadUrl, deleteR2Object, deleteHlsFiles } from "../../lib/r2";
 
 const ROLES_CLAIM = "neuron/roles";
 
@@ -302,7 +302,11 @@ export const deleteRecording = action({
     }
 
     if (recording.r2HlsPath) {
-      await deleteR2Folder(recording.r2HlsPath);
+      await deleteHlsFiles(recording.r2HlsPath);
+    }
+
+    if (recording.r2ThumbnailPath) {
+      await deleteR2Object(recording.r2ThumbnailPath);
     }
 
     await ctx.runMutation(internal.model.recordings.internal.remove, {
