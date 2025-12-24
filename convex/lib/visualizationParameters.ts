@@ -212,7 +212,7 @@ export const PARAMS: Record<string, ParameterDef> = {
   "Particles.alpha": {
     min: 0.1,
     max: 1,
-    default: 0.5,
+    default: 0.3,
     step: 0.1,
     description: "particle opacity",
     group: "Particles",
@@ -284,9 +284,9 @@ export const PARAMS: Record<string, ParameterDef> = {
     system: false,
   },
   "Physics.orbitDecay": {
-    min: 0,
+    min: 0.1,
     max: 20,
-    default: 0,
+    default: 0.2,
     step: 0.1,
     description: "spiral-in rate: 0=stable, high=fast collapse",
     group: "Physics",
@@ -338,7 +338,7 @@ export const PARAMS: Record<string, ParameterDef> = {
   // EMITTERS
   // ===========================================================================
   "Emitters.emitRadius": {
-    min: 5,
+    min: 100,
     max: 200,
     default: 200,
     step: 1,
