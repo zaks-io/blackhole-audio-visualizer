@@ -1,4 +1,4 @@
-import { useRef, useCallback, useEffect } from "react";
+import { useRef, useCallback, useEffect, useState } from "react";
 import gsap from "gsap";
 import { useVisualizationControls, pathToKey } from "@/hooks/useVisualizationControls";
 import { callGPUSetter } from "@/lib/gpuSetterRegistry";
@@ -10,13 +10,12 @@ export function useProducerTween(config: ParameterConfig) {
   const vizStore = useVisualizationControls;
   const producerStore = useProducerMode;
   const stateKey = pathToKey[config.path];
-  const currentValue = useVisualizationControls((s) => s[stateKey]) as number;
+  const storeValue = useVisualizationControls((s) => s[stateKey]) as number;
 
   // Use selectors for functions to avoid re-renders on state changes
   const initParameter = useProducerMode((s) => s.initParameter);
   const setTargetValue = useProducerMode((s) => s.setTargetValue);
   const setIsTweening = useProducerMode((s) => s.setIsTweening);
-  const setProgress = useProducerMode((s) => s.setProgress);
   const resetTween = useProducerMode((s) => s.resetTween);
 
   // Only subscribe to the specific param's state
@@ -25,9 +24,22 @@ export function useProducerTween(config: ParameterConfig) {
   const tweenRef = useRef<gsap.core.Tween | null>(null);
   const tweenState = useRef({ value: 0, progress: 0 });
 
+  // Local animated state for UI feedback (scoped to this slider only).
+  // Avoids per-frame Zustand store updates while still showing animation.
+  const [animatedValue, setAnimatedValue] = useState<number>(storeValue);
+  const [animatedProgress, setAnimatedProgress] = useState<number>(0);
+
   useEffect(() => {
-    initParameter(config.path, currentValue);
-  }, [config.path, initParameter, currentValue]);
+    initParameter(config.path, storeValue);
+  }, [config.path, initParameter, storeValue]);
+
+  // Keep local UI state in sync with store when not actively tweening.
+  useEffect(() => {
+    if (!paramState?.isTweening) {
+      setAnimatedValue(storeValue);
+      setAnimatedProgress(0);
+    }
+  }, [storeValue, paramState?.isTweening]);
 
   const handleTargetChange = useCallback(
     (value: number) => {
@@ -45,7 +57,7 @@ export function useProducerTween(config: ParameterConfig) {
       }
       // Clear tweening state to ensure we can start fresh
       setIsTweening(config.path, false);
-      setProgress(config.path, 0);
+      setAnimatedProgress(0);
 
       // Read fresh state directly from stores to avoid stale closures
       const freshParamState = producerStore.getState().tweenStates[config.path];
@@ -63,7 +75,8 @@ export function useProducerTween(config: ParameterConfig) {
 
       tweenState.current = { value: startValue, progress: 0 };
       setIsTweening(config.path, true);
-      setProgress(config.path, 0);
+      setAnimatedValue(startValue);
+      setAnimatedProgress(0);
 
       tweenRef.current = gsap.to(tweenState.current, {
         value: targetValue,
@@ -73,13 +86,17 @@ export function useProducerTween(config: ParameterConfig) {
         onUpdate: () => {
           // Direct GPU update - bypasses React state for performance
           callGPUSetter(config.path, tweenState.current.value);
+          // UI-only feedback for this slider
+          setAnimatedValue(tweenState.current.value);
+          setAnimatedProgress(tweenState.current.progress);
         },
         onComplete: () => {
           // Sync final value to Zustand store on completion
           vizStore.getState().setByPath(config.path, targetValue);
           setIsTweening(config.path, false);
-          setProgress(config.path, 0);
           resetTween(config.path, targetValue);
+          setAnimatedValue(targetValue);
+          setAnimatedProgress(0);
           tweenRef.current = null;
         },
       });
@@ -91,8 +108,9 @@ export function useProducerTween(config: ParameterConfig) {
       producerStore,
       setTargetValue,
       setIsTweening,
-      setProgress,
       resetTween,
+      setAnimatedValue,
+      setAnimatedProgress,
     ]
   );
 
@@ -101,9 +119,9 @@ export function useProducerTween(config: ParameterConfig) {
       tweenRef.current.kill();
       tweenRef.current = null;
       setIsTweening(config.path, false);
-      setProgress(config.path, 0);
+      setAnimatedProgress(0);
     }
-  }, [config.path, setIsTweening, setProgress]);
+  }, [config.path, setIsTweening]);
 
   const cancelTween = useCallback(() => {
     if (tweenRef.current) {
@@ -111,6 +129,8 @@ export function useProducerTween(config: ParameterConfig) {
       tweenRef.current = null;
       const currentVal = vizStore.getState().getByPath(config.path) as number;
       resetTween(config.path, currentVal);
+      setAnimatedValue(currentVal);
+      setAnimatedProgress(0);
     }
   }, [config.path, vizStore, resetTween]);
 
@@ -123,10 +143,10 @@ export function useProducerTween(config: ParameterConfig) {
   }, []);
 
   return {
-    currentValue,
-    targetValue: paramState?.targetValue ?? currentValue,
+    currentValue: paramState?.isTweening ? animatedValue : storeValue,
+    targetValue: paramState?.targetValue ?? storeValue,
     isTweening: paramState?.isTweening ?? false,
-    progress: paramState?.progress ?? 0,
+    progress: paramState?.isTweening ? animatedProgress : 0,
     setTargetValue: handleTargetChange,
     startTween,
     killTween,
