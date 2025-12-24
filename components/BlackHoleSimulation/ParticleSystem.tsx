@@ -615,7 +615,6 @@ export function ParticleSystem({
         uniforms={uniforms}
         transparent
         dithering
-        depthTest={false}
         depthWrite={false}
         blending={THREE.AdditiveBlending}
         side={THREE.DoubleSide}
