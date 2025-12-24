@@ -412,9 +412,9 @@ export const PARAMS: Record<string, ParameterDef> = {
   // SKYBOX
   // ===========================================================================
   "Skybox.starDensity": {
-    min: 5000,
+    min: 1000,
     max: 50000,
-    default: 20000,
+    default: 5000,
     step: 5000,
     description: "number of background stars",
     group: "Skybox",
