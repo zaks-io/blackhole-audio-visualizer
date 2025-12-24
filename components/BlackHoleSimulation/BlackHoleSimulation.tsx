@@ -205,7 +205,10 @@ export function BlackHoleSimulation({
       audioGain,
       spawnBurstMultiplier,
       hfcVelocityBoost,
+      beatPulse,
     } = runtimeState;
+    // Compute pulsed radius once - this is the single source of truth
+    const pulse = 1 + (beatIntensityRef.current ?? 0) * beatPulse;
     // autoColorChange is a boolean from the store, not runtime state
     const { autoColorChange } = useVisualizationControls.getState();
     const elapsed = state.clock.elapsedTime;
@@ -222,7 +225,7 @@ export function BlackHoleSimulation({
       // Single black hole at origin
       positions[0].set(0, 0, 0);
       masses[0] = maxMass;
-      radii[0] = eventHorizonRadius;
+      radii[0] = eventHorizonRadius * pulse;
     } else {
       // Multi-body: distribute around center of mass in circular orbit
       const angleStep = (2 * Math.PI) / count;
@@ -255,7 +258,7 @@ export function BlackHoleSimulation({
 
         positions[i].set(x, 0, z);
         masses[i] = mass;
-        radii[i] = eventHorizonRadius * (mass / maxMass);
+        radii[i] = eventHorizonRadius * (mass / maxMass) * pulse;
       }
     }
 
@@ -373,12 +376,7 @@ export function BlackHoleSimulation({
         enableHistory={!perfFlags?.noHistory}
       />
       {Array.from({ length: blackHoleCount }, (_, i) => (
-        <BlackHole
-          key={i}
-          beatIntensityRef={beatIntensityRef}
-          blackHoleDataRef={blackHoleDataRef}
-          index={i}
-        />
+        <BlackHole key={i} blackHoleDataRef={blackHoleDataRef} index={i} />
       ))}
 
       {/* Emitter position indicators - only calculated when shown */}
