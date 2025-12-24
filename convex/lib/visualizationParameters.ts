@@ -325,8 +325,8 @@ export const PARAMS: Record<string, ParameterDef> = {
   },
   "Physics.lifetimeGravityMultiplier": {
     min: 1,
-    max: 10,
-    default: 10,
+    max: 50,
+    default: 50,
     step: 0.5,
     description: "gravity boost for aging particles",
     group: "Physics",
