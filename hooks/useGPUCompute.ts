@@ -334,7 +334,6 @@ export function useGPUCompute(
           "format:",
           posRT.texture.format
         );
-        // @ts-expect-error internalFormat exists at runtime on Three.Texture in modern versions
         console.log("[GPUCompute] positionRT.internalFormat:", posRT.texture.internalFormat);
         console.log(
           "[GPUCompute] velocityRT.type:",
@@ -342,7 +341,6 @@ export function useGPUCompute(
           "format:",
           velRT.texture.format
         );
-        // @ts-expect-error internalFormat exists at runtime on Three.Texture in modern versions
         console.log("[GPUCompute] velocityRT.internalFormat:", velRT.texture.internalFormat);
       } catch {
         // best-effort logging only
