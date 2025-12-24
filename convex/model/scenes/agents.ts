@@ -335,13 +335,13 @@ none, power1.inOut, power2.inOut, power3.inOut, power4.inOut
 
 Be creative. Create 1 preset every 10-20 seconds, aligned with song structure and lyrics. Presets must cover the entire song duration and should be distinct from each other. Take into consideration tween times and transitions between presets for best impact.
 
-### SECTION IDEAS
+### SECTION IDEAS & NOTES
 
 - Large Black Hole, Small Emitter Radius, Large Point Size, High Reactivity = Mop of particles around a jumping ball
-- Single emitter, white, 3 point size => A swirling white line of frequency heading towards the black hole
-- Three emitters, tiny black hole, very small spread, high gravity, high decay, high amplitude, high beat repulsion => Particles fall into a tight orbit and the beat repulsion respawns them
+- Three emitters, tiny black holes, very small spread, high gravity, high decay, high amplitude, high beat repulsion => Particles fall into a tight orbit and the beat repulsion respawns them
 - Emitters and black hole orbits at max radius => particles don't flow to the center but instead the nearest black hole or stretch across lagrange point
 - Zero orbital decay, 1000000 gravity, ten softening => forces particles into tight orbits around each blackhole and then collapse into the center
+- Use higher particles sizes when using more spread as they are harder to see spread out
 
 ## MASS & POSITION DISTRIBUTION
 With 3 black holes, masses are distributed as a gradient from massMax (1.0) to massMin:

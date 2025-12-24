@@ -19,7 +19,7 @@ export const closeupPreset: CameraPreset = {
 export const orbitPreset: CameraPreset = {
   id: "orbit",
   name: "Orbit",
-  radius: 150,
+  radius: 200,
   phi: 1.55,
   horizontalSpeed: 0.5,
   verticalOscillation: {

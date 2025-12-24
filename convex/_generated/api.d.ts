@@ -10,6 +10,7 @@
 
 import type * as http from "../http.js";
 import type * as lib_r2 from "../lib/r2.js";
+import type * as lib_visualizationParameters from "../lib/visualizationParameters.js";
 import type * as model_generatedSongs_internal from "../model/generatedSongs/internal.js";
 import type * as model_playlists_public from "../model/playlists/public.js";
 import type * as model_presets_public from "../model/presets/public.js";
@@ -28,6 +29,7 @@ import type { ApiFromModules, FilterApi, FunctionReference } from "convex/server
 declare const fullApi: ApiFromModules<{
   http: typeof http;
   "lib/r2": typeof lib_r2;
+  "lib/visualizationParameters": typeof lib_visualizationParameters;
   "model/generatedSongs/internal": typeof model_generatedSongs_internal;
   "model/playlists/public": typeof model_playlists_public;
   "model/presets/public": typeof model_presets_public;

@@ -107,8 +107,8 @@ export const PARAMS: Record<string, ParameterDef> = {
   },
   "Black Hole.orbitRadius": {
     min: 25,
-    max: 200,
-    default: 200,
+    max: 100,
+    default: 100,
     step: 5,
     description: "distance of black hole orbits from center",
     group: "Black Hole",
@@ -212,7 +212,7 @@ export const PARAMS: Record<string, ParameterDef> = {
   "Particles.alpha": {
     min: 0.1,
     max: 1,
-    default: 0.2,
+    default: 0.5,
     step: 0.1,
     description: "particle opacity",
     group: "Particles",
@@ -254,7 +254,7 @@ export const PARAMS: Record<string, ParameterDef> = {
   // PHYSICS
   // ===========================================================================
   "Physics.gravity": {
-    min: 1000,
+    min: 10000,
     max: 1000000,
     default: 100000,
     step: 10000,
@@ -340,7 +340,7 @@ export const PARAMS: Record<string, ParameterDef> = {
   "Emitters.emitRadius": {
     min: 100,
     max: 200,
-    default: 200,
+    default: 100,
     step: 1,
     description: "spawn distance from center",
     group: "Emitters",
@@ -348,7 +348,7 @@ export const PARAMS: Record<string, ParameterDef> = {
     system: false,
   },
   "Emitters.emitterCount": {
-    min: 1,
+    min: 6,
     max: 32,
     default: 12,
     step: 1,
@@ -388,10 +388,10 @@ export const PARAMS: Record<string, ParameterDef> = {
     system: true,
   },
   "Emitters.spawnRate": {
-    min: 1000,
-    max: 100000,
-    default: 2500,
-    step: 1000,
+    min: 500,
+    max: 10000,
+    default: 500,
+    step: 500,
     description: "particles per second",
     group: "Emitters",
     label: "Particles/Sec",
@@ -399,9 +399,9 @@ export const PARAMS: Record<string, ParameterDef> = {
   },
   "Emitters.emitterSpread": {
     min: 0,
-    max: 1,
+    max: 0.2,
     default: 0,
-    step: 0.01,
+    step: 0.05,
     description: "width: 0=clean lines, >0.3=noise clouds",
     group: "Emitters",
     label: "Spread",
@@ -482,7 +482,7 @@ export const PARAMS: Record<string, ParameterDef> = {
   "Post-FX.bloomBaseIntensity": {
     min: 0,
     max: 2,
-    default: 1,
+    default: 0.3,
     step: 0.1,
     description: "bloom base intensity",
     group: "Post-FX",
@@ -581,7 +581,9 @@ export const presetSchema = z.object({
   parameters: presetParametersSchema,
   duration: z.number().min(0).max(30).default(3).describe("tween duration in seconds"),
   ease: easeSchema.default("power2.inOut").describe("easing function for transitions"),
-  cameraMode: cameraModeSchema.describe("camera movement style"),
+  cameraMode: cameraModeSchema.describe(
+    "camera movement style around barycenter, close works best with small blackhole hole orbits"
+  ),
 });
 
 export type Preset = z.infer<typeof presetSchema>;
