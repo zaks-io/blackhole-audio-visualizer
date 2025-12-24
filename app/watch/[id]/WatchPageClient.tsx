@@ -1,33 +1,28 @@
 "use client";
 
-import { useQuery } from "convex/react";
+import { Preloaded, usePreloadedQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Id } from "@/convex/_generated/dataModel";
 import { HlsPlayer } from "@/components/video/HlsPlayer";
 import { Loader2 } from "lucide-react";
 
-interface Recording {
-  _id: Id<"recordings">;
-  name: string;
-  description?: string;
-  transcodingStatus: "uploaded" | "pending" | "processing" | "completed" | "failed";
-  transcodingError?: string;
-  hlsUrl?: string;
-}
-
 interface WatchPageClientProps {
-  recording: Recording;
+  preloadedRecording: Preloaded<typeof api.model.recordings.public.getRecordingById>;
 }
 
-export function WatchPageClient({ recording: initialRecording }: WatchPageClientProps) {
-  const recording =
-    useQuery(api.model.recordings.public.getRecordingById, {
-      recordingId: initialRecording._id,
-    }) ?? initialRecording;
+export function WatchPageClient({ preloadedRecording }: WatchPageClientProps) {
+  const recording = usePreloadedQuery(preloadedRecording);
+
+  if (!recording) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <p className="text-white">Recording not found</p>
+      </div>
+    );
+  }
 
   if (recording.transcodingStatus !== "completed" || !recording.hlsUrl) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="h-full flex items-center justify-center">
         <div className="text-center text-white">
           <p className="text-lg mb-2">{recording.name}</p>
           {recording.transcodingStatus === "processing" && (
@@ -53,15 +48,5 @@ export function WatchPageClient({ recording: initialRecording }: WatchPageClient
     );
   }
 
-  return (
-    <div className="min-h-screen bg-black flex flex-col items-center justify-center p-4">
-      <div className="w-full max-w-4xl">
-        <h1 className="text-2xl text-white mb-4">{recording.name}</h1>
-        {recording.description && (
-          <p className="text-muted-foreground mb-4">{recording.description}</p>
-        )}
-        <HlsPlayer src={recording.hlsUrl} />
-      </div>
-    </div>
-  );
+  return <HlsPlayer src={recording.hlsUrl} className="w-full h-full" />;
 }

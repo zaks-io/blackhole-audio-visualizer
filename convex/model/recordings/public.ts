@@ -135,6 +135,8 @@ export const submitTranscodingJob = action({
           hls: {
             path: `/${hlsPath}`,
             playlist_name: "master",
+            variants:
+              "mp4:480p::quality=5,maxrate=4000k mp4:720p::quality=5,maxrate=7500k mp4:1080p::quality=5,maxrate=15000k",
           },
         },
       },
@@ -223,6 +225,8 @@ export const retryTranscodingJob = action({
           hls: {
             path: `/${hlsPath}`,
             playlist_name: "master",
+            variants:
+              "mp4:480p::quality=5,maxrate=4000k mp4:720p::quality=5,maxrate=7500k mp4:1080p::quality=5,maxrate=15000k",
           },
         },
       },

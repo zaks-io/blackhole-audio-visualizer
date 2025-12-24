@@ -1,10 +1,8 @@
 import { Metadata } from "next";
-import { ConvexHttpClient } from "convex/browser";
+import { preloadQuery } from "convex/nextjs";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { WatchPageClient } from "./WatchPageClient";
-
-const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
 interface WatchPageProps {
   params: Promise<{ id: string }>;
@@ -12,9 +10,11 @@ interface WatchPageProps {
 
 export async function generateMetadata({ params }: WatchPageProps): Promise<Metadata> {
   const { id } = await params;
-  const recording = await convex.query(api.model.recordings.public.getRecordingById, {
+  const preloadedRecording = await preloadQuery(api.model.recordings.public.getRecordingById, {
     recordingId: id as Id<"recordings">,
   });
+
+  const recording = preloadedRecording._valueJSON as { name?: string; description?: string } | null;
 
   return {
     title: recording?.name ?? "Recording",
@@ -24,17 +24,13 @@ export async function generateMetadata({ params }: WatchPageProps): Promise<Meta
 
 export default async function WatchPage({ params }: WatchPageProps) {
   const { id } = await params;
-  const recording = await convex.query(api.model.recordings.public.getRecordingById, {
+  const preloadedRecording = await preloadQuery(api.model.recordings.public.getRecordingById, {
     recordingId: id as Id<"recordings">,
   });
 
-  if (!recording) {
-    return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <p className="text-white">Recording not found</p>
-      </div>
-    );
-  }
-
-  return <WatchPageClient recording={recording} />;
+  return (
+    <div className="h-screen w-screen bg-black">
+      <WatchPageClient preloadedRecording={preloadedRecording} />
+    </div>
+  );
 }
