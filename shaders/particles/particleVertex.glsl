@@ -11,6 +11,7 @@ uniform float uDebugMode;
 uniform vec2 uViewport;
 
 attribute vec2 reference;
+attribute float crossIndex;
 
 varying vec3 vColor;
 varying vec2 vUV;
@@ -145,13 +146,20 @@ void main() {
     float screenLen = length(screenDir);
 
     vec3 rightView;
+    vec3 upView;
     if (screenLen > 0.001) {
-        // Rotate 90 degrees in screen space: (x,y) -> (-y,x)
+        // Primary ribbon: perpendicular in screen space
         rightView = vec3(-screenDir.y, screenDir.x, 0.0) / screenLen;
+        // Secondary ribbon: perpendicular to both tangent and primary right
+        upView = normalize(cross(tangentView, rightView));
     } else {
-        // Ribbon pointing at camera - use screen-right
+        // Ribbon pointing at camera - use orthogonal axes
         rightView = vec3(1.0, 0.0, 0.0);
+        upView = vec3(0.0, 1.0, 0.0);
     }
+
+    // Select ribbon plane based on crossIndex (0 = screen-aligned, 1 = depth-aligned)
+    vec3 offsetDir = (crossIndex < 0.5) ? rightView : upView;
 
     // Width in view space - scale with uBaseSize
     // Global width trim so trails read more like thin star streaks at typical pointSize values.
@@ -165,8 +173,8 @@ void main() {
     float viewPerPixel = (2.0 * max(0.001, -viewPos.z)) / (max(1.0, uViewport.y) * projY);
     halfW = max(halfW, viewPerPixel * 0.75); // ~0.75 px minimum half-width
 
-    // Offset vertex position in view space along the billboard right vector
-    vec3 offsetViewPos = viewPos.xyz + rightView * position.x * halfW;
+    // Offset vertex position in view space along the selected ribbon direction
+    vec3 offsetViewPos = viewPos.xyz + offsetDir * position.x * halfW;
 
     // Project to clip space
     gl_Position = projectionMatrix * vec4(offsetViewPos, 1.0);

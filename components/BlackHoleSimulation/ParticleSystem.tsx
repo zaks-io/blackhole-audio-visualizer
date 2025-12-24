@@ -164,47 +164,66 @@ export function ParticleSystem({
   } | null>(null);
 
   const quadGeometry = useMemo(() => {
-    // Multi-segment trail: 16 rows x 2 columns = 32 vertices, 15 segments
+    // Cross-billboard trail: 2 perpendicular ribbons x 16 rows x 2 columns = 64 vertices
     // Row y positions map to Catmull-Rom spline parameter t: 0 (tail) to 1 (head)
     const rows = 16;
-    const quadPositions = new Float32Array(rows * 2 * 3);
-    const quadUVs = new Float32Array(rows * 2 * 2);
+    const ribbons = 2;
+    const verticesPerRibbon = rows * 2;
+    const totalVertices = ribbons * verticesPerRibbon;
 
-    for (let r = 0; r < rows; r++) {
-      const y = -0.5 + r / (rows - 1); // -0.5 to 0.5
-      const v = r / (rows - 1); // 0 to 1 for UV
-      // Left vertex
-      quadPositions[r * 6 + 0] = -0.5;
-      quadPositions[r * 6 + 1] = y;
-      quadPositions[r * 6 + 2] = 0;
-      quadUVs[r * 4 + 0] = 0;
-      quadUVs[r * 4 + 1] = v;
-      // Right vertex
-      quadPositions[r * 6 + 3] = 0.5;
-      quadPositions[r * 6 + 4] = y;
-      quadPositions[r * 6 + 5] = 0;
-      quadUVs[r * 4 + 2] = 1;
-      quadUVs[r * 4 + 3] = v;
+    const quadPositions = new Float32Array(totalVertices * 3);
+    const quadUVs = new Float32Array(totalVertices * 2);
+    const crossIndices = new Float32Array(totalVertices);
+
+    for (let ribbon = 0; ribbon < ribbons; ribbon++) {
+      const offset = ribbon * verticesPerRibbon;
+      for (let r = 0; r < rows; r++) {
+        const y = -0.5 + r / (rows - 1); // -0.5 to 0.5
+        const v = r / (rows - 1); // 0 to 1 for UV
+        const idx = offset + r * 2;
+
+        // Left vertex
+        quadPositions[(idx + 0) * 3 + 0] = -0.5;
+        quadPositions[(idx + 0) * 3 + 1] = y;
+        quadPositions[(idx + 0) * 3 + 2] = 0;
+        quadUVs[(idx + 0) * 2 + 0] = 0;
+        quadUVs[(idx + 0) * 2 + 1] = v;
+        crossIndices[idx + 0] = ribbon;
+
+        // Right vertex
+        quadPositions[(idx + 1) * 3 + 0] = 0.5;
+        quadPositions[(idx + 1) * 3 + 1] = y;
+        quadPositions[(idx + 1) * 3 + 2] = 0;
+        quadUVs[(idx + 1) * 2 + 0] = 1;
+        quadUVs[(idx + 1) * 2 + 1] = v;
+        crossIndices[idx + 1] = ribbon;
+      }
     }
 
-    // Generate indices for 7 segments (14 triangles)
-    const indices = new Uint16Array((rows - 1) * 6);
-    for (let r = 0; r < rows - 1; r++) {
-      const baseVertex = r * 2;
-      const baseIndex = r * 6;
-      // First triangle
-      indices[baseIndex + 0] = baseVertex;
-      indices[baseIndex + 1] = baseVertex + 1;
-      indices[baseIndex + 2] = baseVertex + 3;
-      // Second triangle
-      indices[baseIndex + 3] = baseVertex;
-      indices[baseIndex + 4] = baseVertex + 3;
-      indices[baseIndex + 5] = baseVertex + 2;
+    // Generate indices for both ribbons
+    const indicesPerRibbon = (rows - 1) * 6;
+    const indices = new Uint16Array(ribbons * indicesPerRibbon);
+    for (let ribbon = 0; ribbon < ribbons; ribbon++) {
+      const vertexOffset = ribbon * verticesPerRibbon;
+      const indexOffset = ribbon * indicesPerRibbon;
+      for (let r = 0; r < rows - 1; r++) {
+        const baseVertex = vertexOffset + r * 2;
+        const baseIndex = indexOffset + r * 6;
+        // First triangle
+        indices[baseIndex + 0] = baseVertex;
+        indices[baseIndex + 1] = baseVertex + 1;
+        indices[baseIndex + 2] = baseVertex + 3;
+        // Second triangle
+        indices[baseIndex + 3] = baseVertex;
+        indices[baseIndex + 4] = baseVertex + 3;
+        indices[baseIndex + 5] = baseVertex + 2;
+      }
     }
 
     const geo = new THREE.InstancedBufferGeometry();
     geo.setAttribute("position", new THREE.BufferAttribute(quadPositions, 3));
     geo.setAttribute("uv", new THREE.BufferAttribute(quadUVs, 2));
+    geo.setAttribute("crossIndex", new THREE.BufferAttribute(crossIndices, 1));
     geo.setIndex(new THREE.BufferAttribute(indices, 1));
 
     // Instance attribute: texture lookup UVs (one per particle)
