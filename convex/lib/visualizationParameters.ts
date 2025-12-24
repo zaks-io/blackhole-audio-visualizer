@@ -182,7 +182,7 @@ export const PARAMS: Record<string, ParameterDef> = {
   "Particles.textureSize": {
     min: 128,
     max: 1024,
-    default: 512,
+    default: 384,
     step: 128,
     description: "number of particles",
     group: "Particles",
@@ -191,7 +191,7 @@ export const PARAMS: Record<string, ParameterDef> = {
   },
   "Particles.pointSize": {
     min: 1,
-    max: 5,
+    max: 3,
     default: 1,
     step: 0.5,
     description: "particle size",
@@ -212,7 +212,7 @@ export const PARAMS: Record<string, ParameterDef> = {
   "Particles.alpha": {
     min: 0.1,
     max: 1,
-    default: 0.3,
+    default: 0.2,
     step: 0.1,
     description: "particle opacity",
     group: "Particles",
@@ -284,9 +284,9 @@ export const PARAMS: Record<string, ParameterDef> = {
     system: false,
   },
   "Physics.orbitDecay": {
-    min: 0.1,
+    min: 0.3,
     max: 20,
-    default: 0.2,
+    default: 0.3,
     step: 0.1,
     description: "spiral-in rate: 0=stable, high=fast collapse",
     group: "Physics",
@@ -306,7 +306,7 @@ export const PARAMS: Record<string, ParameterDef> = {
   "Physics.lifetimeGracePeriod": {
     min: 5,
     max: 120,
-    default: 20,
+    default: 30,
     step: 5,
     description: "initial lifetime grace period",
     group: "Physics",
@@ -316,7 +316,7 @@ export const PARAMS: Record<string, ParameterDef> = {
   "Physics.lifetimeMax": {
     min: 5,
     max: 120,
-    default: 30,
+    default: 60,
     step: 5,
     description: "maximum particle lifetime",
     group: "Physics",
@@ -390,7 +390,7 @@ export const PARAMS: Record<string, ParameterDef> = {
   "Emitters.spawnRate": {
     min: 1000,
     max: 100000,
-    default: 5000,
+    default: 2500,
     step: 1000,
     description: "particles per second",
     group: "Emitters",
