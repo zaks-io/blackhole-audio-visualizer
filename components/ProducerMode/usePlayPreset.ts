@@ -6,6 +6,7 @@ import { setRuntimeValue } from "@/lib/runtimeStateRegistry";
 import { usePresets } from "./usePresets";
 import type { Preset } from "./types";
 import { PALETTE_OFFSETS, type ColorPaletteId } from "@/components/ColorModeSystem";
+import { PARAMS } from "@/convex/lib/visualizationParameters";
 
 interface TweenRef {
   path: string;
@@ -54,6 +55,10 @@ export function usePlayPreset() {
       setRuntimeValue("colorPaletteOffset", paletteOffset);
 
       for (const param of preset.parameters) {
+        // Skip system parameters - they should not be tweened by presets
+        const paramDef = PARAMS[param.path];
+        if (paramDef?.system) continue;
+
         const startValue = vizStore.getState().getByPath(param.path) as number;
 
         // Skip if value is already at target

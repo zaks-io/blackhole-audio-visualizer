@@ -35,6 +35,7 @@ const GROUP_IDS: Record<string, string> = {
 };
 
 const SPECIAL_CONTROLS: Record<string, React.ReactNode> = {
+  "Black Hole": <SwitchControl controlKey="coronaEnabled" label="Corona Glow" />,
   Particles: (
     <SelectControl controlKey="colorPalette" label="Color Palette" options={PALETTE_IDS} />
   ),

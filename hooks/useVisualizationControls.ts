@@ -13,6 +13,7 @@ export interface VisualizationControlsState {
   orbitSpeed: number;
   blackHoleMassMin: number;
   blackHoleMassMax: number;
+  coronaEnabled: boolean;
   coronaIntensity: number;
   coronaPower: number;
 
@@ -194,6 +195,7 @@ const DEFAULT_STATE: VisualizationControlsState = {
   spawnBurstMultiplier: PARAM_DEFAULTS.spawnBurstMultiplier,
 
   // Non-numeric defaults (not in PARAMS)
+  coronaEnabled: false,
   colorPalette: "grayscale" as ColorPaletteId,
   motionBlurScale: 0.5,
   motionBlurLength: 8.0,

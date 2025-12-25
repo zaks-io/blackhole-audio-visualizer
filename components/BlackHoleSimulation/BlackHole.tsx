@@ -64,18 +64,20 @@ export function BlackHole({ blackHoleDataRef, index }: BlackHoleProps) {
     if (!meshRef.current || !blackHoleDataRef.current || !materialRef.current) return;
 
     const bhData = blackHoleDataRef.current;
-    const { coronaIntensity, coronaPower } = useVisualizationControls.getState();
+    const { coronaEnabled, coronaIntensity, coronaPower } = useVisualizationControls.getState();
 
-    materialRef.current.uniforms.uGlowIntensity.value = coronaIntensity;
+    if (index >= bhData.count) {
+      meshRef.current.visible = false;
+      return;
+    }
+
+    // When corona is disabled, set intensity to 0 (renders as solid black sphere)
+    materialRef.current.uniforms.uGlowIntensity.value = coronaEnabled ? coronaIntensity : 0;
     materialRef.current.uniforms.uFresnelPower.value = coronaPower;
 
-    if (index < bhData.count) {
-      meshRef.current.visible = true;
-      meshRef.current.position.copy(bhData.positions[index]);
-      meshRef.current.scale.setScalar(bhData.radii[index]);
-    } else {
-      meshRef.current.visible = false;
-    }
+    meshRef.current.visible = true;
+    meshRef.current.position.copy(bhData.positions[index]);
+    meshRef.current.scale.setScalar(bhData.radii[index]);
   });
 
   return (

@@ -178,12 +178,12 @@ export const PARAMS: Record<string, ParameterDef> = {
   "Black Hole.coronaIntensity": {
     min: 0,
     max: 0.5,
-    default: 0.03,
+    default: 0.02,
     step: 0.01,
     description: "corona glow brightness",
     group: "Black Hole",
     label: "Corona Intensity",
-    system: false,
+    system: true,
   },
   "Black Hole.coronaPower": {
     min: 0.5,
@@ -193,7 +193,7 @@ export const PARAMS: Record<string, ParameterDef> = {
     description: "corona edge falloff sharpness",
     group: "Black Hole",
     label: "Corona Power",
-    system: false,
+    system: true,
   },
 
   // ===========================================================================
