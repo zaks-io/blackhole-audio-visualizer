@@ -54,13 +54,38 @@ http.route({
 
     let payload: {
       event?: string;
-      data?: { status?: string; error?: string };
+      data?: {
+        status?: string;
+        input?: {
+          status?: string;
+          error?: string;
+        };
+        outputs?: Array<{
+          key?: string;
+          status?: string;
+          error?: string;
+        }>;
+      };
     };
     try {
       payload = await request.json();
     } catch {
       return new Response("Invalid JSON", { status: 400 });
     }
+
+    const extractError = (data: typeof payload.data): string => {
+      if (data?.input?.error) {
+        return data.input.error;
+      }
+      const failedOutput = data?.outputs?.find((o) => o.error);
+      if (failedOutput?.error) {
+        return failedOutput.error;
+      }
+      if (data?.input?.status && data.input.status !== "input.transferred") {
+        return `Input ${data.input.status.replace("input.", "")}`;
+      }
+      return "Unknown transcoding error";
+    };
 
     if (payload.event === "job.completed") {
       const status = payload.data?.status;
@@ -76,7 +101,7 @@ http.route({
         await ctx.runMutation(internal.model.recordings.internal.updateTranscodingStatus, {
           recordingId: recording._id,
           status: "failed",
-          transcodingError: payload.data?.error || "Unknown transcoding error",
+          transcodingError: extractError(payload.data),
           clearWebhookToken: true,
         });
       }
@@ -86,7 +111,7 @@ http.route({
       await ctx.runMutation(internal.model.recordings.internal.updateTranscodingStatus, {
         recordingId: recording._id,
         status: "failed",
-        transcodingError: payload.data?.error || "Job failed",
+        transcodingError: extractError(payload.data),
         clearWebhookToken: true,
       });
     }
