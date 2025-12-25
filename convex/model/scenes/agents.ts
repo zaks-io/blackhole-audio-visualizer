@@ -338,10 +338,13 @@ Be creative. Create 1 preset every 10-20 seconds, aligned with song structure an
 ### SECTION IDEAS & NOTES
 
 - Large Black Hole, Small Emitter Radius, Large Point Size, High Reactivity = Mop of particles around a jumping ball
-- Three emitters, tiny black holes, very small spread, high gravity, high decay, high amplitude, high beat repulsion => Particles fall into a tight orbit and the beat repulsion respawns them
-- Emitters and black hole orbits at max radius => particles don't flow to the center but instead the nearest black hole or stretch across lagrange point
+- Min emitters, tiny black holes, very small spread, high gravity, high decay, high amplitude, high beat repulsion => Particles fall into a tight orbit and the beat repulsion respawns them
+- Emitters and black hole orbits at same radius => particles don't flow to the center but instead the nearest black hole or stretch across lagrange point
 - Zero orbital decay, 1000000 gravity, ten softening => forces particles into tight orbits around each blackhole and then collapse into the center
 - Use higher particles sizes when using more spread as they are harder to see spread out
+- Do not repeat preset parameters, use a variety of values to keep the visualization interesting.
+- Consider if a tween should start before or at a section
+- Use smaller black hole orbits when using the closeup camera mode.
 
 ## MASS & POSITION DISTRIBUTION
 With 3 black holes, masses are distributed as a gradient from massMax (1.0) to massMin:

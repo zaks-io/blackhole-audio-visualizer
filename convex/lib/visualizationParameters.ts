@@ -232,7 +232,7 @@ export const PARAMS: Record<string, ParameterDef> = {
   "Particles.alpha": {
     min: 0.1,
     max: 1,
-    default: 0.3,
+    default: 0.5,
     step: 0.1,
     description: "particle opacity",
     group: "Particles",
