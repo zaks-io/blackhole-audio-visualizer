@@ -10,6 +10,7 @@ import { BlackHole } from "./BlackHole";
 import { CameraSystem } from "@/components/CameraSystem";
 import { StarField } from "@/components/StarField";
 import { useVisualizationControls } from "@/hooks/useVisualizationControls";
+import { usePresetSelector } from "@/components/playlist/usePresetSelector";
 import { runtimeState } from "@/lib/runtimeStateRegistry";
 import type { ColorPaletteId } from "@/components/ColorModeSystem";
 import type { AnalyzedAudio } from "@/hooks/useAudioAnalyzer";
@@ -214,6 +215,7 @@ export function BlackHoleSimulation({
     const pulse = 1 + (beatIntensityRef.current ?? 0) * beatPulse;
     // autoColorChange is a boolean from the store, not runtime state
     const { autoColorChange } = useVisualizationControls.getState();
+    const { isLuckyPlaying } = usePresetSelector.getState();
     const elapsed = state.clock.elapsedTime;
 
     const bh = blackHoleDataRef.current!;
@@ -319,7 +321,7 @@ export function BlackHoleSimulation({
           spawnBurstRef.current = 1.0 + (spawnBurstRef.current - 1.0) * spawnDecayCoef.current;
         }
 
-        if (autoColorChange) {
+        if (autoColorChange && isLuckyPlaying) {
           colorMode.processBeat(beat, state.clock.elapsedTime);
         }
       }
