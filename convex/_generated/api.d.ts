@@ -15,6 +15,7 @@ import type * as model_generatedSongs_internal from "../model/generatedSongs/int
 import type * as model_playlists_public from "../model/playlists/public.js";
 import type * as model_presets_public from "../model/presets/public.js";
 import type * as model_recordings_internal from "../model/recordings/internal.js";
+import type * as model_recordings_multipart from "../model/recordings/multipart.js";
 import type * as model_recordings_public from "../model/recordings/public.js";
 import type * as model_releases_public from "../model/releases/public.js";
 import type * as model_scenes_agents from "../model/scenes/agents.js";
@@ -34,6 +35,7 @@ declare const fullApi: ApiFromModules<{
   "model/playlists/public": typeof model_playlists_public;
   "model/presets/public": typeof model_presets_public;
   "model/recordings/internal": typeof model_recordings_internal;
+  "model/recordings/multipart": typeof model_recordings_multipart;
   "model/recordings/public": typeof model_recordings_public;
   "model/releases/public": typeof model_releases_public;
   "model/scenes/agents": typeof model_scenes_agents;
