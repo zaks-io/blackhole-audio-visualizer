@@ -168,6 +168,34 @@ export function useVideoPlayer({ src, autoPlay = false, containerRef }: UseVideo
     video.currentTime = Math.max(0, Math.min(time, video.duration || 0));
   }, []);
 
+  const skipForward = useCallback((seconds: number = 10) => {
+    const video = videoRef.current;
+    if (!video) return;
+    video.currentTime = video.currentTime + seconds;
+  }, []);
+
+  const skipBack = useCallback((seconds: number = 10) => {
+    const video = videoRef.current;
+    if (!video) return;
+    video.currentTime = Math.max(video.currentTime - seconds, 0);
+  }, []);
+
+  const toggleControlVisibility = useCallback(() => {
+    setShowControls((prev) => {
+      const next = !prev;
+      // If showing controls and playing, start hide timer
+      if (next && isPlaying) {
+        if (hideTimeoutRef.current) {
+          clearTimeout(hideTimeoutRef.current);
+        }
+        hideTimeoutRef.current = window.setTimeout(() => {
+          setShowControls(false);
+        }, 3000);
+      }
+      return next;
+    });
+  }, [isPlaying]);
+
   const setVolume = useCallback((vol: number) => {
     const video = videoRef.current;
     if (!video) return;
@@ -235,6 +263,10 @@ export function useVideoPlayer({ src, autoPlay = false, containerRef }: UseVideo
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
+
+    // Only use mouse events on devices with hover capability (not touch)
+    const hasHover = window.matchMedia("(hover: hover)").matches;
+    if (!hasHover) return;
 
     const handleMouseMove = () => resetHideTimer();
     const handleMouseEnter = () => resetHideTimer();
@@ -356,9 +388,12 @@ export function useVideoPlayer({ src, autoPlay = false, containerRef }: UseVideo
     pause,
     togglePlay,
     seek,
+    skipForward,
+    skipBack,
     setVolume,
     toggleMute,
     setQualityLevel,
     toggleFullscreen,
+    toggleControlVisibility,
   };
 }

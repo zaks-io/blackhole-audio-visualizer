@@ -1,30 +1,22 @@
 "use client";
 
-import { Play, Pause, Volume2, VolumeX, Volume1, Maximize, Minimize } from "lucide-react";
+import { Maximize, Minimize } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Slider } from "@/components/ui/slider";
 import { VideoProgressBar } from "./VideoProgressBar";
 import { VideoQualitySelector } from "./VideoQualitySelector";
 import { cn } from "@/lib/utils";
 import type { HlsLevel } from "./useVideoPlayer";
-import { useState } from "react";
 
 interface VideoControlsProps {
-  isPlaying: boolean;
   currentTime: number;
   duration: number;
   buffered: number;
-  volume: number;
-  isMuted: boolean;
   isFullscreen: boolean;
   showControls: boolean;
   levels: HlsLevel[];
   currentLevel: number;
   autoLevelEnabled: boolean;
-  onPlayPause: () => void;
   onSeek: (time: number) => void;
-  onVolumeChange: (volume: number) => void;
-  onMuteToggle: () => void;
   onQualityChange: (level: number) => void;
   onFullscreenToggle: () => void;
 }
@@ -36,105 +28,35 @@ function formatTime(seconds: number): string {
   return `${mins}:${secs.toString().padStart(2, "0")}`;
 }
 
-function VolumeIcon({ volume, isMuted }: { volume: number; isMuted: boolean }) {
-  if (isMuted || volume === 0) return <VolumeX className="w-5 h-5" />;
-  if (volume < 0.5) return <Volume1 className="w-5 h-5" />;
-  return <Volume2 className="w-5 h-5" />;
-}
-
 export function VideoControls({
-  isPlaying,
   currentTime,
   duration,
   buffered,
-  volume,
-  isMuted,
   isFullscreen,
   showControls,
   levels,
   currentLevel,
   autoLevelEnabled,
-  onPlayPause,
   onSeek,
-  onVolumeChange,
-  onMuteToggle,
   onQualityChange,
   onFullscreenToggle,
 }: VideoControlsProps) {
-  const [showVolumeSlider, setShowVolumeSlider] = useState(false);
-
   return (
     <div
       className={cn(
-        "absolute bottom-0 inset-x-0 transition-opacity duration-300",
+        "absolute bottom-0 inset-x-0 transition-opacity duration-200",
         showControls ? "opacity-100" : "opacity-0 pointer-events-none"
       )}
     >
-      {/* Gradient backdrop */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent pointer-events-none" />
+      {/* Gradient backdrop - thinner for minimal design */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent pointer-events-none" />
 
       {/* Controls content */}
-      <div className="relative px-4 pb-4 pt-16">
-        {/* Progress bar */}
-        <div className="mb-3">
-          <VideoProgressBar
-            currentTime={currentTime}
-            duration={duration}
-            buffered={buffered}
-            onSeek={onSeek}
-          />
-        </div>
-
-        {/* Control bar */}
+      <div className="relative px-3">
+        {/* Info bar - time and buttons */}
         <div className="flex items-center gap-1">
-          {/* Play/Pause */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onPlayPause}
-            className="w-10 h-10 text-white hover:bg-white/10 transition-all hover:scale-105"
-          >
-            {isPlaying ? (
-              <Pause className="w-5 h-5 fill-current" />
-            ) : (
-              <Play className="w-5 h-5 fill-current ml-0.5" />
-            )}
-          </Button>
-
-          {/* Volume control */}
-          <div
-            className="relative flex items-center"
-            onMouseEnter={() => setShowVolumeSlider(true)}
-            onMouseLeave={() => setShowVolumeSlider(false)}
-          >
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onMuteToggle}
-              className="w-10 h-10 text-white hover:bg-white/10 transition-all"
-            >
-              <VolumeIcon volume={volume} isMuted={isMuted} />
-            </Button>
-
-            {/* Volume slider - appears on hover */}
-            <div
-              className={cn(
-                "overflow-hidden transition-all duration-200 ease-out",
-                showVolumeSlider ? "w-20 opacity-100 ml-1" : "w-0 opacity-0 ml-0"
-              )}
-            >
-              <Slider
-                value={[isMuted ? 0 : volume * 100]}
-                onValueChange={(v) => onVolumeChange(v[0] / 100)}
-                max={100}
-                step={1}
-                className="w-20 [&_[data-slot=slider-track]]:h-1 [&_[data-slot=slider-track]]:bg-white/20 [&_[data-slot=slider-range]]:bg-white [&_[data-slot=slider-thumb]]:w-3 [&_[data-slot=slider-thumb]]:h-3 [&_[data-slot=slider-thumb]]:border-0 [&_[data-slot=slider-thumb]]:shadow-[0_0_6px_rgba(255,255,255,0.4)]"
-              />
-            </div>
-          </div>
-
           {/* Time display */}
-          <div className="flex items-center gap-1 text-white/80 text-sm font-medium tabular-nums ml-2">
+          <div className="flex items-center gap-1 text-white/90 text-xs md:text-sm font-medium tabular-nums">
             <span>{formatTime(currentTime)}</span>
             <span className="text-white/40">/</span>
             <span className="text-white/60">{formatTime(duration)}</span>
@@ -156,11 +78,26 @@ export function VideoControls({
             variant="ghost"
             size="icon"
             onClick={onFullscreenToggle}
-            className="w-10 h-10 text-white hover:bg-white/10 transition-all hover:scale-105"
+            className={cn(
+              "w-8 h-8 md:w-9 md:h-9 text-white/90 hover:text-white",
+              "hover:bg-white/10 transition-all hover:scale-105 active:scale-95"
+            )}
           >
-            {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
+            {isFullscreen ? (
+              <Minimize className="w-4 h-4 md:w-5 md:h-5" />
+            ) : (
+              <Maximize className="w-4 h-4 md:w-5 md:h-5" />
+            )}
           </Button>
         </div>
+
+        {/* Progress bar */}
+        <VideoProgressBar
+          currentTime={currentTime}
+          duration={duration}
+          buffered={buffered}
+          onSeek={onSeek}
+        />
       </div>
     </div>
   );

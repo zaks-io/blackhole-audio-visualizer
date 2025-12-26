@@ -85,28 +85,66 @@ export function VideoProgressBar({
     }
   }, [isDragging]);
 
+  // Touch event handlers
+  const handleTouchStart = useCallback(
+    (e: React.TouchEvent) => {
+      e.stopPropagation();
+      const touch = e.touches[0];
+      setIsDragging(true);
+      onSeek(calculateTime(touch.clientX));
+    },
+    [calculateTime, onSeek]
+  );
+
+  const handleTouchMove = useCallback(
+    (e: React.TouchEvent) => {
+      if (!isDragging) return;
+      e.stopPropagation();
+      const touch = e.touches[0];
+      onSeek(calculateTime(touch.clientX));
+    },
+    [isDragging, calculateTime, onSeek]
+  );
+
+  const handleTouchEnd = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
   return (
-    <div className="relative w-full group/progress">
-      {/* Time tooltip on hover */}
+    <div className="relative w-full group/progress touch-none">
+      {/* Time tooltip on hover - hidden on touch devices */}
       {hoverTime !== null && hoverPosition !== null && (
         <div
-          className="absolute -top-8 px-2 py-1 bg-black/90 backdrop-blur-sm rounded text-xs font-medium text-white/90 transform -translate-x-1/2 pointer-events-none z-10 border border-white/10"
+          className={cn(
+            "absolute -top-8 px-2 py-1 bg-black/90 backdrop-blur-sm rounded text-xs font-medium text-white/90",
+            "transform -translate-x-1/2 pointer-events-none z-10 border border-white/10",
+            "hidden [@media(hover:hover)]:block"
+          )}
           style={{ left: `${hoverPosition}%` }}
         >
           {formatTime(hoverTime)}
         </div>
       )}
 
-      {/* Clickable track area */}
+      {/* Clickable/touchable track area - 44px touch target */}
       <div
         ref={barRef}
-        className="relative h-5 flex items-center cursor-pointer"
+        className="relative h-11 flex items-center cursor-pointer"
         onMouseMove={handleMouseMove}
         onMouseDown={handleMouseDown}
         onMouseLeave={handleMouseLeave}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
       >
         {/* Track background */}
-        <div className="absolute inset-x-0 h-1 bg-white/20 rounded-full overflow-hidden transition-all duration-150 group-hover/progress:h-1.5">
+        <div
+          className={cn(
+            "absolute inset-x-0 h-1 bg-white/20 rounded-full overflow-hidden transition-all duration-150",
+            "[@media(hover:hover)]:group-hover/progress:h-1.5",
+            isDragging && "h-1.5"
+          )}
+        >
           {/* Buffered indicator */}
           <div
             className="absolute h-full bg-white/30 rounded-full"
@@ -123,20 +161,28 @@ export function VideoProgressBar({
           />
         </div>
 
-        {/* Hover preview line */}
+        {/* Hover preview line - desktop only */}
         {hoverPosition !== null && (
           <div
-            className="absolute h-1 group-hover/progress:h-1.5 bg-white/40 rounded-full pointer-events-none transition-all duration-150"
+            className={cn(
+              "absolute h-1 bg-white/40 rounded-full pointer-events-none transition-all duration-150",
+              "hidden [@media(hover:hover)]:block [@media(hover:hover)]:group-hover/progress:h-1.5"
+            )}
             style={{ width: `${hoverPosition}%` }}
           />
         )}
 
-        {/* Scrubber handle */}
+        {/* Scrubber handle - always visible on touch, hover-reveal on desktop */}
         <div
           className={cn(
-            "absolute w-3.5 h-3.5 bg-white rounded-full transform -translate-x-1/2 transition-all duration-150",
+            "absolute bg-white rounded-full transform -translate-x-1/2 transition-all duration-150",
             "shadow-[0_0_8px_rgba(255,255,255,0.4)]",
-            "opacity-0 group-hover/progress:opacity-100 scale-75 group-hover/progress:scale-100",
+            // Mobile: 16px, always visible
+            "w-4 h-4",
+            // Desktop: 14px, hover-reveal
+            "md:w-3.5 md:h-3.5",
+            "[@media(hover:hover)]:opacity-0 [@media(hover:hover)]:scale-75",
+            "[@media(hover:hover)]:group-hover/progress:opacity-100 [@media(hover:hover)]:group-hover/progress:scale-100",
             isDragging && "opacity-100 scale-110 shadow-[0_0_16px_rgba(255,255,255,0.6)]"
           )}
           style={{ left: `${progress}%` }}
