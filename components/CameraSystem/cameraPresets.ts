@@ -12,7 +12,7 @@ export const closeupPreset: CameraPreset = {
   id: "closeup",
   name: "Close Up",
   radius: 71,
-  phi: 1.36,
+  phi: 2,
   horizontalSpeed: -0.45,
 };
 
@@ -32,7 +32,7 @@ export const edgePreset: CameraPreset = {
   id: "edge",
   name: "Edge",
   radius: 300,
-  phi: 1.5708,
+  phi: 1.56,
   horizontalSpeed: 0.1,
 };
 

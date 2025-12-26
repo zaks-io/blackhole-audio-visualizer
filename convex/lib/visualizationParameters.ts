@@ -202,7 +202,7 @@ export const PARAMS: Record<string, ParameterDef> = {
   "Particles.textureSize": {
     min: 128,
     max: 1024,
-    default: 512,
+    default: 384,
     step: 128,
     description: "number of particles",
     group: "Particles",
@@ -278,7 +278,7 @@ export const PARAMS: Record<string, ParameterDef> = {
     max: 1000000,
     default: 100000,
     step: 10000,
-    description: "inward pull strength",
+    description: "inward pull strength affects particle speed",
     group: "Physics",
     label: "Gravity",
     system: false,
@@ -360,7 +360,7 @@ export const PARAMS: Record<string, ParameterDef> = {
   "Emitters.emitRadius": {
     min: 100,
     max: 200,
-    default: 100,
+    default: 200,
     step: 1,
     description: "spawn distance from center",
     group: "Emitters",
@@ -410,7 +410,7 @@ export const PARAMS: Record<string, ParameterDef> = {
   "Emitters.spawnRate": {
     min: 500,
     max: 10000,
-    default: 1000,
+    default: 4000,
     step: 500,
     description: "particles per second",
     group: "Emitters",

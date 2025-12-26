@@ -184,12 +184,12 @@ export function ParticleSystem({
     for (let ribbon = 0; ribbon < ribbons; ribbon++) {
       const offset = ribbon * verticesPerRibbon;
       for (let r = 0; r < rows; r++) {
-        const y = -0.5 + r / (rows - 1); // -0.5 to 0.5
+        const y = -0.6 + (r / (rows - 1)) * 1.2; // -0.6 to 0.6
         const v = r / (rows - 1); // 0 to 1 for UV
         const idx = offset + r * 2;
 
         // Left vertex
-        quadPositions[(idx + 0) * 3 + 0] = -0.5;
+        quadPositions[(idx + 0) * 3 + 0] = -0.6;
         quadPositions[(idx + 0) * 3 + 1] = y;
         quadPositions[(idx + 0) * 3 + 2] = 0;
         quadUVs[(idx + 0) * 2 + 0] = 0;
@@ -197,7 +197,7 @@ export function ParticleSystem({
         crossIndices[idx + 0] = ribbon;
 
         // Right vertex
-        quadPositions[(idx + 1) * 3 + 0] = 0.5;
+        quadPositions[(idx + 1) * 3 + 0] = 0.6;
         quadPositions[(idx + 1) * 3 + 1] = y;
         quadPositions[(idx + 1) * 3 + 2] = 0;
         quadUVs[(idx + 1) * 2 + 0] = 1;
