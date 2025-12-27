@@ -30,7 +30,87 @@ protocol.registerSchemesAsPrivileged([
   },
 ]);
 
+// Register deep link protocol for auth callbacks (must be before app.whenReady)
+if (process.defaultApp) {
+  if (process.argv.length >= 2) {
+    app.setAsDefaultProtocolClient("blackhole", process.execPath, [path.resolve(process.argv[1])]);
+  }
+} else {
+  app.setAsDefaultProtocolClient("blackhole");
+}
+
 let mainWindow: BrowserWindow | null = null;
+
+// Handle auth callback from deep link
+async function handleAuthCallback(url: string) {
+  if (!mainWindow) return;
+
+  if (mainWindow.isMinimized()) mainWindow.restore();
+  mainWindow.focus();
+
+  // Parse callback URL
+  const urlObj = new URL(url);
+  const code = urlObj.searchParams.get("code");
+  const state = urlObj.searchParams.get("state");
+
+  if (!code || !state) {
+    mainWindow.webContents.send("auth-callback-error", "Missing code or state");
+    return;
+  }
+
+  // Send code and state to renderer for validation and token storage
+  // The renderer will send back the code_verifier, then we exchange
+  mainWindow.webContents.send("auth-callback", { code, state });
+}
+
+// Exchange auth code for tokens (in main process to avoid CORS)
+ipcMain.handle(
+  "exchange-auth-code",
+  async (
+    _event,
+    {
+      code,
+      codeVerifier,
+      domain,
+      clientId,
+    }: { code: string; codeVerifier: string; domain: string; clientId: string }
+  ) => {
+    const REDIRECT_URI = "blackhole://callback";
+
+    const response = await fetch(`https://${domain}/oauth/token`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        grant_type: "authorization_code",
+        client_id: clientId,
+        code,
+        code_verifier: codeVerifier,
+        redirect_uri: REDIRECT_URI,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Token exchange failed: ${error}`);
+    }
+
+    return response.json();
+  }
+);
+
+// Single instance lock (required for Windows/Linux deep links)
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock) {
+  app.quit();
+} else {
+  // Windows/Linux: deep link comes via second-instance event
+  app.on("second-instance", (_event, commandLine) => {
+    const url = commandLine.find((arg) => arg.startsWith("blackhole://"));
+    if (url) {
+      handleAuthCallback(url);
+    }
+  });
+}
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -87,6 +167,19 @@ ipcMain.handle("open-screen-recording-preferences", async () => {
     return true;
   }
   return false;
+});
+
+// Open URL in system browser (for auth)
+ipcMain.handle("open-external", async (_event, url: string) => {
+  await shell.openExternal(url);
+});
+
+// macOS: deep link comes via open-url event
+app.on("open-url", (event, url) => {
+  event.preventDefault();
+  if (url.startsWith("blackhole://")) {
+    handleAuthCallback(url);
+  }
 });
 
 app.whenReady().then(() => {

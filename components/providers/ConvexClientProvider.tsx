@@ -1,12 +1,22 @@
 "use client";
 
-import { ReactNode } from "react";
-import { ConvexReactClient } from "convex/react";
+import { ReactNode, useSyncExternalStore } from "react";
+import { ConvexReactClient, ConvexProviderWithAuth } from "convex/react";
 import { Auth0Provider } from "@auth0/auth0-react";
 import { ConvexProviderWithAuth0 } from "convex/react-auth0";
 import { useUserInitialization } from "@/hooks/useUserInitialization";
+import { ElectronAuthProvider, useAuthFromElectron } from "@/lib/auth/ElectronAuthProvider";
 
 const convex = new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
+
+// Detect Electron using useSyncExternalStore to avoid hydration mismatch
+function useIsElectronApp(): boolean | null {
+  return useSyncExternalStore(
+    () => () => {},
+    () => !!window.electronAPI?.isElectron,
+    () => null // Return null during SSR
+  );
+}
 
 interface ConvexClientProviderProps {
   children: ReactNode;
@@ -17,7 +27,8 @@ function UserInitializer({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
-export function ConvexClientProvider({ children }: ConvexClientProviderProps) {
+// Web provider using Auth0
+function WebAuthProvider({ children }: { children: ReactNode }) {
   return (
     <Auth0Provider
       domain={process.env.NEXT_PUBLIC_AUTH0_DOMAIN!}
@@ -34,4 +45,30 @@ export function ConvexClientProvider({ children }: ConvexClientProviderProps) {
       </ConvexProviderWithAuth0>
     </Auth0Provider>
   );
+}
+
+// Electron provider using custom PKCE auth
+function ElectronConvexProvider({ children }: { children: ReactNode }) {
+  return (
+    <ElectronAuthProvider>
+      <ConvexProviderWithAuth client={convex} useAuth={useAuthFromElectron}>
+        <UserInitializer>{children}</UserInitializer>
+      </ConvexProviderWithAuth>
+    </ElectronAuthProvider>
+  );
+}
+
+export function ConvexClientProvider({ children }: ConvexClientProviderProps) {
+  const isElectronApp = useIsElectronApp();
+
+  // Show nothing during SSR/hydration to avoid mismatch
+  if (isElectronApp === null) {
+    return null;
+  }
+
+  if (isElectronApp) {
+    return <ElectronConvexProvider>{children}</ElectronConvexProvider>;
+  }
+
+  return <WebAuthProvider>{children}</WebAuthProvider>;
 }

@@ -1,6 +1,5 @@
 "use client";
 
-import { useAuth0 } from "@auth0/auth0-react";
 import { useConvexAuth } from "convex/react";
 import { User, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -14,23 +13,18 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-
-const ROLES_CLAIM = "neuron/roles";
+import { useAuth } from "@/hooks/useAuth";
 
 export function UserMenu() {
   const { isLoading } = useConvexAuth();
-  const { isAuthenticated, user, loginWithRedirect, logout } = useAuth0();
+  const { isAuthenticated, user, login, logout } = useAuth();
 
   const handleSignIn = () => {
-    loginWithRedirect({
-      appState: {
-        returnTo: typeof window !== "undefined" ? window.location.pathname : "/",
-      },
-    });
+    login(typeof window !== "undefined" ? window.location.pathname : "/");
   };
 
   const handleSignOut = () => {
-    logout({ logoutParams: { returnTo: window.location.origin } });
+    logout();
   };
 
   if (isLoading) {
@@ -63,7 +57,6 @@ export function UserMenu() {
     );
   }
 
-  const roles = (user?.[ROLES_CLAIM] as string[] | undefined) ?? [];
   const initials =
     user?.name
       ?.split(" ")
@@ -92,14 +85,6 @@ export function UserMenu() {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        {roles.length > 0 && (
-          <>
-            <DropdownMenuLabel className="text-xs text-muted-foreground">
-              Roles: {roles.join(", ")}
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-          </>
-        )}
         <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer">
           <LogOut className="mr-2 h-4 w-4" />
           Sign Out

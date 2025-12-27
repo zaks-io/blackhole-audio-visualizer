@@ -13,8 +13,8 @@ import {
   Film,
   Video,
 } from "lucide-react";
-import { useAuth0 } from "@auth0/auth0-react";
 import { useConvexAuth } from "convex/react";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -65,7 +65,7 @@ export function MobileOverflowMenu() {
   const router = useRouter();
   const [helpOpen, setHelpOpen] = useState(false);
   const { isLoading: isAuthLoading } = useConvexAuth();
-  const { isAuthenticated, user, loginWithRedirect, logout } = useAuth0();
+  const { isAuthenticated, user, login, logout } = useAuth();
   const { fpsVisible, toggleFPS, bassStrobeEnabled, toggleBassStrobe } = useUIState();
   const mode = useViewerMode((s) => s.mode);
   const sceneId = useViewerMode((s) => s.sceneId);
@@ -86,15 +86,11 @@ export function MobileOverflowMenu() {
   const cameraMode = useCameraMode();
 
   const handleSignIn = () => {
-    loginWithRedirect({
-      appState: {
-        returnTo: typeof window !== "undefined" ? window.location.pathname : "/",
-      },
-    });
+    login(typeof window !== "undefined" ? window.location.pathname : "/");
   };
 
   const handleSignOut = () => {
-    logout({ logoutParams: { returnTo: window.location.origin } });
+    logout();
   };
 
   const handlePresetSelect = (

@@ -1,15 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { useAuth0 } from "@auth0/auth0-react";
 import { LogIn, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useConvexPlaylists } from "@/hooks/useConvexPlaylists";
 import { PlaylistList } from "./PlaylistList";
 import { PlaylistEditor } from "./PlaylistEditor";
+import { useAuth } from "@/hooks/useAuth";
 
 export function PlaylistTab() {
-  const { isAuthenticated, isLoading: authLoading, loginWithRedirect } = useAuth0();
+  const { isAuthenticated, isLoading: authLoading, login } = useAuth();
   const { isLoading: playlistsLoading } = useConvexPlaylists();
   const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null);
 
@@ -26,7 +26,7 @@ export function PlaylistTab() {
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-8 text-center">
         <div className="space-y-3">
           <p className="text-sm text-muted-foreground">Sign in to create and manage playlists</p>
-          <Button onClick={() => loginWithRedirect()} size="sm">
+          <Button onClick={() => login()} size="sm">
             <LogIn className="h-4 w-4 mr-2" />
             Sign In
           </Button>
