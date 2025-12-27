@@ -40,7 +40,12 @@ const SPECIAL_CONTROLS: Record<string, React.ReactNode> = {
     <SelectControl controlKey="colorPalette" label="Color Palette" options={PALETTE_IDS} />
   ),
   Emitters: <SwitchControl controlKey="showEmitters" label="Show Emitters" />,
-  Skybox: <SelectControl controlKey="skybox" label="Environment" options={SKYBOX_OPTIONS} />,
+  Skybox: (
+    <>
+      <SelectControl controlKey="skybox" label="Environment" options={SKYBOX_OPTIONS} />
+      <SwitchControl controlKey="starLensingEnabled" label="Star Lensing" />
+    </>
+  ),
   Audio: <SwitchControl controlKey="autoColorChange" label="Auto Color Change" />,
 };
 

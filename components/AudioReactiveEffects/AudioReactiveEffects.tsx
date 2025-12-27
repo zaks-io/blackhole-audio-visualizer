@@ -73,7 +73,7 @@ export function AudioReactiveEffects({ getAnalysis, isAudioConnected }: AudioRea
   const prevBloomThreshold = useRef(0.3);
   const prevBloomLevels = useRef(3);
 
-  const chromaticPeak = 0.012;
+  const chromaticPeak = 0.025;
 
   // Callback refs to capture effect instances without storing in React state
   const bloomRefCallback = useCallback((effect: unknown) => {

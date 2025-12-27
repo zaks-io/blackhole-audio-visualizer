@@ -53,6 +53,8 @@ export interface VisualizationControlsState {
   skybox: string;
   starDensity: number;
   starBrightness: number;
+  starLensingEnabled: boolean;
+  starLensingStrength: number;
 
   // Audio
   amplitude: number;
@@ -129,6 +131,8 @@ export const pathToKey: Record<string, keyof VisualizationControlsState> = {
   "Skybox.skybox": "skybox",
   "Skybox.starDensity": "starDensity",
   "Skybox.starBrightness": "starBrightness",
+  "Skybox.starLensingEnabled": "starLensingEnabled",
+  "Skybox.starLensingStrength": "starLensingStrength",
   "Audio.amplitude": "amplitude",
   "Audio.onsetDecay": "onsetDecay",
   "Audio.audioGain": "audioGain",
@@ -182,6 +186,7 @@ const DEFAULT_STATE: VisualizationControlsState = {
   emitterSpread: PARAM_DEFAULTS.emitterSpread,
   starDensity: PARAM_DEFAULTS.starDensity,
   starBrightness: PARAM_DEFAULTS.starBrightness,
+  starLensingStrength: PARAM_DEFAULTS.starLensingStrength,
   amplitude: PARAM_DEFAULTS.amplitude,
   onsetDecay: PARAM_DEFAULTS.onsetDecay,
   audioGain: PARAM_DEFAULTS.audioGain,
@@ -201,6 +206,7 @@ const DEFAULT_STATE: VisualizationControlsState = {
   motionBlurLength: 8.0,
   showEmitters: false,
   skybox: "Procedural Stars",
+  starLensingEnabled: true,
   autoColorChange: true,
   bloomEnabled: true,
   chromaticEnabled: true,

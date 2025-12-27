@@ -180,7 +180,7 @@ void main() {
     // Convert 1 pixel to view-space units at this depth using projectionMatrix and viewport height.
     float projY = projectionMatrix[1][1]; // f = 1/tan(fov/2)
     float viewPerPixel = (2.0 * max(0.001, -viewPos.z)) / (max(1.0, uViewport.y) * projY);
-    halfW = max(halfW, viewPerPixel * 0.75); // ~0.75 px minimum half-width
+    halfW = max(halfW, viewPerPixel * 1.5); // ~1.5 px minimum half-width
 
     // Offset vertex position in view space along the selected ribbon direction
     vec3 offsetViewPos = viewPos.xyz + offsetDir * position.x * halfW;

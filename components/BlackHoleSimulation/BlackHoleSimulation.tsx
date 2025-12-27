@@ -2,13 +2,15 @@
 
 import { useRef, useEffect, useMemo, useCallback } from "react";
 import { Environment } from "@react-three/drei";
-import { useFrame } from "@react-three/fiber";
+import { useFrame, useThree } from "@react-three/fiber";
 import { useShallow } from "zustand/shallow";
 import * as THREE from "three";
 import { ParticleSystem } from "./ParticleSystem";
 import { BlackHole } from "./BlackHole";
 import { CameraSystem } from "@/components/CameraSystem";
 import { StarField } from "@/components/StarField";
+import { StarFieldWithLensing } from "@/components/StarFieldWithLensing";
+import { updateBlackHoleScreenData } from "@/components/GravitationalLensing";
 import { useVisualizationControls } from "@/hooks/useVisualizationControls";
 import { usePresetSelector } from "@/components/playlist/usePresetSelector";
 import { runtimeState } from "@/lib/runtimeStateRegistry";
@@ -85,6 +87,7 @@ export function BlackHoleSimulation({
       skybox: s.skybox,
       starDensity: s.starDensity,
       starBrightness: s.starBrightness,
+      starLensingEnabled: s.starLensingEnabled,
     }))
   );
 
@@ -97,6 +100,7 @@ export function BlackHoleSimulation({
   }, [onsetDecay, setOnsetDecay]);
 
   const beatIntensityRef = useRef(0);
+  const { camera } = useThree();
 
   // Black hole positions and masses for N-body system (for GPU compute)
   // Keep stable arrays/Vector3s and mutate in-place to avoid per-frame allocations / GC hiccups.
@@ -104,6 +108,7 @@ export function BlackHoleSimulation({
     positions: THREE.Vector3[];
     masses: number[];
     radii: number[];
+    baseRadii: number[]; // Un-pulsed radii for lensing (no audio reactivity)
     count: number;
   } | null>(null);
 
@@ -119,12 +124,14 @@ export function BlackHoleSimulation({
     ];
     const masses = [0, 0, 0, 0];
     const radii = [0, 0, 0, 0];
+    const baseRadii = [0, 0, 0, 0];
     const maxMass = initial.gravity * initial.blackHoleMassMax;
 
     if (initialCount === 1) {
       positions[0].set(0, 0, 0);
       masses[0] = maxMass;
       radii[0] = initial.eventHorizonRadius;
+      baseRadii[0] = initial.eventHorizonRadius;
     } else {
       const angleStep = (2 * Math.PI) / initialCount;
       const totalMass = initial.gravity;
@@ -150,7 +157,9 @@ export function BlackHoleSimulation({
         const r = effectiveOrbitRadius * (avgMassRatio / massRatio);
         positions[i].set(Math.cos(angle) * r, 0, Math.sin(angle) * r);
         masses[i] = mass;
-        radii[i] = initial.eventHorizonRadius * (mass / maxMass);
+        const baseRadius = initial.eventHorizonRadius * (mass / maxMass);
+        radii[i] = baseRadius;
+        baseRadii[i] = baseRadius;
       }
     }
 
@@ -158,9 +167,10 @@ export function BlackHoleSimulation({
       positions[i].set(0, 0, 0);
       masses[i] = 0;
       radii[i] = 0;
+      baseRadii[i] = 0;
     }
 
-    blackHoleDataRef.current = { positions, masses, radii, count: initialCount };
+    blackHoleDataRef.current = { positions, masses, radii, baseRadii, count: initialCount };
   }
 
   // Subscribe to blackHoleCount for reactive rendering of BlackHole components
@@ -222,6 +232,7 @@ export function BlackHoleSimulation({
     const positions = bh.positions;
     const masses = bh.masses;
     const radii = bh.radii;
+    const baseRadii = bh.baseRadii;
     // Hard cap to shader/compute limit
     const count = Math.max(1, Math.min(Math.floor(bhCount), 4));
     const maxMass = gravity * blackHoleMassMax;
@@ -230,6 +241,7 @@ export function BlackHoleSimulation({
       // Single black hole at origin
       positions[0].set(0, 0, 0);
       masses[0] = maxMass;
+      baseRadii[0] = eventHorizonRadius;
       radii[0] = eventHorizonRadius * pulse;
     } else {
       // Multi-body: distribute around center of mass in circular orbit
@@ -263,7 +275,9 @@ export function BlackHoleSimulation({
 
         positions[i].set(x, 0, z);
         masses[i] = mass;
-        radii[i] = eventHorizonRadius * (mass / maxMass) * pulse;
+        const baseRadius = eventHorizonRadius * (mass / maxMass);
+        baseRadii[i] = baseRadius;
+        radii[i] = baseRadius * pulse;
       }
     }
 
@@ -272,6 +286,7 @@ export function BlackHoleSimulation({
       positions[i].set(0, 0, 0);
       masses[i] = 0;
       radii[i] = 0;
+      baseRadii[i] = 0;
     }
     bh.count = count;
 
@@ -350,6 +365,18 @@ export function BlackHoleSimulation({
       audioData.spawnBurst = 1;
       audioData.beatIntensity = 0;
     }
+
+    // Update black hole screen positions for gravitational lensing post-processing
+    // Use baseRadii (not pulsed) so lensing is static, not audio-reactive
+    const bhData = blackHoleDataRef.current!;
+    updateBlackHoleScreenData(
+      bhData.positions,
+      bhData.baseRadii,
+      bhData.masses,
+      maxMass,
+      bhData.count,
+      camera
+    );
   });
 
   // Memoized callbacks to avoid per-render allocations
@@ -364,7 +391,15 @@ export function BlackHoleSimulation({
     <>
       <color attach="background" args={["#000000"]} />
       {isProceduralStars ? (
-        perfFlags?.noStars ? null : (
+        perfFlags?.noStars ? null : skyboxControls.starLensingEnabled ? (
+          <StarFieldWithLensing
+            key={skyboxControls.starDensity}
+            beatIntensityRef={beatIntensityRef}
+            starCount={skyboxControls.starDensity}
+            brightnessBoost={skyboxControls.starBrightness}
+            resolutionScale={resolutionScale}
+          />
+        ) : (
           <StarField
             key={skyboxControls.starDensity}
             beatIntensityRef={beatIntensityRef}

@@ -410,7 +410,7 @@ export const PARAMS: Record<string, ParameterDef> = {
   "Emitters.spawnRate": {
     min: 500,
     max: 10000,
-    default: 4000,
+    default: 3000,
     step: 500,
     description: "particles per second",
     group: "Emitters",
@@ -450,6 +450,16 @@ export const PARAMS: Record<string, ParameterDef> = {
     group: "Skybox",
     label: "Star Brightness",
     system: true,
+  },
+  "Skybox.starLensingStrength": {
+    min: 0,
+    max: 1,
+    default: 0.5,
+    step: 0.05,
+    description: "gravitational lensing strength on stars",
+    group: "Skybox",
+    label: "Gravitational Lensing",
+    system: false,
   },
 
   // ===========================================================================
@@ -522,7 +532,7 @@ export const PARAMS: Record<string, ParameterDef> = {
   "Post-FX.chromaticAudioReactivity": {
     min: 0,
     max: 1,
-    default: 0.1,
+    default: 0.2,
     step: 0.1,
     description: "chromatic aberration reactivity",
     group: "Post-FX",
@@ -562,7 +572,7 @@ export const PARAMS: Record<string, ParameterDef> = {
   "Post-FX.spawnBurstMultiplier": {
     min: 1,
     max: 20,
-    default: 10,
+    default: 15,
     step: 0.1,
     description: "bass spawn burst multiplier",
     group: "Post-FX",

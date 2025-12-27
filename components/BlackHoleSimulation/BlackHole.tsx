@@ -6,7 +6,7 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { useVisualizationControls } from "@/hooks/useVisualizationControls";
 
-interface BlackHoleData {
+export interface BlackHoleData {
   positions: THREE.Vector3[];
   masses: number[];
   radii: number[];
