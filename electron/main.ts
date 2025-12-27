@@ -1,11 +1,34 @@
-import { app, BrowserWindow, ipcMain, desktopCapturer, systemPreferences, shell } from "electron";
+import {
+  app,
+  BrowserWindow,
+  ipcMain,
+  desktopCapturer,
+  systemPreferences,
+  shell,
+  protocol,
+  net,
+} from "electron";
 import path from "path";
+import { pathToFileURL } from "url";
 import { initMain } from "electron-audio-loopback";
 
 const isDev = process.env.NODE_ENV === "development" || !app.isPackaged;
 
 // Initialize the electron-audio-loopback library (must be before app.whenReady)
 initMain();
+
+// Register custom protocol for serving static files (must be before app.whenReady)
+// This fixes web worker chunk loading issues with file:// protocol
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: "app",
+    privileges: {
+      standard: true,
+      secure: true,
+      supportFetchAPI: true,
+    },
+  },
+]);
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -26,7 +49,7 @@ function createWindow() {
     mainWindow.loadURL("http://localhost:3000/app");
     mainWindow.webContents.openDevTools();
   } else {
-    mainWindow.loadFile(path.join(__dirname, "../out/app.html"));
+    mainWindow.loadURL("app://./app.html");
   }
 
   mainWindow.on("closed", () => {
@@ -67,6 +90,21 @@ ipcMain.handle("open-screen-recording-preferences", async () => {
 });
 
 app.whenReady().then(() => {
+  // Handle app:// protocol requests - serves static files from out/ directory
+  protocol.handle("app", (request) => {
+    const url = new URL(request.url);
+    let pathname = decodeURIComponent(url.pathname);
+
+    // Fix webpack worker chunk loading bug - it doubles the _next/static/chunks/ path
+    pathname = pathname.replace(
+      "/_next/static/chunks/_next/static/chunks/",
+      "/_next/static/chunks/"
+    );
+
+    const filePath = path.join(__dirname, "../out", pathname);
+    return net.fetch(pathToFileURL(filePath).toString());
+  });
+
   createWindow();
 
   app.on("activate", () => {
