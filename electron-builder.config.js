@@ -24,6 +24,7 @@ module.exports = {
     },
   },
   dmg: {
+    title: "Blackhole Audio Visualizer",
     contents: [
       {
         x: 130,
