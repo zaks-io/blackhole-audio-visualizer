@@ -25,6 +25,8 @@ export interface ElectronAPI {
     domain: string,
     clientId: string
   ) => Promise<AuthTokenResponse>;
+  setAlwaysOnTop: (enabled: boolean) => Promise<boolean>;
+  getAlwaysOnTop: () => Promise<boolean>;
 }
 
 declare global {

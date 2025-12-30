@@ -21,4 +21,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
   },
   exchangeAuthCode: (code: string, codeVerifier: string, domain: string, clientId: string) =>
     ipcRenderer.invoke("exchange-auth-code", { code, codeVerifier, domain, clientId }),
+  setAlwaysOnTop: (enabled: boolean) => ipcRenderer.invoke("set-always-on-top", enabled),
+  getAlwaysOnTop: () => ipcRenderer.invoke("get-always-on-top"),
 } satisfies ElectronAPI);

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useSyncExternalStore } from "react";
 import {
   Settings,
   Gauge,
@@ -15,6 +16,7 @@ import {
   Subtitles,
   Info,
   HelpCircle,
+  Pin,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -78,8 +80,24 @@ export function SettingsMenu({
     toggleBassStrobe,
     resolution,
     setResolution,
+    alwaysOnTop,
+    setAlwaysOnTop,
   } = useUIState();
   const isAdmin = useIsAdmin();
+
+  // Detect Electron using useSyncExternalStore to avoid hydration mismatch
+  const isElectronApp = useSyncExternalStore(
+    () => () => {},
+    () => !!window.electronAPI?.isElectron,
+    () => false
+  );
+
+  // Sync always-on-top state with Electron on mount and whenever it changes
+  useEffect(() => {
+    if (isElectronApp && window.electronAPI) {
+      window.electronAPI.setAlwaysOnTop(alwaysOnTop);
+    }
+  }, [isElectronApp, alwaysOnTop]);
 
   return (
     <DropdownMenu>
@@ -196,6 +214,17 @@ export function SettingsMenu({
           </div>
           <Switch id="bass-strobe" checked={bassStrobeEnabled} onCheckedChange={toggleBassStrobe} />
         </div>
+        {isElectronApp && (
+          <div className="flex items-center justify-between px-2 py-1.5">
+            <div className="flex items-center gap-2">
+              <Pin className="h-4 w-4 text-muted-foreground" />
+              <Label htmlFor="always-on-top" className="text-sm">
+                Always on top
+              </Label>
+            </div>
+            <Switch id="always-on-top" checked={alwaysOnTop} onCheckedChange={setAlwaysOnTop} />
+          </div>
+        )}
 
         {/* Scene-specific options */}
         {onLoopToggle !== undefined && (

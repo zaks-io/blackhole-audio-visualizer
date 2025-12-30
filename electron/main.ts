@@ -174,6 +174,17 @@ ipcMain.handle("open-external", async (_event, url: string) => {
   await shell.openExternal(url);
 });
 
+// Set always-on-top window state
+ipcMain.handle("set-always-on-top", (_event, enabled: boolean) => {
+  mainWindow?.setAlwaysOnTop(enabled);
+  return mainWindow?.isAlwaysOnTop() ?? false;
+});
+
+// Get always-on-top window state
+ipcMain.handle("get-always-on-top", () => {
+  return mainWindow?.isAlwaysOnTop() ?? false;
+});
+
 // macOS: deep link comes via open-url event
 app.on("open-url", (event, url) => {
   event.preventDefault();

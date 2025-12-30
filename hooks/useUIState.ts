@@ -10,6 +10,7 @@ interface UIState {
   bassStrobeEnabled: boolean;
   controlBarCollapsed: boolean;
   resolution: Resolution;
+  alwaysOnTop: boolean;
   toggleDebugPanels: () => void;
   toggleFPS: () => void;
   toggleDevControls: () => void;
@@ -18,6 +19,8 @@ interface UIState {
   toggleControlBar: () => void;
   setControlBarCollapsed: (collapsed: boolean) => void;
   setResolution: (resolution: Resolution) => void;
+  setAlwaysOnTop: (enabled: boolean) => void;
+  toggleAlwaysOnTop: () => void;
 }
 
 export const useUIState = create<UIState>()(
@@ -29,6 +32,7 @@ export const useUIState = create<UIState>()(
       bassStrobeEnabled: false,
       controlBarCollapsed: false,
       resolution: "auto",
+      alwaysOnTop: false,
       toggleDebugPanels: () => set((state) => ({ debugPanelsVisible: !state.debugPanelsVisible })),
       toggleFPS: () => set((state) => ({ fpsVisible: !state.fpsVisible })),
       toggleDevControls: () => set((state) => ({ devControlsVisible: !state.devControlsVisible })),
@@ -37,6 +41,8 @@ export const useUIState = create<UIState>()(
       toggleControlBar: () => set((state) => ({ controlBarCollapsed: !state.controlBarCollapsed })),
       setControlBarCollapsed: (collapsed) => set({ controlBarCollapsed: collapsed }),
       setResolution: (resolution) => set({ resolution }),
+      setAlwaysOnTop: (enabled) => set({ alwaysOnTop: enabled }),
+      toggleAlwaysOnTop: () => set((state) => ({ alwaysOnTop: !state.alwaysOnTop })),
     }),
     {
       name: "ui-state",
