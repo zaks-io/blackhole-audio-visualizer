@@ -367,11 +367,10 @@ export function BlackHoleSimulation({
     }
 
     // Update black hole screen positions for gravitational lensing post-processing
-    // Use baseRadii (not pulsed) so lensing is static, not audio-reactive
     const bhData = blackHoleDataRef.current!;
     updateBlackHoleScreenData(
       bhData.positions,
-      bhData.baseRadii,
+      bhData.radii,
       bhData.masses,
       maxMass,
       bhData.count,

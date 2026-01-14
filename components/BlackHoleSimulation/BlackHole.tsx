@@ -50,6 +50,7 @@ const coronaFragmentShader = /* glsl */ `
 export function BlackHole({ blackHoleDataRef, index }: BlackHoleProps) {
   const meshRef = useRef<THREE.Mesh>(null);
   const materialRef = useRef<THREE.ShaderMaterial>(null);
+  const smoothedScaleRef = useRef<number>(0);
 
   const uniforms = useMemo(
     () => ({
@@ -60,7 +61,7 @@ export function BlackHole({ blackHoleDataRef, index }: BlackHoleProps) {
     []
   );
 
-  useFrame(() => {
+  useFrame((_, delta) => {
     if (!meshRef.current || !blackHoleDataRef.current || !materialRef.current) return;
 
     const bhData = blackHoleDataRef.current;
@@ -77,7 +78,11 @@ export function BlackHole({ blackHoleDataRef, index }: BlackHoleProps) {
 
     meshRef.current.visible = true;
     meshRef.current.position.copy(bhData.positions[index]);
-    meshRef.current.scale.setScalar(bhData.radii[index]);
+
+    const targetScale = bhData.radii[index];
+    const lerpFactor = 1 - Math.exp(-12 * delta);
+    smoothedScaleRef.current += (targetScale - smoothedScaleRef.current) * lerpFactor;
+    meshRef.current.scale.setScalar(smoothedScaleRef.current);
   });
 
   return (
