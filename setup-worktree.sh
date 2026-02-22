@@ -25,21 +25,18 @@ echo "Main worktree: $MAIN_WORKTREE"
 echo "Installing dependencies with bun..."
 bun install
 
-# Copy .env files
-if [ -f "$MAIN_WORKTREE/.env" ]; then
-  echo "Copying .env from main worktree..."
-  cp "$MAIN_WORKTREE/.env" .env
-  echo "✓ .env file copied"
-else
-  echo "⚠ Warning: $MAIN_WORKTREE/.env not found, skipping .env copy"
-fi
+# Copy .env files from main worktree, preserving monorepo structure
+ENV_DIRS=("." "apps/web" "apps/desktop" "packages/backend")
 
-if [ -f "$MAIN_WORKTREE/.env.local" ]; then
-  echo "Copying .env.local from main worktree..."
-  cp "$MAIN_WORKTREE/.env.local" .env.local
-  echo "✓ .env.local file copied"
-else
-  echo "⚠ Warning: $MAIN_WORKTREE/.env.local not found, skipping .env.local copy"
-fi
+for dir in "${ENV_DIRS[@]}"; do
+  for pattern in .env .env.local; do
+    src="$MAIN_WORKTREE/$dir/$pattern"
+    if [ -f "$src" ]; then
+      mkdir -p "$dir"
+      cp "$src" "$dir/$pattern"
+      echo "✓ Copied $dir/$pattern"
+    fi
+  done
+done
 
 echo "✓ Worktree setup complete!"
