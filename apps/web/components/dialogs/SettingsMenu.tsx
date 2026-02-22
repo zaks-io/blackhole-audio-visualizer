@@ -8,6 +8,7 @@ import {
   Zap,
   Video,
   Package,
+  BarChart3,
   Download,
   ChevronRight,
   Monitor,
@@ -39,6 +40,7 @@ import { RecordingsManagerDialog } from "./RecordingsManagerDialog";
 import { ReleasesManagerDialog } from "./ReleasesManagerDialog";
 import { DownloadDialog } from "./DownloadDialog";
 import { HelpDialog } from "./HelpModal";
+import { VoteAnalysisDialog } from "./VoteAnalysisDialog";
 
 const RESOLUTION_LABELS: Record<Resolution, string> = {
   auto: "Fill",
@@ -156,6 +158,12 @@ export function SettingsMenu({
                 <ChevronRight className="h-4 w-4 text-muted-foreground" />
               </button>
             </ReleasesManagerDialog>
+            <VoteAnalysisDialog>
+              <button className="flex items-center w-full text-left px-2 py-1.5 hover:bg-accent rounded-sm gap-2">
+                <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm">Vote Analysis</span>
+              </button>
+            </VoteAnalysisDialog>
             <DropdownMenuSeparator />
           </>
         )}

@@ -101,7 +101,6 @@ export function PresetControls() {
   const [migrating, setMigrating] = useState(false);
   const [overwriteDialogOpen, setOverwriteDialogOpen] = useState(false);
   const [migrateProgress, setMigrateProgress] = useState({ current: 0, total: 0 });
-
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const cloudPresets: UnifiedPreset[] = useMemo(() => {

@@ -6,3 +6,4 @@ release
 node_modules
 .turbo
 *.glsl
+packages/backend/convex/_generated/

@@ -425,7 +425,7 @@ const generateVisualizationPlaylist = createTool({
       return sectionInfo;
     });
 
-    const prompt: string = `# Visualization Playlist Instructions
+    let prompt: string = `# Visualization Playlist Instructions
 Create a visualization playlist for the song "${song.name}".
 
 ## Song Structure
@@ -443,6 +443,15 @@ Negative (avoid): ${composition.negative_global_styles.join(", ")}
   - Add a variety of settings to the presets to make the visualization more interesting.
 
 ${args.customInstructions ? `## Custom Instructions\n${args.customInstructions}` : ""}`.trim();
+
+    // Inject voting analysis insights if sufficient data exists
+    const analysis = await ctx.runQuery(
+      internal.model.presetVotes.analysis.getAnalysisInternal,
+      {}
+    );
+    if (analysis && analysis.totalVotes >= 10) {
+      prompt += `\n\n${analysis.promptFragment}`;
+    }
 
     // Use generateObject with Gemini 3 Pro for structured output
     const result: GenerateObjectResult<PlaylistOutput> = await generateObject({

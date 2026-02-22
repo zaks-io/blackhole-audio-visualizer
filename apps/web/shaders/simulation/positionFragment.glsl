@@ -17,6 +17,9 @@ uniform float uParticlesPerSecond;
 uniform float uTotalParticles;
 uniform float uLifetimeMax;
 uniform float uEmitterSpread;
+uniform float uEmissionShape;
+uniform float uEmitterLineY;
+uniform float uEmitterLineWidth;
 uniform bool uDoDrift;
 uniform sampler2D uBandOnsetsTexture;
 uniform float uBandOnsetMax;
@@ -86,15 +89,6 @@ void main() {
 
             // Pick which emitter this particle spawns from
             float emitterIndex = floor(hash2(ip, 100.0) * uEmitterCount);
-            float baseAngle = emitterIndex * 6.28318530718 / uEmitterCount;
-
-            float angle = baseAngle + uEmitterAngle;
-
-            // Calculate emit position - single point, no offset
-            float rad = uEmissionRadius;
-            float x = rad * cos(angle);
-            float z = rad * sin(angle);
-            float tiltAmount = sin(angle) * uEmitterTilt;
 
             // Map emitter to frequency band (emitter 0 = low freq, emitter N = high freq)
             float freqIndex = emitterIndex / uEmitterCount;
@@ -104,32 +98,83 @@ void main() {
             // Beat-reactive Y offset - oscillates up and down based on frequency energy
             float audioEnergy = spectrumValue * 15.0;
             float oscillation = sin(uTime * 2.0 + emitterIndex * 0.5);
-            float y = tiltAmount + audioEnergy * oscillation * uAudioAmplitude;
 
-            // Always-on temporal + spatial de-correlation:
-            // - time-varying per-particle angle jitter breaks phase-locked lanes
-            // - uEmitterSpread remains an extra user-controlled intensifier
+            // Always-on temporal + spatial de-correlation seeds
             float timeSeed = spawnTime * 17.0 + emitterIndex * 13.0;
             float hJitter = hash2(ip, 1000.0 + timeSeed);
-            float baseAngleJitter = (hJitter - 0.5) * BASE_SPAWN_ANGLE_JITTER;
-
-            // Small time-varying arc offset (kept modest to preserve spokes)
             float hArc = hash2(ip, 2000.0 + timeSeed);
-            float baseArc = (hArc - 0.5) * 0.02;
-
-            // User-controlled spread (time-varying so it doesn't lock)
             float hSpread = hash2(ip, 3000.0 + timeSeed);
-            float userSpread = (hSpread - 0.5) * uEmitterSpread * 0.5;
-
-            float spawnAngle = angle + baseArc + baseAngleJitter + userSpread;
-
-            // Subtle radial jitter breaks perfect circular quantization without destroying spoke structure
             float hRad = hash2(ip, 4000.0 + timeSeed);
-            float spawnRad = rad + (hRad - 0.5) * (BASE_SPAWN_RADIAL_JITTER * rad);
 
-            float spawnX = spawnRad * cos(spawnAngle);
-            float spawnZ = spawnRad * sin(spawnAngle);
-            pos = vec3(spawnX, y, spawnZ);
+            // Convert shared angle/tilt from degrees to radians
+            float emitterAngleRad = uEmitterAngle * 0.01745329;
+            float emitterTiltRad = uEmitterTilt * 0.01745329;
+
+            if (uEmissionShape < 0.5) {
+                // CIRCLE MODE
+                float baseAngle = emitterIndex * 6.28318530718 / uEmitterCount;
+                float angle = baseAngle + emitterAngleRad;
+
+                float rad = uEmissionRadius;
+                float audioY = audioEnergy * oscillation * uAudioAmplitude;
+
+                float baseAngleJitter = (hJitter - 0.5) * BASE_SPAWN_ANGLE_JITTER;
+                float baseArc = (hArc - 0.5) * 0.02;
+                float userSpread = (hSpread - 0.5) * uEmitterSpread * 0.5;
+
+                float spawnAngle = angle + baseArc + baseAngleJitter + userSpread;
+                float spawnRad = rad + (hRad - 0.5) * (BASE_SPAWN_RADIAL_JITTER * rad);
+
+                float spawnX = spawnRad * cos(spawnAngle);
+                float spawnZ = spawnRad * sin(spawnAngle);
+                vec3 p = vec3(spawnX, audioY, spawnZ);
+
+                // Rodrigues tilt (same formula as line mode)
+                if (emitterTiltRad > 0.001) {
+                    vec3 tiltAxis = vec3(-sin(emitterAngleRad), 0.0, cos(emitterAngleRad));
+                    float ct = cos(emitterTiltRad);
+                    float st = sin(emitterTiltRad);
+                    float d = dot(tiltAxis, p);
+                    vec3 cr = cross(tiltAxis, p);
+                    p = p * ct + cr * st + tiltAxis * d * (1.0 - ct);
+                }
+
+                pos = p;
+            } else {
+                // LINE MODE - Vertical cylinder, tiltable via Rodrigues' rotation
+                float t = (emitterIndex + 0.5) / uEmitterCount;
+
+                // Distance along line from center (uses lineWidth, not radius)
+                float lineOffset = (t - 0.5) * 2.0 * uEmitterLineWidth;
+                lineOffset += (hJitter - 0.5) * (2.0 * uEmitterLineWidth / uEmitterCount);
+                lineOffset += (hRad - 0.5) * BASE_SPAWN_RADIAL_JITTER * uEmitterLineWidth;
+
+                // Base emitter position (stays fixed, not tilted)
+                float basePx = uEmissionRadius * cos(emitterAngleRad);
+                float basePz = uEmissionRadius * sin(emitterAngleRad);
+
+                // Local offset: vertical line + tangential spread (will be tilted)
+                float spreadAngle = emitterAngleRad + 1.5708;
+                float spreadX = (hSpread - 0.5) * uEmitterSpread * cos(spreadAngle);
+                float spreadZ = (hSpread - 0.5) * uEmitterSpread * sin(spreadAngle);
+                vec3 localOffset = vec3(spreadX, lineOffset, spreadZ);
+
+                // Tilt only the local offset around the radial axis
+                // Radial axis keeps particles at emitRadius distance (no center collapse)
+                if (emitterTiltRad > 0.001) {
+                    vec3 tiltAxis = vec3(cos(emitterAngleRad), 0.0, sin(emitterAngleRad));
+                    float ct = cos(emitterTiltRad);
+                    float st = sin(emitterTiltRad);
+                    float d = dot(tiltAxis, localOffset);
+                    vec3 cr = cross(tiltAxis, localOffset);
+                    localOffset = localOffset * ct + cr * st + tiltAxis * d * (1.0 - ct);
+                }
+
+                float audioY = audioEnergy * oscillation * uAudioAmplitude;
+                vec3 p = vec3(basePx + localOffset.x, uEmitterLineY + localOffset.y + audioY, basePz + localOffset.z);
+
+                pos = p;
+            }
             lifetime = 1.0;
         }
     } else if (!uDoDrift) {
