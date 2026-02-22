@@ -16,6 +16,7 @@ export interface VisualizationControlsState {
   coronaEnabled: boolean;
   coronaIntensity: number;
   coronaPower: number;
+  blackHoleOffsetY: number;
 
   // Particles
   textureSize: number;
@@ -47,6 +48,9 @@ export interface VisualizationControlsState {
   inwardAngle: number;
   spawnRate: number;
   emitterSpread: number;
+  emissionShape: number;
+  emitterLineY: number;
+  emitterLineWidth: number;
   showEmitters: boolean;
 
   // Skybox
@@ -101,6 +105,7 @@ export const pathToKey: Record<string, keyof VisualizationControlsState> = {
   "Black Hole.blackHoleMassMax": "blackHoleMassMax",
   "Black Hole.coronaIntensity": "coronaIntensity",
   "Black Hole.coronaPower": "coronaPower",
+  "Black Hole.blackHoleOffsetY": "blackHoleOffsetY",
   "Particles.textureSize": "textureSize",
   "Particles.pointSize": "pointSize",
   "Particles.brightness": "brightness",
@@ -127,6 +132,9 @@ export const pathToKey: Record<string, keyof VisualizationControlsState> = {
   "Emitters.inwardAngle": "inwardAngle",
   "Emitters.spawnRate": "spawnRate",
   "Emitters.emitterSpread": "emitterSpread",
+  "Emitters.emissionShape": "emissionShape",
+  "Emitters.emitterLineY": "emitterLineY",
+  "Emitters.emitterLineWidth": "emitterLineWidth",
   "Emitters.showEmitters": "showEmitters",
   "Skybox.skybox": "skybox",
   "Skybox.starDensity": "starDensity",
@@ -162,6 +170,7 @@ const DEFAULT_STATE: VisualizationControlsState = {
   blackHoleMassMax: PARAM_DEFAULTS.blackHoleMassMax,
   coronaIntensity: PARAM_DEFAULTS.coronaIntensity,
   coronaPower: PARAM_DEFAULTS.coronaPower,
+  blackHoleOffsetY: PARAM_DEFAULTS.blackHoleOffsetY,
   textureSize: PARAM_DEFAULTS.textureSize,
   pointSize: PARAM_DEFAULTS.pointSize,
   brightness: PARAM_DEFAULTS.brightness,
@@ -184,6 +193,9 @@ const DEFAULT_STATE: VisualizationControlsState = {
   inwardAngle: PARAM_DEFAULTS.inwardAngle,
   spawnRate: PARAM_DEFAULTS.spawnRate,
   emitterSpread: PARAM_DEFAULTS.emitterSpread,
+  emissionShape: PARAM_DEFAULTS.emissionShape,
+  emitterLineY: PARAM_DEFAULTS.emitterLineY,
+  emitterLineWidth: PARAM_DEFAULTS.emitterLineWidth,
   starDensity: PARAM_DEFAULTS.starDensity,
   starBrightness: PARAM_DEFAULTS.starBrightness,
   starLensingStrength: PARAM_DEFAULTS.starLensingStrength,

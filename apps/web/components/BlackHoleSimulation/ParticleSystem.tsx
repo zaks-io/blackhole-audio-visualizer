@@ -77,6 +77,9 @@ export function ParticleSystem({
     setISCORadius,
     setISCOStrength,
     setEmitterSpread,
+    setEmissionShape,
+    setEmitterLineY,
+    setEmitterLineWidth,
     setBeatIntensity,
     setBeatRepulsion,
     setBandOnsets,
@@ -112,6 +115,9 @@ export function ParticleSystem({
     inwardAngle: number;
     iscoStrength: number;
     emitterSpread: number;
+    emissionShape: number;
+    emitterLineY: number;
+    emitterLineWidth: number;
     amplitude: number;
     beatRepulsion: number;
     beatPulse: number;
@@ -436,6 +442,9 @@ export function ParticleSystem({
         inwardAngle: state.inwardAngle,
         iscoStrength: state.iscoStrength,
         emitterSpread: state.emitterSpread,
+        emissionShape: state.emissionShape,
+        emitterLineY: state.emitterLineY,
+        emitterLineWidth: state.emitterLineWidth,
         amplitude: state.amplitude,
         beatRepulsion: state.beatRepulsion,
         beatPulse: state.beatPulse,
@@ -458,6 +467,9 @@ export function ParticleSystem({
       setInwardAngle(state.inwardAngle);
       setISCOStrength(state.iscoStrength);
       setEmitterSpread(state.emitterSpread);
+      setEmissionShape(state.emissionShape);
+      setEmitterLineY(state.emitterLineY);
+      setEmitterLineWidth(state.emitterLineWidth);
       setAudioAmplitude(state.amplitude);
       setBeatRepulsion(state.beatRepulsion);
       setPositionBeatPulse(state.beatPulse);
@@ -521,6 +533,18 @@ export function ParticleSystem({
       if (prev.emitterSpread !== state.emitterSpread) {
         prev.emitterSpread = state.emitterSpread;
         setEmitterSpread(state.emitterSpread);
+      }
+      if (prev.emissionShape !== state.emissionShape) {
+        prev.emissionShape = state.emissionShape;
+        setEmissionShape(state.emissionShape);
+      }
+      if (prev.emitterLineY !== state.emitterLineY) {
+        prev.emitterLineY = state.emitterLineY;
+        setEmitterLineY(state.emitterLineY);
+      }
+      if (prev.emitterLineWidth !== state.emitterLineWidth) {
+        prev.emitterLineWidth = state.emitterLineWidth;
+        setEmitterLineWidth(state.emitterLineWidth);
       }
       if (prev.amplitude !== state.amplitude) {
         prev.amplitude = state.amplitude;

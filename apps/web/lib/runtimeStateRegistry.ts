@@ -18,6 +18,7 @@ export const runtimeState = {
   orbitSpeed: PARAM_DEFAULTS.orbitSpeed,
   blackHoleMassMin: PARAM_DEFAULTS.blackHoleMassMin,
   blackHoleMassMax: PARAM_DEFAULTS.blackHoleMassMax,
+  blackHoleOffsetY: PARAM_DEFAULTS.blackHoleOffsetY,
 
   // Particles / Render
   pointSize: PARAM_DEFAULTS.pointSize,
@@ -46,6 +47,9 @@ export const runtimeState = {
   inwardAngle: PARAM_DEFAULTS.inwardAngle,
   spawnRate: PARAM_DEFAULTS.spawnRate,
   emitterSpread: PARAM_DEFAULTS.emitterSpread,
+  emissionShape: PARAM_DEFAULTS.emissionShape,
+  emitterLineY: PARAM_DEFAULTS.emitterLineY,
+  emitterLineWidth: PARAM_DEFAULTS.emitterLineWidth,
 
   // Audio
   amplitude: PARAM_DEFAULTS.amplitude,
@@ -81,6 +85,7 @@ const runtimePathToKey: Record<string, RuntimeStateKey> = {
   "Black Hole.orbitSpeed": "orbitSpeed",
   "Black Hole.blackHoleMassMin": "blackHoleMassMin",
   "Black Hole.blackHoleMassMax": "blackHoleMassMax",
+  "Black Hole.blackHoleOffsetY": "blackHoleOffsetY",
 
   // Particles
   "Particles.pointSize": "pointSize",
@@ -110,6 +115,9 @@ const runtimePathToKey: Record<string, RuntimeStateKey> = {
   "Emitters.inwardAngle": "inwardAngle",
   "Emitters.spawnRate": "spawnRate",
   "Emitters.emitterSpread": "emitterSpread",
+  "Emitters.emissionShape": "emissionShape",
+  "Emitters.emitterLineY": "emitterLineY",
+  "Emitters.emitterLineWidth": "emitterLineWidth",
 
   // Audio
   "Audio.amplitude": "amplitude",
@@ -147,6 +155,7 @@ const storeKeyToRuntimeKey: Record<string, RuntimeStateKey> = {
   orbitSpeed: "orbitSpeed",
   blackHoleMassMin: "blackHoleMassMin",
   blackHoleMassMax: "blackHoleMassMax",
+  blackHoleOffsetY: "blackHoleOffsetY",
 
   // Particles
   pointSize: "pointSize",
@@ -175,6 +184,9 @@ const storeKeyToRuntimeKey: Record<string, RuntimeStateKey> = {
   inwardAngle: "inwardAngle",
   spawnRate: "spawnRate",
   emitterSpread: "emitterSpread",
+  emissionShape: "emissionShape",
+  emitterLineY: "emitterLineY",
+  emitterLineWidth: "emitterLineWidth",
 
   // Audio
   amplitude: "amplitude",

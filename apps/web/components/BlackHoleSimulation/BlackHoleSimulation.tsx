@@ -76,6 +76,9 @@ export function BlackHoleSimulation({
       emitterAngle: s.emitterAngle,
       emitterTilt: s.emitterTilt,
       showEmitters: s.showEmitters,
+      emissionShape: s.emissionShape,
+      emitterLineY: s.emitterLineY,
+      emitterLineWidth: s.emitterLineWidth,
     }))
   );
 
@@ -127,8 +130,9 @@ export function BlackHoleSimulation({
     const baseRadii = [0, 0, 0, 0];
     const maxMass = initial.gravity * initial.blackHoleMassMax;
 
+    const initOffsetY = initial.blackHoleOffsetY;
     if (initialCount === 1) {
-      positions[0].set(0, 0, 0);
+      positions[0].set(0, initOffsetY, 0);
       masses[0] = maxMass;
       radii[0] = initial.eventHorizonRadius;
       baseRadii[0] = initial.eventHorizonRadius;
@@ -155,7 +159,7 @@ export function BlackHoleSimulation({
           initial.blackHoleMassMax - t * (initial.blackHoleMassMax - initial.blackHoleMassMin);
         const mass = totalMass * massRatio;
         const r = effectiveOrbitRadius * (avgMassRatio / massRatio);
-        positions[i].set(Math.cos(angle) * r, 0, Math.sin(angle) * r);
+        positions[i].set(Math.cos(angle) * r, initOffsetY, Math.sin(angle) * r);
         masses[i] = mass;
         const baseRadius = initial.eventHorizonRadius * (mass / maxMass);
         radii[i] = baseRadius;
@@ -220,6 +224,7 @@ export function BlackHoleSimulation({
       spawnBurstMultiplier,
       hfcVelocityBoost,
       beatPulse,
+      blackHoleOffsetY,
     } = runtimeState;
     // Compute pulsed radius once - this is the single source of truth
     const pulse = 1 + (beatIntensityRef.current ?? 0) * beatPulse;
@@ -238,8 +243,8 @@ export function BlackHoleSimulation({
     const maxMass = gravity * blackHoleMassMax;
 
     if (count === 1) {
-      // Single black hole at origin
-      positions[0].set(0, 0, 0);
+      // Single black hole at origin (with optional Y offset)
+      positions[0].set(0, blackHoleOffsetY, 0);
       masses[0] = maxMass;
       baseRadii[0] = eventHorizonRadius;
       radii[0] = eventHorizonRadius * pulse;
@@ -273,7 +278,7 @@ export function BlackHoleSimulation({
         const x = Math.cos(angle) * r;
         const z = Math.sin(angle) * r;
 
-        positions[i].set(x, 0, z);
+        positions[i].set(x, blackHoleOffsetY, z);
         masses[i] = mass;
         const baseRadius = eventHorizonRadius * (mass / maxMass);
         baseRadii[i] = baseRadius;
@@ -432,6 +437,9 @@ export function BlackHoleSimulation({
           radius={emitterControls.emitRadius}
           angle={emitterControls.emitterAngle}
           tilt={emitterControls.emitterTilt}
+          emissionShape={emitterControls.emissionShape}
+          emitterLineY={emitterControls.emitterLineY}
+          emitterLineWidth={emitterControls.emitterLineWidth}
         />
       )}
 
@@ -451,24 +459,73 @@ function EmitterHelpers({
   radius,
   angle,
   tilt,
+  emissionShape,
+  emitterLineY,
+  emitterLineWidth,
 }: {
   count: number;
   radius: number;
   angle: number;
   tilt: number;
+  emissionShape: number;
+  emitterLineY: number;
+  emitterLineWidth: number;
 }) {
   const positions = useMemo(() => {
     const pos: [number, number, number][] = [];
-    for (let i = 0; i < count; i++) {
-      const baseAngle = (i * Math.PI * 2) / count;
-      const a = baseAngle + angle;
-      const x = radius * Math.cos(a);
-      const z = radius * Math.sin(a);
-      const y = Math.sin(a) * tilt;
-      pos.push([x, y, z]);
+    const angleRad = (angle * Math.PI) / 180;
+    const tiltRad = (tilt * Math.PI) / 180;
+    const ct = Math.cos(tiltRad);
+    const st = Math.sin(tiltRad);
+    const doTilt = tiltRad > 0.001;
+
+    if (emissionShape >= 1) {
+      // Line mode - tilt only the line offset around radial axis
+      const basePx = radius * Math.cos(angleRad);
+      const basePz = radius * Math.sin(angleRad);
+      const tiltAxis = [Math.cos(angleRad), 0, Math.sin(angleRad)];
+      for (let i = 0; i < count; i++) {
+        const t = (i + 0.5) / count;
+        const lineOffset = (t - 0.5) * 2 * emitterLineWidth;
+        let ox = 0,
+          oy = lineOffset,
+          oz = 0;
+        if (doTilt) {
+          const d = tiltAxis[0] * ox + tiltAxis[1] * oy + tiltAxis[2] * oz;
+          const cx = tiltAxis[1] * oz - tiltAxis[2] * oy;
+          const cy = tiltAxis[2] * ox - tiltAxis[0] * oz;
+          const cz = tiltAxis[0] * oy - tiltAxis[1] * ox;
+          ox = ox * ct + cx * st + tiltAxis[0] * d * (1 - ct);
+          oy = oy * ct + cy * st + tiltAxis[1] * d * (1 - ct);
+          oz = oz * ct + cz * st + tiltAxis[2] * d * (1 - ct);
+        }
+        pos.push([basePx + ox, emitterLineY + oy, basePz + oz]);
+      }
+    } else {
+      // Circle mode - tilt around tangent axis (tilts the ring)
+      const circleTiltAxis = [-Math.sin(angleRad), 0, Math.cos(angleRad)];
+      for (let i = 0; i < count; i++) {
+        const baseAngle = (i * Math.PI * 2) / count;
+        const a = baseAngle + angleRad;
+        const x = radius * Math.cos(a);
+        const z = radius * Math.sin(a);
+        let px = x,
+          py = 0,
+          pz = z;
+        if (doTilt) {
+          const d = circleTiltAxis[0] * px + circleTiltAxis[1] * py + circleTiltAxis[2] * pz;
+          const cx = circleTiltAxis[1] * pz - circleTiltAxis[2] * py;
+          const cy = circleTiltAxis[2] * px - circleTiltAxis[0] * pz;
+          const cz = circleTiltAxis[0] * py - circleTiltAxis[1] * px;
+          px = px * ct + cx * st + circleTiltAxis[0] * d * (1 - ct);
+          py = py * ct + cy * st + circleTiltAxis[1] * d * (1 - ct);
+          pz = pz * ct + cz * st + circleTiltAxis[2] * d * (1 - ct);
+        }
+        pos.push([px, py, pz]);
+      }
     }
     return pos;
-  }, [count, radius, angle, tilt]);
+  }, [count, radius, angle, tilt, emissionShape, emitterLineY, emitterLineWidth]);
 
   return (
     <>

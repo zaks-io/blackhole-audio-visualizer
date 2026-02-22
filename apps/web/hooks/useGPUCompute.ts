@@ -187,6 +187,9 @@ export function useGPUCompute(
     positionVariable.material.uniforms.uAudioAmplitude = { value: 1.0 };
     positionVariable.material.uniforms.uSpawnBurst = { value: 1.0 };
     positionVariable.material.uniforms.uEmitterSpread = { value: 0.0 };
+    positionVariable.material.uniforms.uEmissionShape = { value: 0.0 };
+    positionVariable.material.uniforms.uEmitterLineY = { value: 0.0 };
+    positionVariable.material.uniforms.uEmitterLineWidth = { value: 200.0 };
     positionVariable.material.uniforms.uBeatIntensity = { value: 0.0 };
     positionVariable.material.uniforms.uBeatPulse = { value: 2.0 };
     // Very small drift dither to break residual lattice lock without changing the overall aesthetic.
@@ -277,6 +280,9 @@ export function useGPUCompute(
     velocityVariable.material.uniforms.uISCOStrength.value = initial.iscoStrength;
     velocityVariable.material.uniforms.uEmitterSpread.value = initial.emitterSpread;
     positionVariable.material.uniforms.uEmitterSpread.value = initial.emitterSpread;
+    positionVariable.material.uniforms.uEmissionShape.value = initial.emissionShape;
+    positionVariable.material.uniforms.uEmitterLineY.value = initial.emitterLineY;
+    positionVariable.material.uniforms.uEmitterLineWidth.value = initial.emitterLineWidth;
     velocityVariable.material.uniforms.uBeatRepulsion.value = initial.beatRepulsion;
     positionVariable.material.uniforms.uAudioAmplitude.value = initial.amplitude;
 
@@ -656,6 +662,24 @@ export function useGPUCompute(
     }
   }, []);
 
+  const setEmissionShape = useCallback((value: number) => {
+    if (positionVariableRef.current) {
+      positionVariableRef.current.material.uniforms.uEmissionShape.value = value;
+    }
+  }, []);
+
+  const setEmitterLineY = useCallback((value: number) => {
+    if (positionVariableRef.current) {
+      positionVariableRef.current.material.uniforms.uEmitterLineY.value = value;
+    }
+  }, []);
+
+  const setEmitterLineWidth = useCallback((value: number) => {
+    if (positionVariableRef.current) {
+      positionVariableRef.current.material.uniforms.uEmitterLineWidth.value = value;
+    }
+  }, []);
+
   const setBeatIntensity = useCallback((value: number) => {
     if (velocityVariableRef.current) {
       velocityVariableRef.current.material.uniforms.uBeatIntensity.value = value;
@@ -880,6 +904,9 @@ export function useGPUCompute(
     registerGPUSetter("Emitters.inwardAngle", setInwardAngle);
     registerGPUSetter("Emitters.spawnRate", setSpawnRate);
     registerGPUSetter("Emitters.emitterSpread", setEmitterSpread);
+    registerGPUSetter("Emitters.emissionShape", setEmissionShape);
+    registerGPUSetter("Emitters.emitterLineY", setEmitterLineY);
+    registerGPUSetter("Emitters.emitterLineWidth", setEmitterLineWidth);
     registerGPUSetter("Audio.amplitude", setAudioAmplitude);
     registerGPUSetter("Audio.beatRepulsion", setBeatRepulsion);
 
@@ -901,6 +928,9 @@ export function useGPUCompute(
     setInwardAngle,
     setSpawnRate,
     setEmitterSpread,
+    setEmissionShape,
+    setEmitterLineY,
+    setEmitterLineWidth,
     setAudioAmplitude,
     setBeatRepulsion,
   ]);
@@ -925,6 +955,9 @@ export function useGPUCompute(
     setISCORadius,
     setISCOStrength,
     setEmitterSpread,
+    setEmissionShape,
+    setEmitterLineY,
+    setEmitterLineWidth,
     setBeatIntensity,
     setBeatRepulsion,
     setBandOnsets,
