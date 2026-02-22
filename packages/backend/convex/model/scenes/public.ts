@@ -370,6 +370,13 @@ export const sendSceneMessage = action({
         prompt,
         stopWhen: stepCountIs(10),
         headers: createTraceHeaders(traceId, "scene-agent"),
+        providerOptions: {
+          openrouter: {
+            reasoning: {
+              effort: "low",
+            },
+          },
+        },
       },
       {
         saveStreamDeltas: true,

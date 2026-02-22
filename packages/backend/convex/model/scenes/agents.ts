@@ -10,6 +10,10 @@ if (!process.env.OPENROUTER_API_KEY) {
   throw new Error("OPENROUTER_API_KEY is not set");
 }
 
+if (!process.env.TRACEFLOW_API_KEY) {
+  throw new Error("TRACEFLOW_API_KEY is not set");
+}
+
 // Trace-flow utilities for LLM observability
 // traceId: generated ONCE per user request, shared across all calls in workflow
 // spanId: generated fresh for EACH LLM call
@@ -28,11 +32,9 @@ function generateSpanId(): string {
 }
 
 export function createTraceHeaders(traceId: string, operation: string): Record<string, string> {
-  if (!process.env.TRACEFLOW_API_KEY) return {};
-
   const spanId = generateSpanId();
   return {
-    "X-Trace-Flow-Api-Key": process.env.TRACEFLOW_API_KEY,
+    "X-Trace-Flow-Api-Key": process.env.TRACEFLOW_API_KEY ?? "",
     traceparent: `00-${traceId}-${spanId}-01`,
     baggage: `operation=${operation}`,
   };
@@ -462,6 +464,13 @@ ${args.customInstructions ? `## Custom Instructions\n${args.customInstructions}`
       headers: (ctx as TraceCtx).traceId
         ? createTraceHeaders((ctx as TraceCtx).traceId!, "visualization-generation")
         : {},
+      providerOptions: {
+        openrouter: {
+          reasoning: {
+            effort: "medium",
+          },
+        },
+      },
     });
 
     const generatedPresets: GeneratedPreset[] = result.object.presets;
@@ -814,7 +823,7 @@ const updateScene = createTool({
 // Scene Agent (Kimi K2 Thinking)
 export const sceneAgent = new Agent<TraceCtx>(components.agent, {
   name: "Scene Agent",
-  languageModel: openrouter.chat("moonshotai/kimi-k2-thinking"),
+  languageModel: openrouter.chat("moonshotai/kimi-k2.5"),
   instructions: SCENE_AGENT_INSTRUCTIONS,
   tools: {
     updateCompositionPlan,

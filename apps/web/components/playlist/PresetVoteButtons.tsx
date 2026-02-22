@@ -6,6 +6,7 @@ import { api } from "@blackhole/backend/convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { useSceneControls } from "@/components/scenes/useSceneControls";
 import type { Id } from "@blackhole/backend/convex/_generated/dataModel";
 
 interface PresetVoteButtonsProps {
@@ -14,6 +15,7 @@ interface PresetVoteButtonsProps {
 
 export function PresetVoteButtons({ presetId }: PresetVoteButtonsProps) {
   const { isAuthenticated } = useConvexAuth();
+  const isSceneAgentOpen = useSceneControls((s) => s.isSceneAgentOpen);
   const voteMutation = useMutation(api.model.presetVotes.public.vote);
 
   const summary = useQuery(
@@ -28,7 +30,12 @@ export function PresetVoteButtons({ presetId }: PresetVoteButtonsProps) {
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex items-center gap-0.5 glass-panel rounded-full px-2 py-1">
+    <div
+      className={cn(
+        "fixed z-50 flex items-center gap-0.5 glass-panel rounded-full px-2 py-1 transition-all duration-300",
+        isSceneAgentOpen ? "bottom-6 right-[25.5rem]" : "bottom-6 right-6"
+      )}
+    >
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
