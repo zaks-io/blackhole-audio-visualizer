@@ -10,6 +10,7 @@ import { useUnifiedAudio } from "@/hooks/useUnifiedAudio";
 import { useUnifiedPlayer } from "@/hooks/useUnifiedPlayer";
 import { useSceneRecording } from "@/hooks/useSceneRecording";
 import { useConvexScenes } from "@/hooks/useConvexScenes";
+import { PresetVoteButtons } from "@/components/playlist/PresetVoteButtons";
 import type { PlaylistWithPresets } from "@/components/ProducerMode/types";
 import { Preloaded, usePreloadedQuery, useQuery } from "convex/react";
 import { api } from "@blackhole/backend/convex/_generated/api";
@@ -116,6 +117,8 @@ export function SceneModeUIClient({ sceneId, preloadedScene }: SceneModeUIClient
       />
 
       <ScenePlayerControls scene={scene} player={scenePlayer} />
+
+      <PresetVoteButtons presetId={scenePlayer.currentPreset?._id ?? null} />
 
       <SceneInfoPanel
         scene={scene}

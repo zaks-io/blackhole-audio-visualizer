@@ -54,6 +54,8 @@ export function PresetSelector({ compact = false }: PresetSelectorProps) {
     setMode,
     selectedPresetId,
     setSelectedPresetId,
+    activePresetId,
+    setActivePresetId,
     isLuckyPlaying,
     triggerStop,
     triggerPlay,
@@ -131,10 +133,12 @@ export function PresetSelector({ compact = false }: PresetSelectorProps) {
     } else if (value === "none") {
       setMode("none");
       setSelectedPresetId(null);
+      setActivePresetId(null);
     } else {
       const preset = allPresets.find((p) => p._id === value);
       setMode("preset");
       setSelectedPresetId(value);
+      setActivePresetId(value);
       if (preset) {
         playPreset(convexPresetToPreset(preset));
         if (preset.cameraMode) {

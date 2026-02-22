@@ -99,8 +99,9 @@ export function useFeelingLucky(allPresets: ConvexPreset[]) {
 
       setCameraMode(nextCamera);
 
-      // Play the preset
+      // Play the preset and track it
       playPreset(convexPresetToPreset(nextPreset));
+      usePresetSelector.getState().setActivePresetId(nextPreset._id);
 
       // Increment cycleKey to reset CSS animation
       setState((s) => ({ ...s, cycleKey: s.cycleKey + 1 }));

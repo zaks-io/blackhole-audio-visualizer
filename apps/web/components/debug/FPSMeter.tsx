@@ -78,9 +78,9 @@ export function FPSMeter() {
   return (
     <div
       className={cn(
-        "fixed bottom-3 z-50 glass-panel rounded-md px-2 py-1.5 flex items-center gap-3",
-        "transition-[left] duration-300 ease-out backdrop-blur-md shadow-sm border-white/5",
-        producerPanelOpen ? "left-[332px]" : "left-3"
+        "fixed bottom-0 pb-6 z-50 glass-panel rounded-full px-2 py-1.5 flex items-center gap-3",
+        "transition-[left] duration-300 ease-out",
+        producerPanelOpen ? "left-[336px]" : "left-4"
       )}
     >
       <canvas ref={canvasRef} width={CHART_WIDTH} height={CHART_HEIGHT} className="opacity-90" />

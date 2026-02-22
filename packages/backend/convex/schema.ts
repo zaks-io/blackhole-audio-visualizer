@@ -171,4 +171,47 @@ export default defineSchema({
   })
     .index("by_scene", ["sceneId"])
     .index("by_thread", ["threadId"]),
+
+  presetVotes: defineTable({
+    userId: v.id("users"),
+    presetId: v.id("presets"),
+    vote: v.number(), // 1 or -1
+  })
+    .index("by_user_preset", ["userId", "presetId"])
+    .index("by_preset", ["presetId"]),
+
+  presetAnalysis: defineTable({
+    totalVotes: v.number(),
+    upvotes: v.number(),
+    downvotes: v.number(),
+    presetsAnalyzed: v.number(),
+    promptFragment: v.string(),
+    clusters: v.array(
+      v.object({
+        label: v.string(),
+        size: v.number(),
+        avgScore: v.number(),
+        centroid: v.array(
+          v.object({
+            param: v.string(),
+            value: v.number(),
+          })
+        ),
+        topPalettes: v.array(v.string()),
+        topCameraModes: v.array(v.string()),
+      })
+    ),
+    antiPatterns: v.array(
+      v.object({
+        description: v.string(),
+        params: v.array(
+          v.object({
+            param: v.string(),
+            range: v.string(),
+          })
+        ),
+        avgScore: v.number(),
+      })
+    ),
+  }),
 });
