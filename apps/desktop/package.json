@@ -1,0 +1,26 @@
+{
+  "name": "@blackhole/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "main": "dist/main.js",
+  "scripts": {
+    "dev": "concurrently \"cd ../web && bun dev\" \"wait-on http://localhost:3000 && bun run compile && cross-env NODE_ENV=development electron .\"",
+    "compile": "tsc",
+    "typecheck": "tsc --noEmit",
+    "package": "bun run compile && electron-builder",
+    "package:mac": "bun run compile && electron-builder --mac",
+    "package:win": "bun run compile && electron-builder --win"
+  },
+  "dependencies": {
+    "electron-audio-loopback": "^1.0.6"
+  },
+  "devDependencies": {
+    "@types/electron": "^1.6.12",
+    "concurrently": "^9.2.1",
+    "cross-env": "^10.1.0",
+    "electron": "^38.7.2",
+    "electron-builder": "^26.0.12",
+    "typescript": "^5",
+    "wait-on": "^9.0.3"
+  }
+}

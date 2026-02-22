@@ -1,7 +1,8 @@
 .next
 out
 build
-dist-electron
+dist
 release
 node_modules
+.turbo
 *.glsl

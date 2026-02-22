@@ -1,5 +1,0 @@
-{
-  "framework": "nextjs",
-  "installCommand": "bun install --ignore-scripts",
-  "buildCommand": "bun convex deploy --cmd 'bun run build'"
-}

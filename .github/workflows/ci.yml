@@ -19,13 +19,10 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Lint
-        run: bun lint
+        run: bun run lint
 
       - name: Format check
         run: bun run format:check
 
-      - name: TypeScript check
-        run: bunx tsc --noEmit
-
-      - name: TypeScript check (Electron)
-        run: bunx tsc -p electron/tsconfig.json --noEmit
+      - name: Typecheck
+        run: bun run typecheck
