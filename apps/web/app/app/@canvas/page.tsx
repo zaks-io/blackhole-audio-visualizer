@@ -4,13 +4,42 @@ import { useRef, useState, useEffect, useMemo } from "react";
 import { Canvas } from "@react-three/fiber";
 import { NoToneMapping, SRGBColorSpace } from "three";
 import { useShallow } from "zustand/shallow";
+import dynamic from "next/dynamic";
 import { PostProcessing } from "@/components/PostProcessing";
 import { BlackHoleSimulation } from "@/components/BlackHoleSimulation";
-import { FPSMeter } from "@/components/debug/FPSMeter";
 import { FPSTracker } from "@/hooks/useFPSMonitor";
-import { ControlSidebar } from "@/components/layout";
-import { ProducerModePanel } from "@/components/ProducerMode";
-import { SceneAgentPanel } from "@/components/scenes";
+
+const ProducerModePanel = dynamic(
+  () =>
+    import("@/components/ProducerMode/ProducerModePanel").then((m) => ({
+      default: m.ProducerModePanel,
+    })),
+  { ssr: false }
+);
+
+const SceneAgentPanel = dynamic(
+  () =>
+    import("@/components/scenes/SceneAgentPanel").then((m) => ({
+      default: m.SceneAgentPanel,
+    })),
+  { ssr: false }
+);
+
+const ControlSidebar = dynamic(
+  () =>
+    import("@/components/layout/ControlSidebar").then((m) => ({
+      default: m.ControlSidebar,
+    })),
+  { ssr: false }
+);
+
+const FPSMeter = dynamic(
+  () =>
+    import("@/components/debug/FPSMeter").then((m) => ({
+      default: m.FPSMeter,
+    })),
+  { ssr: false }
+);
 import { useCameraMode, type CameraMode } from "@/components/CameraSystem";
 import { useColorMode } from "@/components/ColorModeSystem";
 import { useUIState } from "@/hooks/useUIState";
