@@ -1,8 +1,5 @@
-"use client";
-
-import Link from "next/link";
 import { Download } from "lucide-react";
-import { track } from "@vercel/analytics";
+import { TrackedLink, TrackedAnchor } from "@/components/TrackedLink";
 
 export default function LandingPage() {
   return (
@@ -32,35 +29,33 @@ export default function LandingPage() {
           Audio Visualizer
         </p>
         <p className="text-sm text-muted-foreground/60 mt-4 max-w-xs">Listen to the void</p>
-        <Link
+        <TrackedLink
           href="/app"
           className="mt-10 px-8 py-3 rounded-full bg-cyan text-cyan-foreground font-medium transition-all duration-300 hover:scale-105"
           style={{ animation: "pulse-glow 3s ease-in-out infinite" }}
-          onClick={() => track("launch_visualizer")}
+          event="launch_visualizer"
         >
           Launch Visualizer
-        </Link>
+        </TrackedLink>
 
         {/* Download Links - using <a> tags because these redirect to external storage URLs */}
         <div className="flex flex-col sm:flex-row gap-3 mt-8">
-          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-          <a
+          <TrackedAnchor
             href="/release/macos/latest"
             className="inline-flex items-center gap-2 px-5 py-2 rounded-full border border-white/10 text-sm text-muted-foreground hover:text-foreground hover:border-white/20 transition-colors"
-            onClick={() => track("download_macos")}
+            event="download_macos"
           >
             <Download className="h-4 w-4" />
             Download for Mac
-          </a>
-          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-          <a
+          </TrackedAnchor>
+          <TrackedAnchor
             href="/release/windows/latest"
             className="inline-flex items-center gap-2 px-5 py-2 rounded-full border border-white/10 text-sm text-muted-foreground hover:text-foreground hover:border-white/20 transition-colors"
-            onClick={() => track("download_windows")}
+            event="download_windows"
           >
             <Download className="h-4 w-4" />
             Download for Windows
-          </a>
+          </TrackedAnchor>
         </div>
       </div>
     </main>
