@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { useConvexScenes } from "@/hooks/useConvexScenes";
+import { useViewerMode } from "@/hooks/useViewerMode";
 import { useSceneControls } from "./useSceneControls";
 
 interface SceneControlsProps {
@@ -36,7 +37,7 @@ export function SceneControls({ compact = false }: SceneControlsProps) {
       setChatThreadId(null);
       openSceneAgent();
     } else {
-      // Navigate to dedicated scene page
+      useViewerMode.getState().setNavigating(value);
       router.push(`/app/scene/${value}`);
     }
   };

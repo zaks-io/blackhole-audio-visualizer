@@ -131,6 +131,7 @@ export function MobileOverflowMenu() {
   };
 
   const handleSceneSelect = (id: string) => {
+    useViewerMode.getState().setNavigating(id);
     router.push(`/app/scene/${id}`);
   };
 

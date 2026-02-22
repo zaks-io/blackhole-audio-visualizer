@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Film, ExternalLink } from "lucide-react";
 import type { MessagePartStatus } from "@/lib/enrichedUIMessages";
+import { useViewerMode } from "@/hooks/useViewerMode";
 import { ToolResultBase } from "./ToolResultBase";
 
 interface SceneToolResultProps {
@@ -49,6 +50,7 @@ export const SceneToolResult = memo(function SceneToolResult({
       const isOnScenePage = pathname === `/app/scene/${sceneId}`;
       if (!isOnScenePage) {
         hasNavigated.current = true;
+        useViewerMode.getState().setNavigating(sceneId);
         router.push(`/app/scene/${sceneId}`);
       }
     }

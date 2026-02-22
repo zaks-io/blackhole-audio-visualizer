@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Film } from "lucide-react";
+import { Film, Loader2 } from "lucide-react";
 import { useConvexAuth } from "convex/react";
 import {
   Select,
@@ -28,9 +28,11 @@ export function SceneSelector({ variant = "pill", currentScene }: SceneSelectorP
   const { scenes, publicScenes, isLoading } = useConvexScenes();
   const sceneId = useViewerMode((s) => s.sceneId);
   const mode = useViewerMode((s) => s.mode);
+  const navigatingToSceneId = useViewerMode((s) => s.navigatingToSceneId);
 
   const handleValueChange = (value: string) => {
     if (value && value !== sceneId) {
+      useViewerMode.getState().setNavigating(value);
       router.push(`/app/scene/${value}`);
     }
   };
@@ -48,14 +50,14 @@ export function SceneSelector({ variant = "pill", currentScene }: SceneSelectorP
           "h-9 w-9 rounded-full border-0 bg-transparent p-0 justify-center",
           "hover:bg-accent/50",
           "focus:ring-0 focus-visible:ring-0",
-          isLoading && "opacity-50 cursor-wait",
+          (isLoading || navigatingToSceneId) && "opacity-50 cursor-wait",
           mode === "scene" && "bg-primary/20 text-primary"
         )
       : cn(
           "h-10 min-w-[140px] gap-2 rounded-full border-0 bg-transparent px-3",
           "hover:bg-accent/50",
           "focus:ring-0 focus-visible:ring-0",
-          isLoading && "opacity-50 cursor-wait"
+          (isLoading || navigatingToSceneId) && "opacity-50 cursor-wait"
         );
 
   const select = (
@@ -65,7 +67,11 @@ export function SceneSelector({ variant = "pill", currentScene }: SceneSelectorP
         aria-label={displayName}
         hideChevron={variant === "icon"}
       >
-        <Film className="h-4 w-4 shrink-0" />
+        {navigatingToSceneId ? (
+          <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
+        ) : (
+          <Film className="h-4 w-4 shrink-0" />
+        )}
         {variant === "icon" ? (
           <span className="sr-only">{displayName}</span>
         ) : (
