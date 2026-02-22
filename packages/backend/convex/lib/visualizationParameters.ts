@@ -103,7 +103,7 @@ export const PARAMS: Record<string, ParameterDef> = {
     description: "number of black holes",
     group: "Black Hole",
     label: "Count",
-    system: true,
+    system: false,
   },
   "Black Hole.orbitRadius": {
     min: 25,

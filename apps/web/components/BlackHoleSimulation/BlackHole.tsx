@@ -69,6 +69,7 @@ export function BlackHole({ blackHoleDataRef, index }: BlackHoleProps) {
 
     if (index >= bhData.count) {
       meshRef.current.visible = false;
+      smoothedScaleRef.current = 0;
       return;
     }
 

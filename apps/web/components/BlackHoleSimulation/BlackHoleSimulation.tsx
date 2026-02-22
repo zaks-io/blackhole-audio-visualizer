@@ -18,6 +18,79 @@ import type { ColorPaletteId } from "@/components/ColorModeSystem";
 import type { AnalyzedAudio } from "@/hooks/useAudioAnalyzer";
 import type { CameraMode } from "@/components/CameraSystem";
 
+// Pre-allocated scratch arrays for layout calculations (avoids per-frame GC)
+const _layoutPositions = [
+  new THREE.Vector3(),
+  new THREE.Vector3(),
+  new THREE.Vector3(),
+  new THREE.Vector3(),
+];
+const _layoutMasses = [0, 0, 0, 0];
+const _layoutBaseRadii = [0, 0, 0, 0];
+
+/**
+ * Compute orbital positions, masses, and base radii for `count` black holes.
+ * Writes into the provided output arrays (caller-owned) to avoid allocations.
+ */
+function calculateOrbitalLayout(
+  count: number,
+  elapsed: number,
+  orbitSpeed: number,
+  orbitRadius: number,
+  gravity: number,
+  blackHoleMassMin: number,
+  blackHoleMassMax: number,
+  eventHorizonRadius: number,
+  outPositions: THREE.Vector3[],
+  outMasses: number[],
+  outBaseRadii: number[]
+) {
+  const maxMass = gravity * blackHoleMassMax;
+
+  if (count === 1) {
+    outPositions[0].set(0, 0, 0);
+    outMasses[0] = maxMass;
+    outBaseRadii[0] = eventHorizonRadius;
+    return;
+  }
+
+  const angleStep = (2 * Math.PI) / count;
+  const totalMass = gravity;
+
+  let totalMassRatio = 0;
+  for (let i = 0; i < count; i++) {
+    const ti = i / (count - 1);
+    totalMassRatio += blackHoleMassMax - ti * (blackHoleMassMax - blackHoleMassMin);
+  }
+  const avgMassRatio = totalMassRatio / count;
+
+  const spacingFactor = 2.5 / Math.sin(Math.PI / count);
+  const minOrbitRadius = eventHorizonRadius * spacingFactor;
+  const effectiveOrbitRadius = Math.max(orbitRadius, minOrbitRadius);
+
+  for (let i = 0; i < count; i++) {
+    const angle = elapsed * orbitSpeed + i * angleStep;
+    const t = i / (count - 1);
+    const massRatio = blackHoleMassMax - t * (blackHoleMassMax - blackHoleMassMin);
+    const mass = totalMass * massRatio;
+    const r = effectiveOrbitRadius * (avgMassRatio / massRatio);
+
+    outPositions[i].set(Math.cos(angle) * r, 0, Math.sin(angle) * r);
+    outMasses[i] = mass;
+    outBaseRadii[i] = eventHorizonRadius * (mass / maxMass);
+  }
+}
+
+// Second set of scratch arrays for the "to" layout during transitions
+const _toPositions = [
+  new THREE.Vector3(),
+  new THREE.Vector3(),
+  new THREE.Vector3(),
+  new THREE.Vector3(),
+];
+const _toMasses = [0, 0, 0, 0];
+const _toBaseRadii = [0, 0, 0, 0];
+
 const SKYBOX_OPTIONS: Record<string, string> = {
   None: "",
   "Procedural Stars": "__procedural__",
@@ -115,7 +188,7 @@ export function BlackHoleSimulation({
   // Initialize immediately from current store so the compute pipeline never sees a 0-mass frame.
   if (!blackHoleDataRef.current) {
     const initial = useVisualizationControls.getState();
-    const initialCount = Math.max(1, Math.min(Math.floor(initial.blackHoleCount), 4));
+    const initialCount = Math.max(1, Math.min(Math.ceil(initial.blackHoleCount), 4));
     const positions = [
       new THREE.Vector3(0, 0, 0),
       new THREE.Vector3(0, 0, 0),
@@ -125,44 +198,21 @@ export function BlackHoleSimulation({
     const masses = [0, 0, 0, 0];
     const radii = [0, 0, 0, 0];
     const baseRadii = [0, 0, 0, 0];
-    const maxMass = initial.gravity * initial.blackHoleMassMax;
 
-    if (initialCount === 1) {
-      positions[0].set(0, 0, 0);
-      masses[0] = maxMass;
-      radii[0] = initial.eventHorizonRadius;
-      baseRadii[0] = initial.eventHorizonRadius;
-    } else {
-      const angleStep = (2 * Math.PI) / initialCount;
-      const totalMass = initial.gravity;
-      let totalMassRatio = 0;
-      for (let i = 0; i < initialCount; i++) {
-        const ti = i / (initialCount - 1);
-        totalMassRatio +=
-          initial.blackHoleMassMax - ti * (initial.blackHoleMassMax - initial.blackHoleMassMin);
-      }
-      const avgMassRatio = totalMassRatio / initialCount;
-
-      // Ensure minimum orbit radius to prevent black hole overlap
-      const spacingFactor = 2.5 / Math.sin(Math.PI / initialCount);
-      const minOrbitRadius = initial.eventHorizonRadius * spacingFactor;
-      const effectiveOrbitRadius = Math.max(initial.orbitRadius, minOrbitRadius);
-
-      for (let i = 0; i < initialCount; i++) {
-        const angle = i * angleStep;
-        const t = i / (initialCount - 1);
-        const massRatio =
-          initial.blackHoleMassMax - t * (initial.blackHoleMassMax - initial.blackHoleMassMin);
-        const mass = totalMass * massRatio;
-        const r = effectiveOrbitRadius * (avgMassRatio / massRatio);
-        positions[i].set(Math.cos(angle) * r, 0, Math.sin(angle) * r);
-        masses[i] = mass;
-        const baseRadius = initial.eventHorizonRadius * (mass / maxMass);
-        radii[i] = baseRadius;
-        baseRadii[i] = baseRadius;
-      }
-    }
-
+    calculateOrbitalLayout(
+      initialCount,
+      0,
+      initial.orbitSpeed,
+      initial.orbitRadius,
+      initial.gravity,
+      initial.blackHoleMassMin,
+      initial.blackHoleMassMax,
+      initial.eventHorizonRadius,
+      positions,
+      masses,
+      baseRadii
+    );
+    for (let i = 0; i < initialCount; i++) radii[i] = baseRadii[i];
     for (let i = initialCount; i < 4; i++) {
       positions[i].set(0, 0, 0);
       masses[i] = 0;
@@ -172,9 +222,6 @@ export function BlackHoleSimulation({
 
     blackHoleDataRef.current = { positions, masses, radii, baseRadii, count: initialCount };
   }
-
-  // Subscribe to blackHoleCount for reactive rendering of BlackHole components
-  const blackHoleCount = useVisualizationControls((s) => s.blackHoleCount);
 
   // Envelope followers for particle system audio signals
   // HFC boost: 50ms attack, 150ms decay (for velocity boost)
@@ -233,62 +280,72 @@ export function BlackHoleSimulation({
     const masses = bh.masses;
     const radii = bh.radii;
     const baseRadii = bh.baseRadii;
-    // Hard cap to shader/compute limit
-    const count = Math.max(1, Math.min(Math.floor(bhCount), 4));
     const maxMass = gravity * blackHoleMassMax;
 
-    if (count === 1) {
-      // Single black hole at origin
-      positions[0].set(0, 0, 0);
-      masses[0] = maxMass;
-      baseRadii[0] = eventHorizonRadius;
-      radii[0] = eventHorizonRadius * pulse;
+    // Transition logic: use fractional bhCount for smooth split/merge
+    const stableCount = Math.max(1, Math.min(Math.floor(bhCount), 4));
+    const targetCount = Math.max(1, Math.min(Math.ceil(bhCount), 4));
+    const progress = bhCount - Math.floor(bhCount);
+
+    const layoutArgs = [
+      elapsed,
+      orbitSpeed,
+      orbitRadius,
+      gravity,
+      blackHoleMassMin,
+      blackHoleMassMax,
+      eventHorizonRadius,
+    ] as const;
+
+    if (progress < 0.001 || stableCount === targetCount) {
+      // Integer count — no transition, identical to previous behavior
+      calculateOrbitalLayout(stableCount, ...layoutArgs, positions, masses, baseRadii);
+      for (let i = 0; i < stableCount; i++) radii[i] = baseRadii[i] * pulse;
+      for (let i = stableCount; i < 4; i++) {
+        positions[i].set(0, 0, 0);
+        masses[i] = 0;
+        radii[i] = 0;
+        baseRadii[i] = 0;
+      }
+      bh.count = stableCount;
     } else {
-      // Multi-body: distribute around center of mass in circular orbit
-      const angleStep = (2 * Math.PI) / count;
-      const totalMass = gravity;
+      // Mid-transition: compute both layouts and blend
+      calculateOrbitalLayout(
+        stableCount,
+        ...layoutArgs,
+        _layoutPositions,
+        _layoutMasses,
+        _layoutBaseRadii
+      );
+      calculateOrbitalLayout(targetCount, ...layoutArgs, _toPositions, _toMasses, _toBaseRadii);
 
-      // Calculate average mass ratio for barycenter adjustment
-      let totalMassRatio = 0;
-      for (let i = 0; i < count; i++) {
-        const ti = i / (count - 1);
-        totalMassRatio += blackHoleMassMax - ti * (blackHoleMassMax - blackHoleMassMin);
+      // Stable BHs: lerp between from→to layouts
+      for (let i = 0; i < stableCount; i++) {
+        positions[i].lerpVectors(_layoutPositions[i], _toPositions[i], progress);
+        masses[i] = _layoutMasses[i] + (_toMasses[i] - _layoutMasses[i]) * progress;
+        const br = _layoutBaseRadii[i] + (_toBaseRadii[i] - _layoutBaseRadii[i]) * progress;
+        baseRadii[i] = br;
+        radii[i] = br * pulse;
       }
-      const avgMassRatio = totalMassRatio / count;
 
-      // Ensure minimum orbit radius to prevent black hole overlap
-      const spacingFactor = 2.5 / Math.sin(Math.PI / count);
-      const minOrbitRadius = eventHorizonRadius * spacingFactor;
-      const effectiveOrbitRadius = Math.max(orbitRadius, minOrbitRadius);
+      // Transitioning BH: emerges from parent's current blended position
+      const transIdx = stableCount; // the new BH being born
+      const parentIdx = Math.max(0, stableCount - 1);
+      positions[transIdx].lerpVectors(positions[parentIdx], _toPositions[transIdx], progress);
+      masses[transIdx] = _toMasses[transIdx] * progress;
+      const transBr = _toBaseRadii[transIdx] * progress;
+      baseRadii[transIdx] = transBr;
+      radii[transIdx] = transBr * pulse;
 
-      for (let i = 0; i < count; i++) {
-        const angle = elapsed * orbitSpeed + i * angleStep;
-        // Interpolate mass from max to min based on index
-        const t = i / (count - 1);
-        const massRatio = blackHoleMassMax - t * (blackHoleMassMax - blackHoleMassMin);
-        const mass = totalMass * massRatio;
-        // Orbit radius inversely proportional to mass (heavier = closer to center)
-        const r = effectiveOrbitRadius * (avgMassRatio / massRatio);
-
-        const x = Math.cos(angle) * r;
-        const z = Math.sin(angle) * r;
-
-        positions[i].set(x, 0, z);
-        masses[i] = mass;
-        const baseRadius = eventHorizonRadius * (mass / maxMass);
-        baseRadii[i] = baseRadius;
-        radii[i] = baseRadius * pulse;
+      // Zero unused slots
+      for (let i = targetCount; i < 4; i++) {
+        positions[i].set(0, 0, 0);
+        masses[i] = 0;
+        radii[i] = 0;
+        baseRadii[i] = 0;
       }
+      bh.count = targetCount;
     }
-
-    // Zero out unused slots to keep data stable and predictable
-    for (let i = count; i < 4; i++) {
-      positions[i].set(0, 0, 0);
-      masses[i] = 0;
-      radii[i] = 0;
-      baseRadii[i] = 0;
-    }
-    bh.count = count;
 
     if (isAudioConnected) {
       const analysis = getAnalysis();
@@ -421,7 +478,7 @@ export function BlackHoleSimulation({
         resolutionScale={resolutionScale}
         onGPUError={onGPUError}
       />
-      {Array.from({ length: blackHoleCount }, (_, i) => (
+      {[0, 1, 2, 3].map((i) => (
         <BlackHole key={i} blackHoleDataRef={blackHoleDataRef} index={i} />
       ))}
 
