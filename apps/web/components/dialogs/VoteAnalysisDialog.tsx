@@ -89,38 +89,68 @@ export function VoteAnalysisDialog({ children }: VoteAnalysisDialogProps) {
               {analysis.clusters.length > 0 && (
                 <div className="space-y-3">
                   <h4 className="text-sm font-medium">Clusters</h4>
-                  {analysis.clusters.map((cluster, i) => (
-                    <div key={i} className="border rounded-lg p-3 space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium">{cluster.label}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {cluster.size} presets · avg {cluster.avgScore.toFixed(2)}
-                        </span>
-                      </div>
-                      {cluster.topPalettes.length > 0 && (
-                        <p className="text-xs text-muted-foreground">
-                          Palettes: {cluster.topPalettes.join(", ")}
-                        </p>
-                      )}
-                      {cluster.topCameraModes.length > 0 && (
-                        <p className="text-xs text-muted-foreground">
-                          Camera: {cluster.topCameraModes.join(", ")}
-                        </p>
-                      )}
-                      {cluster.centroid.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5 mt-1">
-                          {cluster.centroid.map((c) => (
+                  {analysis.clusters.map((cluster, i) => {
+                    const inPrompt = cluster.avgScore > 0;
+                    const isAntiPattern = cluster.avgScore < 0;
+                    return (
+                      <div
+                        key={i}
+                        className={`border rounded-lg p-3 space-y-1.5 ${
+                          inPrompt
+                            ? "border-green-500/20"
+                            : isAntiPattern
+                              ? "border-red-500/20"
+                              : "border-white/5 opacity-60"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-sm font-medium truncate">{cluster.label}</span>
+                          <div className="flex items-center gap-2 shrink-0">
                             <span
-                              key={c.param}
-                              className="text-[10px] bg-white/5 border border-white/10 rounded px-1.5 py-0.5"
+                              className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                                inPrompt
+                                  ? "bg-green-500/20 text-green-400"
+                                  : isAntiPattern
+                                    ? "bg-red-500/20 text-red-400"
+                                    : "bg-white/5 text-muted-foreground"
+                              }`}
                             >
-                              {c.param}: {c.value.toFixed(2)}
+                              {inPrompt
+                                ? "In prompt"
+                                : isAntiPattern
+                                  ? "Anti-pattern"
+                                  : "Not in prompt"}
                             </span>
-                          ))}
+                            <span className="text-xs text-muted-foreground">
+                              {cluster.size} presets · avg {cluster.avgScore.toFixed(2)}
+                            </span>
+                          </div>
                         </div>
-                      )}
-                    </div>
-                  ))}
+                        {cluster.topPalettes.length > 0 && (
+                          <p className="text-xs text-muted-foreground">
+                            Palettes: {cluster.topPalettes.join(", ")}
+                          </p>
+                        )}
+                        {cluster.topCameraModes.length > 0 && (
+                          <p className="text-xs text-muted-foreground">
+                            Camera: {cluster.topCameraModes.join(", ")}
+                          </p>
+                        )}
+                        {cluster.centroid.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 mt-1">
+                            {cluster.centroid.map((c) => (
+                              <span
+                                key={c.param}
+                                className="text-[10px] bg-white/5 border border-white/10 rounded px-1.5 py-0.5"
+                              >
+                                {c.param}: {c.value.toFixed(2)}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
 

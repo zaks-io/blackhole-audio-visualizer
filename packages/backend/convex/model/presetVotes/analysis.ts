@@ -131,6 +131,20 @@ export const runAnalysis = internalAction({
     const paramNames = USER_PARAMS.map(([name]) => name);
     const paramDefs = USER_PARAMS.map(([, def]) => def);
 
+    // Collect unique palettes and camera modes for one-hot encoding
+    const paletteSet = new Set<string>();
+    const cameraSet = new Set<string>();
+    for (const preset of presets) {
+      paletteSet.add(preset.colorPalette);
+      cameraSet.add(preset.cameraMode ?? "circle");
+    }
+    const paletteList = [...paletteSet].sort();
+    const cameraList = [...cameraSet].sort();
+    // Weight categorical dimensions so they contribute without dominating
+    // Each one-hot group sums to this weight (equivalent to ~2 numerical params)
+    const categoricalWeight = 2 / Math.max(paletteList.length, 1);
+    const cameraWeight = 2 / Math.max(cameraList.length, 1);
+
     const featureVectors: number[][] = [];
     const presetMeta: Array<{
       id: string;
@@ -149,9 +163,19 @@ export const runAnalysis = internalAction({
       for (let i = 0; i < paramNames.length; i++) {
         const def = paramDefs[i];
         const raw = paramMap.get(paramNames[i]) ?? def.default;
-        // Normalize to 0-1
         const range = def.max - def.min;
         vector.push(range > 0 ? (raw - def.min) / range : 0);
+      }
+
+      // One-hot encode colorPalette
+      for (const p of paletteList) {
+        vector.push(preset.colorPalette === p ? categoricalWeight : 0);
+      }
+
+      // One-hot encode cameraMode
+      const cam = preset.cameraMode ?? "circle";
+      for (const c of cameraList) {
+        vector.push(cam === c ? cameraWeight : 0);
       }
 
       featureVectors.push(vector);
@@ -182,14 +206,14 @@ export const runAnalysis = internalAction({
       topCameraModes: string[];
     }> = [];
 
-    // Compute global mean for anti-pattern detection
+    // Compute global mean for anti-pattern detection (numerical params only)
     const globalMean = new Array(paramNames.length).fill(0);
     for (const vec of featureVectors) {
-      for (let i = 0; i < vec.length; i++) {
+      for (let i = 0; i < paramNames.length; i++) {
         globalMean[i] += vec[i];
       }
     }
-    for (let i = 0; i < globalMean.length; i++) {
+    for (let i = 0; i < paramNames.length; i++) {
       globalMean[i] /= featureVectors.length;
     }
 
