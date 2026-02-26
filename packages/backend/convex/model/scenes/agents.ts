@@ -106,7 +106,7 @@ const showGenerateSongButton = createTool({
     }
 
     const user: { _id: Id<"users"> } | null = await ctx.runQuery(
-      internal.model.scenes.public.getUserByToken,
+      internal.model.users.server.getUserByToken,
       { tokenIdentifier: identity.tokenIdentifier as string }
     );
 
@@ -119,13 +119,13 @@ const showGenerateSongButton = createTool({
 
     // Save composition to compositions table first
     const compositionId: Id<"compositions"> = await ctx.runMutation(
-      internal.model.scenes.public.saveComposition,
+      internal.model.generatedSongs.server.saveComposition,
       { compositionPlan: args.compositionPlan }
     );
 
     // Create song record with status "ready" and compositionId reference
     const songId: Id<"generatedSongs"> = await ctx.runMutation(
-      internal.model.scenes.public.createReadySong,
+      internal.model.generatedSongs.server.createReadySong,
       {
         userId: user._id,
         name: args.songTitle,
@@ -175,15 +175,18 @@ const readCompositionPlan = createTool({
     };
     totalDurationMs?: number;
   }> => {
-    const song = await ctx.runQuery(internal.model.scenes.public.getSongInternal, {
+    const song = await ctx.runQuery(internal.model.generatedSongs.server.getById, {
       songId: args.songId as Id<"generatedSongs">,
     });
     if (!song) return { action: "error", error: "Song not found" };
     if (!song.compositionId) return { action: "error", error: "Song has no composition" };
 
-    const composition = await ctx.runQuery(internal.model.scenes.public.getCompositionInternal, {
-      compositionId: song.compositionId,
-    });
+    const composition = await ctx.runQuery(
+      internal.model.generatedSongs.server.getCompositionInternal,
+      {
+        compositionId: song.compositionId,
+      }
+    );
     if (!composition) return { action: "error", error: "Composition not found" };
 
     return {
@@ -207,18 +210,18 @@ const updateSavedCompositionPlan = createTool({
     compositionPlan: compositionPlanSchema,
   }),
   handler: async (ctx, args) => {
-    const song = await ctx.runQuery(internal.model.scenes.public.getSongInternal, {
+    const song = await ctx.runQuery(internal.model.generatedSongs.server.getById, {
       songId: args.songId as Id<"generatedSongs">,
     });
     if (!song) return { action: "error", error: "Song not found" };
     if (song.status !== "ready") return { action: "error", error: "Song is not in ready status" };
 
     const compositionId: Id<"compositions"> = await ctx.runMutation(
-      internal.model.scenes.public.saveComposition,
+      internal.model.generatedSongs.server.saveComposition,
       { compositionPlan: args.compositionPlan }
     );
 
-    await ctx.runMutation(internal.model.scenes.public.updateSongComposition, {
+    await ctx.runMutation(internal.model.generatedSongs.server.updateSongComposition, {
       songId: args.songId as Id<"generatedSongs">,
       compositionId,
     });
@@ -240,7 +243,7 @@ A "scene" consists of:
 1. **Generated song**: AI-generated music based on a composition plan
 2. **Visualization playlist**: Timed presets that control the particle simulation
 
-The visualizer renders three orbitting black holes with particles emitting from configurable points. Particles orbit inward following physics. The system analyzes audio in realtime (beats, frequency bands) and uses that to drive particle emission, colors, and effects. Your presets define how the visualization responds to each section of the song. 
+The visualizer renders three orbitting black holes with particles emitting from configurable points. Particles orbit inward following physics. The system analyzes audio in realtime (beats, frequency bands) and uses that to drive particle emission, colors, and effects. Your presets define how the visualization responds to each section of the song.
 
 ## GENERAL WORKFLOW
 
@@ -356,7 +359,7 @@ With 3 black holes, masses are distributed as a gradient from massMax (1.0) to m
 
 Positions are distributed around the barycenter (center of mass) based on mass:
 - Heavier black holes orbit CLOSER to the barycenter
-- Lighter black holes orbit FARTHER from the barycenter 
+- Lighter black holes orbit FARTHER from the barycenter
 
 As massMin lowers, the position/mass distribution becomes more asymmetric:
 - massMin=1.0: Equal masses, symmetric orbits around center
@@ -404,13 +407,13 @@ const generateVisualizationPlaylist = createTool({
   }),
   handler: async (ctx, args) => {
     const song: Doc<"generatedSongs"> | null = await ctx.runQuery(
-      internal.model.scenes.public.getSongInternal,
+      internal.model.generatedSongs.server.getById,
       { songId: args.songId as Id<"generatedSongs"> }
     );
     if (!song) return { action: "error", error: "Song not found" };
     if (!song.compositionId) return { action: "error", error: "Song has no composition" };
     const composition: Doc<"compositions"> | null = await ctx.runQuery(
-      internal.model.scenes.public.getCompositionInternal,
+      internal.model.generatedSongs.server.getCompositionInternal,
       { compositionId: song.compositionId }
     );
     if (!composition) return { action: "error", error: "Composition not found" };
@@ -485,7 +488,7 @@ ${args.customInstructions ? `## Custom Instructions\n${args.customInstructions}`
     }
 
     const user: { _id: Id<"users"> } | null = await ctx.runQuery(
-      internal.model.scenes.public.getUserByToken,
+      internal.model.users.server.getUserByToken,
       { tokenIdentifier: identity.tokenIdentifier as string }
     );
 
@@ -499,7 +502,7 @@ ${args.customInstructions ? `## Custom Instructions\n${args.customInstructions}`
     // Save presets to database - convert flat parameters object to array format
     const presetIds: Id<"presets">[] = [];
     for (const preset of generatedPresets) {
-      const presetId = await ctx.runMutation(internal.model.scenes.public.createPresetForScene, {
+      const presetId = await ctx.runMutation(internal.model.scenes.server.createPresetForScene, {
         userId: user._id,
         name: preset.name,
         colorPalette: preset.colorPalette,
@@ -517,7 +520,7 @@ ${args.customInstructions ? `## Custom Instructions\n${args.customInstructions}`
 
     // Create playlist with wait durations and camera presets
     const playlistId: Id<"playlists"> = await ctx.runMutation(
-      internal.model.scenes.public.createPlaylistForScene,
+      internal.model.scenes.server.createPlaylistForScene,
       {
         userId: user._id,
         name: `${song.name} Visualization`,
@@ -566,7 +569,7 @@ const createScene = createTool({
     }
 
     const user: { _id: Id<"users"> } | null = await ctx.runQuery(
-      internal.model.scenes.public.getUserByToken,
+      internal.model.users.server.getUserByToken,
       { tokenIdentifier: identity.tokenIdentifier as string }
     );
 
@@ -578,7 +581,7 @@ const createScene = createTool({
     }
 
     const sceneId: Id<"scenes"> = await ctx.runMutation(
-      internal.model.scenes.public.saveSceneForAgent,
+      internal.model.scenes.server.saveSceneForAgent,
       {
         userId: user._id,
         name: args.name,
@@ -625,13 +628,13 @@ const readPreset = createTool({
     if (!identity) {
       return { action: "error", error: "Not authenticated" };
     }
-    const user = await ctx.runQuery(internal.model.scenes.public.getUserByToken, {
+    const user = await ctx.runQuery(internal.model.users.server.getUserByToken, {
       tokenIdentifier: identity.tokenIdentifier as string,
     });
     if (!user) {
       return { action: "error", error: "User not found" };
     }
-    const preset = await ctx.runQuery(internal.model.scenes.internal.getPresetById, {
+    const preset = await ctx.runQuery(internal.model.scenes.server.getPresetById, {
       presetId: args.presetId as Id<"presets">,
       userId: user._id,
     });
@@ -681,13 +684,13 @@ const readPlaylistPresets = createTool({
     if (!identity) {
       return { action: "error", error: "Not authenticated" };
     }
-    const user = await ctx.runQuery(internal.model.scenes.public.getUserByToken, {
+    const user = await ctx.runQuery(internal.model.users.server.getUserByToken, {
       tokenIdentifier: identity.tokenIdentifier as string,
     });
     if (!user) {
       return { action: "error", error: "User not found" };
     }
-    const result = await ctx.runQuery(internal.model.scenes.internal.getPlaylistWithPresets, {
+    const result = await ctx.runQuery(internal.model.scenes.server.getPlaylistWithPresets, {
       playlistId: args.playlistId as Id<"playlists">,
       userId: user._id,
     });
@@ -736,7 +739,7 @@ const updatePresetTool = createTool({
     if (!identity) {
       return { action: "error", error: "Not authenticated" };
     }
-    const user = await ctx.runQuery(internal.model.scenes.public.getUserByToken, {
+    const user = await ctx.runQuery(internal.model.users.server.getUserByToken, {
       tokenIdentifier: identity.tokenIdentifier as string,
     });
     if (!user) {
@@ -751,7 +754,7 @@ const updatePresetTool = createTool({
       args.cameraMode !== undefined;
 
     if (hasPresetUpdates) {
-      await ctx.runMutation(internal.model.scenes.internal.updatePreset, {
+      await ctx.runMutation(internal.model.scenes.server.updatePreset, {
         presetId: args.presetId as Id<"presets">,
         userId: user._id,
         name: args.name,
@@ -766,7 +769,7 @@ const updatePresetTool = createTool({
       if (!args.playlistId) {
         return { action: "error", error: "playlistId is required when updating waitDuration" };
       }
-      await ctx.runMutation(internal.model.scenes.internal.updatePlaylistItemTiming, {
+      await ctx.runMutation(internal.model.scenes.server.updatePlaylistItemTiming, {
         playlistId: args.playlistId as Id<"playlists">,
         presetId: args.presetId as Id<"presets">,
         userId: user._id,
@@ -803,7 +806,7 @@ const updateScene = createTool({
       };
     }
 
-    await ctx.runMutation(internal.model.scenes.public.updateSceneForAgent, {
+    await ctx.runMutation(internal.model.scenes.server.updateSceneForAgent, {
       sceneId: args.sceneId as Id<"scenes">,
       name: args.name,
       description: args.description,

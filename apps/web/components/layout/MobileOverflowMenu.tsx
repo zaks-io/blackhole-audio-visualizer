@@ -1,18 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import {
-  MoreVertical,
-  HelpCircle,
-  User,
-  LogOut,
-  Gauge,
-  Zap,
-  ListMusic,
-  Radio,
-  Film,
-  Video,
-} from "lucide-react";
+import { MoreVertical, HelpCircle, User, LogOut, Radio, Film } from "lucide-react";
 import { useConvexAuth } from "convex/react";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -23,11 +12,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -42,6 +27,12 @@ import { usePlayPreset } from "@/components/ProducerMode/usePlayPreset";
 import { useRouter } from "next/navigation";
 import type { ConvexPreset, Preset } from "@/components/ProducerMode/types";
 import { HelpDialogContent } from "@/components/dialogs";
+import {
+  CameraMenuSection,
+  PresetMenuSection,
+  SceneMenuSection,
+  SettingsMenuSection,
+} from "./MobileMenuSections";
 
 const CAMERA_MODES: { id: CameraMode; label: string }[] = [
   { id: "free", label: "Free Look" },
@@ -85,14 +76,6 @@ export function MobileOverflowMenu() {
   } = usePresetSelector();
   const cameraMode = useCameraMode();
 
-  const handleSignIn = () => {
-    login(typeof window !== "undefined" ? window.location.pathname : "/");
-  };
-
-  const handleSignOut = () => {
-    logout();
-  };
-
   const handlePresetSelect = (
     presetId: string | null,
     newMode: "none" | "preset" | "feeling-lucky"
@@ -101,7 +84,6 @@ export function MobileOverflowMenu() {
     if (!switchingToLucky && isLuckyPlaying) {
       triggerStop();
     }
-    // If we're already running Feeling Lucky and re-select it, don't kill tweens.
     if (!switchingToLucky || !isLuckyPlaying) {
       stopAll();
     }
@@ -135,16 +117,10 @@ export function MobileOverflowMenu() {
     router.push(`/app/scene/${id}`);
   };
 
-  const handleCameraChange = (newMode: CameraMode) => {
-    cameraMode.setMode(newMode);
-  };
-
-  // Filter out user's scenes from public list to avoid duplicates
   const userSceneIds = new Set(scenes.map((s) => s._id));
   const filteredPublicScenes = publicScenes.filter((s) => !userSceneIds.has(s._id));
   const currentScene = [...scenes, ...filteredPublicScenes].find((s) => s._id === sceneId);
 
-  // Build preset groups (same logic as PresetSelector)
   const allPresets = [...myPresets, ...publicPresets];
   const allPlaylists = [...playlists, ...publicPlaylists];
 
@@ -215,184 +191,51 @@ export function MobileOverflowMenu() {
 
           <DropdownMenuSeparator />
 
-          {/* Live Mode Controls */}
           {mode === "live" && (
             <>
-              {/* Camera Selection */}
-              <DropdownMenuSub>
-                <DropdownMenuSubTrigger className="cursor-pointer">
-                  <Video className="mr-2 h-4 w-4" />
-                  <span className="truncate">
-                    {CAMERA_MODES.find((m) => m.id === cameraMode.mode)?.label ?? "Camera"}
-                  </span>
-                </DropdownMenuSubTrigger>
-                <DropdownMenuSubContent>
-                  {CAMERA_MODES.map((m) => (
-                    <DropdownMenuItem
-                      key={m.id}
-                      onClick={() => handleCameraChange(m.id)}
-                      className={`cursor-pointer ${cameraMode.mode === m.id ? "bg-primary/20" : ""}`}
-                    >
-                      {m.label}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuSubContent>
-              </DropdownMenuSub>
-
-              {/* Preset Selection */}
-              <DropdownMenuSub>
-                <DropdownMenuSubTrigger className="cursor-pointer">
-                  <ListMusic className="mr-2 h-4 w-4" />
-                  <span className="truncate">{displayName}</span>
-                </DropdownMenuSubTrigger>
-                <DropdownMenuSubContent className="max-h-80 overflow-y-auto">
-                  <DropdownMenuItem
-                    onClick={() => handlePresetSelect(null, "feeling-lucky")}
-                    className={`cursor-pointer ${presetMode === "feeling-lucky" ? "bg-primary/20" : ""}`}
-                  >
-                    ✨ I&apos;m Feeling Lucky
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => handlePresetSelect(null, "none")}
-                    className={`cursor-pointer ${presetMode === "none" ? "bg-primary/20" : ""}`}
-                  >
-                    None
-                  </DropdownMenuItem>
-                  {!isPresetsLoading && !isPlaylistLoading && (
-                    <>
-                      {ungroupedPresets.length > 0 && (
-                        <>
-                          <DropdownMenuSeparator />
-                          {ungroupedPresets.map((p) => (
-                            <DropdownMenuItem
-                              key={p._id}
-                              onClick={() => handlePresetSelect(p._id, "preset")}
-                              className={`cursor-pointer ${selectedPresetId === p._id ? "bg-primary/20" : ""}`}
-                            >
-                              {p.name}
-                            </DropdownMenuItem>
-                          ))}
-                        </>
-                      )}
-                      {playlistGroups.map(({ playlist, presets }) => (
-                        <div key={playlist._id}>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuLabel className="text-xs text-muted-foreground">
-                            {playlist.name}
-                          </DropdownMenuLabel>
-                          {presets.map((p) => (
-                            <DropdownMenuItem
-                              key={`${playlist._id}-${p!._id}`}
-                              onClick={() => handlePresetSelect(p!._id, "preset")}
-                              className={`cursor-pointer ${selectedPresetId === p!._id ? "bg-primary/20" : ""}`}
-                            >
-                              {p!.name}
-                            </DropdownMenuItem>
-                          ))}
-                        </div>
-                      ))}
-                      {publicUngroupedPresets.length > 0 && (
-                        <>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuLabel className="text-xs text-muted-foreground">
-                            Public Presets
-                          </DropdownMenuLabel>
-                          {publicUngroupedPresets.map((p) => (
-                            <DropdownMenuItem
-                              key={p._id}
-                              onClick={() => handlePresetSelect(p._id, "preset")}
-                              className={`cursor-pointer ${selectedPresetId === p._id ? "bg-primary/20" : ""}`}
-                            >
-                              {p.name}
-                            </DropdownMenuItem>
-                          ))}
-                        </>
-                      )}
-                    </>
-                  )}
-                </DropdownMenuSubContent>
-              </DropdownMenuSub>
-
+              <CameraMenuSection
+                currentMode={cameraMode.mode}
+                modes={CAMERA_MODES}
+                onSelect={(m) => cameraMode.setMode(m)}
+              />
+              <PresetMenuSection
+                displayName={displayName}
+                presetMode={presetMode}
+                selectedPresetId={selectedPresetId}
+                isLoading={isPresetsLoading || isPlaylistLoading}
+                ungroupedPresets={ungroupedPresets}
+                publicUngroupedPresets={publicUngroupedPresets}
+                playlistGroups={playlistGroups}
+                onSelect={handlePresetSelect}
+              />
               <DropdownMenuSeparator />
             </>
           )}
 
-          {/* Scene Mode Controls */}
           {mode === "scene" && (
             <>
-              {/* Scene Selection */}
-              <DropdownMenuSub>
-                <DropdownMenuSubTrigger className="cursor-pointer">
-                  <Film className="mr-2 h-4 w-4" />
-                  <span className="truncate">{currentScene?.name ?? "Select Scene"}</span>
-                </DropdownMenuSubTrigger>
-                <DropdownMenuSubContent>
-                  {!isScenesLoading && (scenes.length > 0 || filteredPublicScenes.length > 0) ? (
-                    <>
-                      {isAuthenticated && scenes.length > 0 && (
-                        <>
-                          <DropdownMenuLabel className="text-xs text-muted-foreground">
-                            My Scenes
-                          </DropdownMenuLabel>
-                          {scenes.map((s) => (
-                            <DropdownMenuItem
-                              key={s._id}
-                              onClick={() => handleSceneSelect(s._id)}
-                              className={`cursor-pointer ${sceneId === s._id ? "bg-primary/20" : ""}`}
-                            >
-                              {s.name}
-                            </DropdownMenuItem>
-                          ))}
-                          {filteredPublicScenes.length > 0 && <DropdownMenuSeparator />}
-                        </>
-                      )}
-                      {filteredPublicScenes.length > 0 && (
-                        <>
-                          <DropdownMenuLabel className="text-xs text-muted-foreground">
-                            Public Scenes
-                          </DropdownMenuLabel>
-                          {filteredPublicScenes.map((s) => (
-                            <DropdownMenuItem
-                              key={s._id}
-                              onClick={() => handleSceneSelect(s._id)}
-                              className={`cursor-pointer ${sceneId === s._id ? "bg-primary/20" : ""}`}
-                            >
-                              {s.name}
-                            </DropdownMenuItem>
-                          ))}
-                        </>
-                      )}
-                    </>
-                  ) : (
-                    <DropdownMenuItem disabled>No scenes available</DropdownMenuItem>
-                  )}
-                </DropdownMenuSubContent>
-              </DropdownMenuSub>
-
+              <SceneMenuSection
+                currentSceneId={sceneId}
+                currentSceneName={currentScene?.name}
+                isAuthenticated={isAuthenticated}
+                isLoading={isScenesLoading}
+                myScenes={scenes}
+                publicScenes={filteredPublicScenes}
+                onSelect={handleSceneSelect}
+              />
               <DropdownMenuSeparator />
             </>
           )}
 
-          {/* Settings */}
-          <DropdownMenuLabel className="text-xs text-muted-foreground">Settings</DropdownMenuLabel>
-          <div className="px-2 py-1.5 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Gauge className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm">FPS Meter</span>
-            </div>
-            <Switch checked={fpsVisible} onCheckedChange={toggleFPS} />
-          </div>
-          <div className="px-2 py-1.5 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Zap className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm">Bass Strobe</span>
-            </div>
-            <Switch checked={bassStrobeEnabled} onCheckedChange={toggleBassStrobe} />
-          </div>
+          <SettingsMenuSection
+            fpsVisible={fpsVisible}
+            bassStrobeEnabled={bassStrobeEnabled}
+            onToggleFPS={toggleFPS}
+            onToggleBassStrobe={toggleBassStrobe}
+          />
 
           <DropdownMenuSeparator />
 
-          {/* Help */}
           <DropdownMenuItem onClick={() => setHelpOpen(true)} className="cursor-pointer">
             <HelpCircle className="mr-2 h-4 w-4" />
             Help
@@ -400,7 +243,6 @@ export function MobileOverflowMenu() {
 
           <DropdownMenuSeparator />
 
-          {/* User */}
           {isAuthLoading ? (
             <DropdownMenuItem disabled>
               <User className="mr-2 h-4 w-4" />
@@ -420,13 +262,16 @@ export function MobileOverflowMenu() {
                   </div>
                 </div>
               </DropdownMenuLabel>
-              <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer">
+              <DropdownMenuItem onClick={logout} className="cursor-pointer">
                 <LogOut className="mr-2 h-4 w-4" />
                 Sign Out
               </DropdownMenuItem>
             </>
           ) : (
-            <DropdownMenuItem onClick={handleSignIn} className="cursor-pointer">
+            <DropdownMenuItem
+              onClick={() => login(typeof window !== "undefined" ? window.location.pathname : "/")}
+              className="cursor-pointer"
+            >
               <User className="mr-2 h-4 w-4" />
               Sign In
             </DropdownMenuItem>
@@ -434,7 +279,6 @@ export function MobileOverflowMenu() {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {/* Help Dialog */}
       <Dialog open={helpOpen} onOpenChange={setHelpOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>

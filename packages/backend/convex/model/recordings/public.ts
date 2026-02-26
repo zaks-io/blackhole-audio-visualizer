@@ -2,20 +2,8 @@ import { mutation, query, action, internalMutation } from "../../_generated/serv
 import { internal } from "../../_generated/api";
 import { v } from "convex/values";
 import { generateUploadUrl, deleteR2Object, deleteHlsFiles } from "../../lib/r2";
-
-const ROLES_CLAIM = "neuron/roles";
-
-async function requireAdmin(ctx: { auth: { getUserIdentity: () => Promise<unknown> } }) {
-  const identity = await ctx.auth.getUserIdentity();
-  if (!identity) {
-    throw new Error("Not authenticated");
-  }
-  const roles = ((identity as Record<string, unknown>)[ROLES_CLAIM] as string[] | undefined) ?? [];
-  if (!roles.includes("admin")) {
-    throw new Error("Not authorized");
-  }
-  return identity as { tokenIdentifier: string };
-}
+import { requireAdmin, ROLES_CLAIM } from "../../lib/auth";
+import { getExtensionFromMimeType } from "../../lib/mimeTypes";
 
 export const createPendingRecording = mutation({
   args: {
@@ -56,34 +44,19 @@ export const createPendingRecording = mutation({
   },
 });
 
-function getExtensionFromMimeType(mimeType: string): string {
-  const mimeToExt: Record<string, string> = {
-    "video/webm": "webm",
-    "video/mp4": "mp4",
-    "video/quicktime": "mov",
-    "video/x-msvideo": "avi",
-    "video/x-matroska": "mkv",
-  };
-  return mimeToExt[mimeType] ?? "mp4";
-}
-
 export const generateR2UploadUrl = action({
   args: {
     recordingId: v.id("recordings"),
     contentType: v.string(),
   },
   handler: async (ctx, { recordingId, contentType }) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-    const roles =
-      ((identity as Record<string, unknown>)[ROLES_CLAIM] as string[] | undefined) ?? [];
-    if (!roles.includes("admin")) throw new Error("Not authorized");
+    await requireAdmin(ctx);
 
     const ext = getExtensionFromMimeType(contentType);
     const key = `source/${recordingId}.${ext}`;
     const uploadUrl = await generateUploadUrl(key, contentType);
 
-    await ctx.runMutation(internal.model.recordings.internal.updateR2Key, {
+    await ctx.runMutation(internal.model.recordings.server.updateR2Key, {
       recordingId,
       r2SourceKey: key,
     });
@@ -95,13 +68,9 @@ export const generateR2UploadUrl = action({
 export const submitTranscodingJob = action({
   args: { recordingId: v.id("recordings") },
   handler: async (ctx, { recordingId }): Promise<{ jobId: string }> => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-    const roles =
-      ((identity as Record<string, unknown>)[ROLES_CLAIM] as string[] | undefined) ?? [];
-    if (!roles.includes("admin")) throw new Error("Not authorized");
+    await requireAdmin(ctx);
 
-    const recording = await ctx.runQuery(internal.model.recordings.internal.getById, {
+    const recording = await ctx.runQuery(internal.model.recordings.server.getById, {
       recordingId,
     });
     if (!recording) throw new Error("Recording not found");
@@ -161,7 +130,7 @@ export const submitTranscodingJob = action({
 
     if (!response.ok) {
       const error = await response.text();
-      await ctx.runMutation(internal.model.recordings.internal.updateTranscodingStatus, {
+      await ctx.runMutation(internal.model.recordings.server.updateTranscodingStatus, {
         recordingId,
         status: "failed",
         transcodingError: `Coconut API error: ${error}`,
@@ -171,7 +140,7 @@ export const submitTranscodingJob = action({
 
     const job = await response.json();
 
-    await ctx.runMutation(internal.model.recordings.internal.updateTranscodingStatus, {
+    await ctx.runMutation(internal.model.recordings.server.updateTranscodingStatus, {
       recordingId,
       status: "processing",
       coconutJobId: job.id,
@@ -186,13 +155,9 @@ export const submitTranscodingJob = action({
 export const retryTranscodingJob = action({
   args: { recordingId: v.id("recordings") },
   handler: async (ctx, { recordingId }): Promise<{ jobId: string }> => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-    const roles =
-      ((identity as Record<string, unknown>)[ROLES_CLAIM] as string[] | undefined) ?? [];
-    if (!roles.includes("admin")) throw new Error("Not authorized");
+    await requireAdmin(ctx);
 
-    const recording = await ctx.runQuery(internal.model.recordings.internal.getById, {
+    const recording = await ctx.runQuery(internal.model.recordings.server.getById, {
       recordingId,
     });
 
@@ -202,7 +167,7 @@ export const retryTranscodingJob = action({
     }
 
     const webhookToken = crypto.randomUUID();
-    await ctx.runMutation(internal.model.recordings.internal.updateWebhookToken, {
+    await ctx.runMutation(internal.model.recordings.server.updateWebhookToken, {
       recordingId,
       webhookToken,
     });
@@ -260,7 +225,7 @@ export const retryTranscodingJob = action({
 
     if (!response.ok) {
       const error = await response.text();
-      await ctx.runMutation(internal.model.recordings.internal.updateTranscodingStatus, {
+      await ctx.runMutation(internal.model.recordings.server.updateTranscodingStatus, {
         recordingId,
         status: "failed",
         transcodingError: `Coconut API error: ${error}`,
@@ -270,7 +235,7 @@ export const retryTranscodingJob = action({
 
     const job = await response.json();
 
-    await ctx.runMutation(internal.model.recordings.internal.updateTranscodingStatus, {
+    await ctx.runMutation(internal.model.recordings.server.updateTranscodingStatus, {
       recordingId,
       status: "processing",
       coconutJobId: job.id,
@@ -286,13 +251,9 @@ export const retryTranscodingJob = action({
 export const deleteRecording = action({
   args: { recordingId: v.id("recordings") },
   handler: async (ctx, { recordingId }) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-    const roles =
-      ((identity as Record<string, unknown>)[ROLES_CLAIM] as string[] | undefined) ?? [];
-    if (!roles.includes("admin")) throw new Error("Not authorized");
+    await requireAdmin(ctx);
 
-    const recording = await ctx.runQuery(internal.model.recordings.internal.getById, {
+    const recording = await ctx.runQuery(internal.model.recordings.server.getById, {
       recordingId,
     });
     if (!recording) throw new Error("Recording not found");
@@ -309,7 +270,7 @@ export const deleteRecording = action({
       await deleteR2Object(recording.r2ThumbnailPath);
     }
 
-    await ctx.runMutation(internal.model.recordings.internal.remove, {
+    await ctx.runMutation(internal.model.recordings.server.remove, {
       recordingId,
     });
 

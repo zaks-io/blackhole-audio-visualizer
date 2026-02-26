@@ -1,19 +1,6 @@
 import { mutation, query } from "../../_generated/server";
 import { v } from "convex/values";
-
-const ROLES_CLAIM = "neuron/roles";
-
-async function requireAdmin(ctx: { auth: { getUserIdentity: () => Promise<unknown> } }) {
-  const identity = await ctx.auth.getUserIdentity();
-  if (!identity) {
-    throw new Error("Not authenticated");
-  }
-  const roles = ((identity as Record<string, unknown>)[ROLES_CLAIM] as string[] | undefined) ?? [];
-  if (!roles.includes("admin")) {
-    throw new Error("Not authorized");
-  }
-  return identity as { tokenIdentifier: string };
-}
+import { requireAdmin, ROLES_CLAIM } from "../../lib/auth";
 
 export const generateUploadUrl = mutation({
   handler: async (ctx) => {

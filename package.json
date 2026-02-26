@@ -18,11 +18,15 @@
     "electron:package": "cd apps/web && bun run build:electron && cd ../../apps/desktop && bun run package",
     "electron:package:mac": "cd apps/web && bun run build:electron && cd ../../apps/desktop && bun run package:mac",
     "electron:package:win": "cd apps/web && bun run build:electron && cd ../../apps/desktop && bun run package:win",
+    "test": "turbo test",
+    "test:coverage": "turbo test -- --coverage",
     "prepare": "husky"
   },
   "devDependencies": {
+    "@vitest/coverage-v8": "^4.0.18",
     "husky": "^9.1.7",
     "prettier": "^3.7.4",
-    "turbo": "^2"
+    "turbo": "^2",
+    "vitest": "^4.0.18"
   }
 }

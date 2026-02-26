@@ -10,19 +10,8 @@ import {
   abortMultipartUpload as abortMultipartUploadFn,
   listUploadedParts as listUploadedPartsFn,
 } from "../../lib/r2";
-
-const ROLES_CLAIM = "neuron/roles";
-
-function getExtensionFromMimeType(mimeType: string): string {
-  const mimeToExt: Record<string, string> = {
-    "video/webm": "webm",
-    "video/mp4": "mp4",
-    "video/quicktime": "mov",
-    "video/x-msvideo": "avi",
-    "video/x-matroska": "mkv",
-  };
-  return mimeToExt[mimeType] ?? "mp4";
-}
+import { requireAdmin } from "../../lib/auth";
+import { getExtensionFromMimeType } from "../../lib/mimeTypes";
 
 export const initiateMultipartUpload = action({
   args: {
@@ -30,18 +19,14 @@ export const initiateMultipartUpload = action({
     contentType: v.string(),
   },
   handler: async (ctx, { recordingId, contentType }) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-    const roles =
-      ((identity as Record<string, unknown>)[ROLES_CLAIM] as string[] | undefined) ?? [];
-    if (!roles.includes("admin")) throw new Error("Not authorized");
+    await requireAdmin(ctx);
 
     const ext = getExtensionFromMimeType(contentType);
     const key = `source/${recordingId}.${ext}`;
 
     const { uploadId } = await initiateMultipartUploadFn(key, contentType);
 
-    await ctx.runMutation(internal.model.recordings.internal.updateR2Key, {
+    await ctx.runMutation(internal.model.recordings.server.updateR2Key, {
       recordingId,
       r2SourceKey: key,
     });
@@ -57,11 +42,7 @@ export const generatePartUploadUrl = action({
     partNumber: v.number(),
   },
   handler: async (ctx, { key, uploadId, partNumber }) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-    const roles =
-      ((identity as Record<string, unknown>)[ROLES_CLAIM] as string[] | undefined) ?? [];
-    if (!roles.includes("admin")) throw new Error("Not authorized");
+    await requireAdmin(ctx);
 
     const url = await generatePartUploadUrlFn(key, uploadId, partNumber);
     return { url };
@@ -80,11 +61,7 @@ export const completeMultipartUpload = action({
     ),
   },
   handler: async (ctx, { key, uploadId, parts }) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-    const roles =
-      ((identity as Record<string, unknown>)[ROLES_CLAIM] as string[] | undefined) ?? [];
-    if (!roles.includes("admin")) throw new Error("Not authorized");
+    await requireAdmin(ctx);
 
     await completeMultipartUploadFn(key, uploadId, parts);
     return { success: true };
@@ -97,11 +74,7 @@ export const abortMultipartUpload = action({
     uploadId: v.string(),
   },
   handler: async (ctx, { key, uploadId }) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-    const roles =
-      ((identity as Record<string, unknown>)[ROLES_CLAIM] as string[] | undefined) ?? [];
-    if (!roles.includes("admin")) throw new Error("Not authorized");
+    await requireAdmin(ctx);
 
     await abortMultipartUploadFn(key, uploadId);
     return { success: true };
@@ -114,11 +87,7 @@ export const listUploadedParts = action({
     uploadId: v.string(),
   },
   handler: async (ctx, { key, uploadId }) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-    const roles =
-      ((identity as Record<string, unknown>)[ROLES_CLAIM] as string[] | undefined) ?? [];
-    if (!roles.includes("admin")) throw new Error("Not authorized");
+    await requireAdmin(ctx);
 
     const parts = await listUploadedPartsFn(key, uploadId);
     return { parts };

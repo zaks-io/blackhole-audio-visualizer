@@ -31,47 +31,20 @@ import {
   Pause,
   Square,
   SkipForward,
-  Video,
-  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Progress } from "@/components/ui/progress";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { useConvexPlaylists, usePlaylistWithPresets } from "@/hooks/useConvexPlaylists";
 import { usePlaylistPlayer } from "@/hooks/usePlaylistPlayer";
 import { PlaylistPresetItem } from "./PlaylistPresetItem";
 import { PresetPicker } from "./PresetPicker";
+import { CameraPresetEditor } from "./CameraPresetEditor";
 
 interface PlaylistEditorProps {
   playlistId: string;
   onBack: () => void;
-}
-
-const CAMERA_MODES = [
-  { id: "circle", label: "Circle" },
-  { id: "closeup", label: "Close Up" },
-  { id: "orbit", label: "Orbit" },
-  { id: "edge", label: "Edge" },
-] as const;
-
-interface CameraPresetItem {
-  mode: string;
-  duration?: number;
-}
-
-// Normalize camera presets to handle both old string format and new object format
-function normalizeCameraPresets(
-  presets: (CameraPresetItem | string)[] | undefined
-): CameraPresetItem[] {
-  if (!presets) return [];
-  return presets.map((p) => (typeof p === "string" ? { mode: p } : p));
 }
 
 export function PlaylistEditor({ playlistId, onBack }: PlaylistEditorProps) {
@@ -138,51 +111,6 @@ export function PlaylistEditor({ playlistId, onBack }: PlaylistEditorProps) {
     setIsEditingName(false);
   };
 
-  const handleTogglePublic = async () => {
-    await updatePlaylist(playlistId, { isPublic: !playlist.isPublic });
-  };
-
-  const handleToggleShuffle = async () => {
-    await updatePlaylist(playlistId, { shuffle: !playlist.shuffle });
-  };
-
-  const handleUpdateDefaultWait = async (duration: number) => {
-    if (duration >= 0) {
-      await updatePlaylist(playlistId, { defaultWaitDuration: duration });
-    }
-  };
-
-  const handleRemovePreset = async (presetId: string) => {
-    await removePreset(playlistId, presetId);
-  };
-
-  const handleAddPreset = async (presetId: string) => {
-    await addPreset(playlistId, presetId);
-    setPickerOpen(false);
-  };
-
-  const handleWaitDurationChange = async (presetId: string, duration: number | undefined) => {
-    await updatePlaylistItem(playlistId, presetId, duration);
-  };
-
-  const handleUpdateDefaultCameraDuration = async (duration: number) => {
-    if (duration >= 0) {
-      await updatePlaylist(playlistId, { defaultCameraDuration: duration });
-    }
-  };
-
-  const handleAddCameraPreset = async (cameraMode: string) => {
-    await addCameraPreset(playlistId, cameraMode);
-  };
-
-  const handleUpdateCameraPreset = async (index: number, duration: number | undefined) => {
-    await updateCameraPreset(playlistId, index, duration);
-  };
-
-  const handleRemoveCameraPreset = async (index: number) => {
-    await removeCameraPreset(playlistId, index);
-  };
-
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Header */}
@@ -244,7 +172,10 @@ export function PlaylistEditor({ playlistId, onBack }: PlaylistEditorProps) {
             <Globe className="h-4 w-4 text-muted-foreground" />
             <span className="text-xs text-muted-foreground">Public</span>
           </div>
-          <Switch checked={playlist.isPublic} onCheckedChange={handleTogglePublic} />
+          <Switch
+            checked={playlist.isPublic}
+            onCheckedChange={() => updatePlaylist(playlistId, { isPublic: !playlist.isPublic })}
+          />
         </div>
 
         <div className="flex items-center justify-between">
@@ -252,7 +183,10 @@ export function PlaylistEditor({ playlistId, onBack }: PlaylistEditorProps) {
             <Shuffle className="h-4 w-4 text-muted-foreground" />
             <span className="text-xs text-muted-foreground">Shuffle</span>
           </div>
-          <Switch checked={playlist.shuffle} onCheckedChange={handleToggleShuffle} />
+          <Switch
+            checked={playlist.shuffle}
+            onCheckedChange={() => updatePlaylist(playlistId, { shuffle: !playlist.shuffle })}
+          />
         </div>
 
         <div className="flex items-center justify-between">
@@ -265,7 +199,10 @@ export function PlaylistEditor({ playlistId, onBack }: PlaylistEditorProps) {
             min={0}
             step={1}
             value={playlist.defaultWaitDuration}
-            onChange={(e) => handleUpdateDefaultWait(Number(e.target.value))}
+            onChange={(e) => {
+              const val = Number(e.target.value);
+              if (val >= 0) updatePlaylist(playlistId, { defaultWaitDuration: val });
+            }}
             className="w-16 h-7 text-xs text-right"
           />
         </div>
@@ -312,9 +249,9 @@ export function PlaylistEditor({ playlistId, onBack }: PlaylistEditorProps) {
                       waitDuration={item.waitDuration}
                       defaultWaitDuration={playlist.defaultWaitDuration}
                       isCurrentlyPlaying={playerState.currentIndex === index}
-                      onRemove={() => handleRemovePreset(item.presetId)}
+                      onRemove={() => removePreset(playlistId, item.presetId)}
                       onWaitDurationChange={(duration) =>
-                        handleWaitDurationChange(item.presetId, duration)
+                        updatePlaylistItem(playlistId, item.presetId, duration)
                       }
                     />
                   );
@@ -325,91 +262,18 @@ export function PlaylistEditor({ playlistId, onBack }: PlaylistEditorProps) {
         )}
       </div>
 
-      {/* Camera Presets Section */}
-      <div className="px-3 py-2 border-t border-white/5">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <Video className="h-4 w-4 text-muted-foreground" />
-            <span className="text-xs text-muted-foreground">Camera Modes</span>
-          </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-6 w-6">
-                <Plus className="h-3 w-3" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {CAMERA_MODES.map((mode) => (
-                <DropdownMenuItem
-                  key={mode.id}
-                  onClick={() => handleAddCameraPreset(mode.id)}
-                  className="cursor-pointer"
-                >
-                  {mode.label}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <Clock className="h-4 w-4 text-muted-foreground" />
-            <span className="text-xs text-muted-foreground">Duration (sec)</span>
-          </div>
-          <Input
-            type="number"
-            min={1}
-            step={1}
-            value={playlist.defaultCameraDuration ?? 20}
-            onChange={(e) => handleUpdateDefaultCameraDuration(Number(e.target.value))}
-            className="w-16 h-7 text-xs text-right"
-          />
-        </div>
-
-        {normalizeCameraPresets(playlist.cameraPresets as (CameraPresetItem | string)[] | undefined)
-          .length === 0 ? (
-          <p className="text-[10px] text-muted-foreground text-center py-2">
-            No camera modes added
-          </p>
-        ) : (
-          <div className="space-y-1">
-            {normalizeCameraPresets(
-              playlist.cameraPresets as (CameraPresetItem | string)[] | undefined
-            ).map((preset, index) => {
-              const modeInfo = CAMERA_MODES.find((m) => m.id === preset.mode);
-              return (
-                <div
-                  key={`${preset.mode}-${index}`}
-                  className="flex items-center justify-between py-1 px-2 rounded bg-white/5 gap-2"
-                >
-                  <span className="text-xs flex-1">{modeInfo?.label ?? preset.mode}</span>
-                  <Input
-                    type="number"
-                    min={1}
-                    step={1}
-                    value={preset.duration ?? ""}
-                    placeholder={String(playlist.defaultCameraDuration ?? 20)}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      handleUpdateCameraPreset(index, val === "" ? undefined : Number(val));
-                    }}
-                    className="w-14 h-6 text-xs text-right"
-                  />
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-5 w-5 opacity-50 hover:opacity-100 shrink-0"
-                    onClick={() => handleRemoveCameraPreset(index)}
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+      <CameraPresetEditor
+        cameraPresets={
+          playlist.cameraPresets as (string | { mode: string; duration?: number })[] | undefined
+        }
+        defaultCameraDuration={playlist.defaultCameraDuration}
+        onAdd={(mode) => addCameraPreset(playlistId, mode)}
+        onUpdate={(index, duration) => updateCameraPreset(playlistId, index, duration)}
+        onRemove={(index) => removeCameraPreset(playlistId, index)}
+        onUpdateDefaultDuration={(duration) => {
+          if (duration >= 0) updatePlaylist(playlistId, { defaultCameraDuration: duration });
+        }}
+      />
 
       {/* Footer */}
       <div className="px-4 py-3 border-t border-white/5 shrink-0">
@@ -461,11 +325,13 @@ export function PlaylistEditor({ playlistId, onBack }: PlaylistEditorProps) {
         )}
       </div>
 
-      {/* Preset Picker Dialog */}
       <PresetPicker
         open={pickerOpen}
         onOpenChange={setPickerOpen}
-        onSelect={handleAddPreset}
+        onSelect={async (presetId) => {
+          await addPreset(playlistId, presetId);
+          setPickerOpen(false);
+        }}
         excludeIds={presetIds}
       />
     </div>

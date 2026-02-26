@@ -1,12 +1,6 @@
 import { mutation, query } from "../../_generated/server";
 import { v } from "convex/values";
-
-const presetParameterValidator = v.object({
-  path: v.string(),
-  value: v.number(),
-  duration: v.number(),
-  ease: v.string(),
-});
+import { presetParameterValidator } from "../../lib/validators";
 
 export const getMyPresets = query({
   handler: async (ctx) => {

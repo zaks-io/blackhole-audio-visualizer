@@ -9,23 +9,31 @@
  */
 
 import type * as http from "../http.js";
+import type * as lib_auth from "../lib/auth.js";
+import type * as lib_mimeTypes from "../lib/mimeTypes.js";
 import type * as lib_r2 from "../lib/r2.js";
+import type * as lib_validators from "../lib/validators.js";
 import type * as lib_visualizationParameters from "../lib/visualizationParameters.js";
-import type * as model_generatedSongs_internal from "../model/generatedSongs/internal.js";
+import type * as model_generatedSongs_generation from "../model/generatedSongs/generation.js";
+import type * as model_generatedSongs_public from "../model/generatedSongs/public.js";
+import type * as model_generatedSongs_server from "../model/generatedSongs/server.js";
 import type * as model_playlists_public from "../model/playlists/public.js";
 import type * as model_presetVotes_analysis from "../model/presetVotes/analysis.js";
 import type * as model_presetVotes_public from "../model/presetVotes/public.js";
 import type * as model_presets_public from "../model/presets/public.js";
-import type * as model_recordings_internal from "../model/recordings/internal.js";
 import type * as model_recordings_multipart from "../model/recordings/multipart.js";
 import type * as model_recordings_public from "../model/recordings/public.js";
+import type * as model_recordings_server from "../model/recordings/server.js";
 import type * as model_releases_public from "../model/releases/public.js";
+import type * as model_sceneConversations_public from "../model/sceneConversations/public.js";
+import type * as model_sceneConversations_server from "../model/sceneConversations/server.js";
 import type * as model_scenes_agents from "../model/scenes/agents.js";
-import type * as model_scenes_internal from "../model/scenes/internal.js";
 import type * as model_scenes_public from "../model/scenes/public.js";
-import type * as model_transcriptions_internal from "../model/transcriptions/internal.js";
+import type * as model_scenes_server from "../model/scenes/server.js";
 import type * as model_transcriptions_public from "../model/transcriptions/public.js";
+import type * as model_transcriptions_server from "../model/transcriptions/server.js";
 import type * as model_users_public from "../model/users/public.js";
+import type * as model_users_server from "../model/users/server.js";
 
 import type {
   ApiFromModules,
@@ -35,23 +43,31 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   http: typeof http;
+  "lib/auth": typeof lib_auth;
+  "lib/mimeTypes": typeof lib_mimeTypes;
   "lib/r2": typeof lib_r2;
+  "lib/validators": typeof lib_validators;
   "lib/visualizationParameters": typeof lib_visualizationParameters;
-  "model/generatedSongs/internal": typeof model_generatedSongs_internal;
+  "model/generatedSongs/generation": typeof model_generatedSongs_generation;
+  "model/generatedSongs/public": typeof model_generatedSongs_public;
+  "model/generatedSongs/server": typeof model_generatedSongs_server;
   "model/playlists/public": typeof model_playlists_public;
   "model/presetVotes/analysis": typeof model_presetVotes_analysis;
   "model/presetVotes/public": typeof model_presetVotes_public;
   "model/presets/public": typeof model_presets_public;
-  "model/recordings/internal": typeof model_recordings_internal;
   "model/recordings/multipart": typeof model_recordings_multipart;
   "model/recordings/public": typeof model_recordings_public;
+  "model/recordings/server": typeof model_recordings_server;
   "model/releases/public": typeof model_releases_public;
+  "model/sceneConversations/public": typeof model_sceneConversations_public;
+  "model/sceneConversations/server": typeof model_sceneConversations_server;
   "model/scenes/agents": typeof model_scenes_agents;
-  "model/scenes/internal": typeof model_scenes_internal;
   "model/scenes/public": typeof model_scenes_public;
-  "model/transcriptions/internal": typeof model_transcriptions_internal;
+  "model/scenes/server": typeof model_scenes_server;
   "model/transcriptions/public": typeof model_transcriptions_public;
+  "model/transcriptions/server": typeof model_transcriptions_server;
   "model/users/public": typeof model_users_public;
+  "model/users/server": typeof model_users_server;
 }>;
 
 /**

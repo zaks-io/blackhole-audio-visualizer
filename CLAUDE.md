@@ -11,6 +11,7 @@ bun run electron:package      # Build desktop app (output: release/)
 bun run lint                  # ESLint across all workspaces
 bun run typecheck             # TypeScript check across all workspaces
 bun run format:check          # Prettier check
+bun run test                  # Run all tests (via turbo)
 ```
 
 ## Architecture
@@ -75,11 +76,19 @@ packages/
 ```
 packages/backend/convex/model/{modelName}/
 ├── public.ts      # Client queries/mutations/actions
-├── internal.ts    # Server-only functions (optional)
+├── server.ts      # Server-only functions (internalQuery/internalMutation/internalAction)
 └── agents.ts      # AI agents (scenes only)
 ```
 
-**Tables:** users, presets, playlists, recordings, releases, compositions, generatedSongs, transcriptions, scenes, sceneConversations
+Shared utilities live in `packages/backend/convex/lib/`:
+
+- `auth.ts` - `requireAdmin()`, `isAdmin()`, `ROLES_CLAIM`
+- `validators.ts` - shared Convex validators (`presetParameterValidator`, `compositionPlanValidator`)
+- `mimeTypes.ts` - MIME type utilities
+- `r2.ts` - R2/S3 storage operations
+- `visualizationParameters.ts` - preset parameter definitions
+
+**Tables:** users, presets, playlists, recordings, releases, compositions, generatedSongs, transcriptions, scenes, sceneConversations, presetVotes, presetAnalysis
 
 **Frontend imports:** Use `@blackhole/backend/convex/...` (not `@/convex/...`)
 
@@ -88,7 +97,7 @@ packages/backend/convex/model/{modelName}/
 - **Hooks:** `use[Feature].ts` in `apps/web/hooks/`
 - **Components:** PascalCase directories with `index.ts` barrel exports
 - **Shaders:** `{purpose}Fragment.glsl`, `{purpose}Vertex.glsl`
-- **Convex:** `model/{entity}/public.ts`, `model/{entity}/internal.ts`
+- **Convex:** `model/{entity}/public.ts`, `model/{entity}/server.ts`
 
 ## Key Files
 

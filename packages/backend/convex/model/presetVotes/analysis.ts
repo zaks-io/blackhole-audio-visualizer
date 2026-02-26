@@ -10,6 +10,7 @@ import { internal } from "../../_generated/api";
 import type { Id } from "../../_generated/dataModel";
 import { PARAMS } from "../../lib/visualizationParameters";
 import { kmeans } from "ml-kmeans";
+import { requireAdmin } from "../../lib/auth";
 
 // User-facing params only (system: false)
 const USER_PARAMS = Object.entries(PARAMS).filter(([, p]) => !p.system);
@@ -425,8 +426,7 @@ function generatePromptFragment(data: {
 
 export const triggerAnalysis = action({
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
+    await requireAdmin(ctx);
 
     await ctx.scheduler.runAfter(0, internal.model.presetVotes.analysis.runAnalysis);
     return { triggered: true };

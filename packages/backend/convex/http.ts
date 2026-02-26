@@ -44,7 +44,7 @@ http.route({
       return new Response("Missing token", { status: 400 });
     }
 
-    const recording = await ctx.runQuery(internal.model.recordings.internal.getByWebhookToken, {
+    const recording = await ctx.runQuery(internal.model.recordings.server.getByWebhookToken, {
       webhookToken: token,
     });
 
@@ -91,14 +91,14 @@ http.route({
       const status = payload.data?.status;
 
       if (status === "job.completed") {
-        await ctx.runMutation(internal.model.recordings.internal.updateTranscodingStatus, {
+        await ctx.runMutation(internal.model.recordings.server.updateTranscodingStatus, {
           recordingId: recording._id,
           status: "completed",
           r2HlsPath: recording.r2HlsPath,
           clearWebhookToken: true,
         });
       } else {
-        await ctx.runMutation(internal.model.recordings.internal.updateTranscodingStatus, {
+        await ctx.runMutation(internal.model.recordings.server.updateTranscodingStatus, {
           recordingId: recording._id,
           status: "failed",
           transcodingError: extractError(payload.data),
@@ -108,7 +108,7 @@ http.route({
     }
 
     if (payload.event === "job.failed") {
-      await ctx.runMutation(internal.model.recordings.internal.updateTranscodingStatus, {
+      await ctx.runMutation(internal.model.recordings.server.updateTranscodingStatus, {
         recordingId: recording._id,
         status: "failed",
         transcodingError: extractError(payload.data),

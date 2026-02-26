@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { toast } from "sonner";
 import {
   Save,
@@ -11,7 +11,6 @@ import {
   MoreHorizontal,
   Trash2,
   Pencil,
-  Copy,
   RotateCcw,
   Globe,
   Loader2,
@@ -27,21 +26,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
 import { usePresets } from "./usePresets";
 import { usePlayPreset } from "./usePlayPreset";
 import { useProducerMode } from "./useProducerMode";
@@ -49,6 +39,13 @@ import { useVisualizationControls } from "@/hooks/useVisualizationControls";
 import { useConvexPresets } from "@/hooks/useConvexPresets";
 import { usePresetSelector } from "@/components/playlist/usePresetSelector";
 import { PRODUCER_PARAMETERS, DEFAULT_DURATION, DEFAULT_EASE } from "./producerConfig";
+import {
+  PresetNameDialog,
+  PresetExportDialog,
+  PresetImportDialog,
+  PresetMigrateDialog,
+  PresetOverwriteDialog,
+} from "./PresetSaveDialog";
 import type { PresetParameter } from "./types";
 
 type UnifiedPreset = {
@@ -101,7 +98,6 @@ export function PresetControls() {
   const [migrating, setMigrating] = useState(false);
   const [overwriteDialogOpen, setOverwriteDialogOpen] = useState(false);
   const [migrateProgress, setMigrateProgress] = useState({ current: 0, total: 0 });
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const cloudPresets: UnifiedPreset[] = useMemo(() => {
     return convexPresets.presets
@@ -210,12 +206,7 @@ export function PresetControls() {
 
   const handleTogglePublic = async () => {
     if (!activePresetId || !selectedPreset || selectedPreset.source !== "convex") return;
-
     await convexPresets.updatePreset(activePresetId, { isPublic: !selectedPreset.isPublic });
-  };
-
-  const handleExport = () => {
-    setExportDialogOpen(true);
   };
 
   const getExportJson = () => {
@@ -239,12 +230,6 @@ export function PresetControls() {
     a.click();
     URL.revokeObjectURL(url);
     setExportDialogOpen(false);
-  };
-
-  const handleImport = () => {
-    setImportJson("");
-    setImportError("");
-    setImportDialogOpen(true);
   };
 
   const handleImportSubmit = async () => {
@@ -285,8 +270,7 @@ export function PresetControls() {
     if (file) {
       const reader = new FileReader();
       reader.onload = (event) => {
-        const content = event.target?.result as string;
-        setImportJson(content);
+        setImportJson(event.target?.result as string);
       };
       reader.readAsText(file);
     }
@@ -453,11 +437,20 @@ export function PresetControls() {
               Reset to Default
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleExport} disabled={unifiedPresets.length === 0}>
+            <DropdownMenuItem
+              onClick={() => setExportDialogOpen(true)}
+              disabled={unifiedPresets.length === 0}
+            >
               <Download className="h-4 w-4 mr-2" />
               Export JSON
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleImport}>
+            <DropdownMenuItem
+              onClick={() => {
+                setImportJson("");
+                setImportError("");
+                setImportDialogOpen(true);
+              }}
+            >
               <Upload className="h-4 w-4 mr-2" />
               Import JSON
             </DropdownMenuItem>
@@ -474,223 +467,63 @@ export function PresetControls() {
         </DropdownMenu>
       </div>
 
-      {/* Create New Preset Dialog */}
-      <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Create New Preset</DialogTitle>
-            <DialogDescription>
-              Save the current parameter values and tween settings as a new preset.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <Input
-              placeholder="Preset name"
-              value={presetName}
-              onChange={(e) => setPresetName(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleCreatePreset()}
-              autoFocus
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setSaveDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleCreatePreset} disabled={!presetName.trim()}>
-              Create
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <PresetNameDialog
+        open={saveDialogOpen}
+        onOpenChange={setSaveDialogOpen}
+        title="Create New Preset"
+        description="Save the current parameter values and tween settings as a new preset."
+        value={presetName}
+        onChange={setPresetName}
+        onConfirm={handleCreatePreset}
+        confirmLabel="Create"
+      />
 
-      {/* Rename Dialog */}
-      <Dialog open={renameDialogOpen} onOpenChange={setRenameDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Rename Preset</DialogTitle>
-          </DialogHeader>
-          <div className="py-4">
-            <Input
-              placeholder="Preset name"
-              value={presetName}
-              onChange={(e) => setPresetName(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleRename()}
-              autoFocus
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setRenameDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleRename} disabled={!presetName.trim()}>
-              Rename
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <PresetNameDialog
+        open={renameDialogOpen}
+        onOpenChange={setRenameDialogOpen}
+        title="Rename Preset"
+        value={presetName}
+        onChange={setPresetName}
+        onConfirm={handleRename}
+        confirmLabel="Rename"
+      />
 
-      {/* Export Dialog */}
-      <Dialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Export Presets</DialogTitle>
-            <DialogDescription>Copy or download all presets as JSON.</DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <textarea
-              className="w-full h-48 p-3 text-xs font-mono bg-black/20 border border-white/10 rounded-md resize-none"
-              value={getExportJson()}
-              readOnly
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setExportDialogOpen(false)}>
-              Close
-            </Button>
-            <Button variant="outline" onClick={handleCopyExport}>
-              <Copy className="h-4 w-4 mr-2" />
-              Copy
-            </Button>
-            <Button onClick={handleDownloadExport}>
-              <Download className="h-4 w-4 mr-2" />
-              Download
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <PresetExportDialog
+        open={exportDialogOpen}
+        onOpenChange={setExportDialogOpen}
+        getJson={getExportJson}
+        onCopy={handleCopyExport}
+        onDownload={handleDownloadExport}
+      />
 
-      {/* Import Dialog */}
-      <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Import Presets</DialogTitle>
-            <DialogDescription>Paste JSON or select a file to import presets.</DialogDescription>
-          </DialogHeader>
-          <div className="py-4 space-y-3">
-            <textarea
-              className="w-full h-48 p-3 text-xs font-mono bg-black/20 border border-white/10 rounded-md resize-none"
-              value={importJson}
-              onChange={(e) => setImportJson(e.target.value)}
-              placeholder="Paste JSON here..."
-            />
-            {importError && <p className="text-xs text-destructive">{importError}</p>}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".json"
-              onChange={handleFileImport}
-              className="hidden"
-            />
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => fileInputRef.current?.click()}
-              className="w-full"
-            >
-              <Upload className="h-4 w-4 mr-2" />
-              Select File
-            </Button>
-          </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setImportDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleImportSubmit} disabled={!importJson.trim()}>
-              Import
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <PresetImportDialog
+        open={importDialogOpen}
+        onOpenChange={setImportDialogOpen}
+        value={importJson}
+        onChange={setImportJson}
+        error={importError}
+        onSubmit={handleImportSubmit}
+        onFileChange={handleFileImport}
+      />
 
-      {/* Migrate to Cloud Dialog */}
-      <Dialog
+      <PresetMigrateDialog
         open={migrateDialogOpen}
-        onOpenChange={(open) => !migrating && setMigrateDialogOpen(open)}
-      >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Migrate Local Presets to Cloud</DialogTitle>
-            <DialogDescription>
-              {localPresetsList.length} local preset{localPresetsList.length !== 1 ? "s" : ""} will
-              be uploaded to your cloud account. Local presets will be removed after migration.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <div className="max-h-48 overflow-y-auto space-y-1">
-              {localPresetsList.map((preset) => (
-                <div
-                  key={preset.id}
-                  className="text-sm text-muted-foreground px-2 py-1 bg-white/5 rounded"
-                >
-                  {preset.name}
-                </div>
-              ))}
-            </div>
-            {migrating && (
-              <div className="mt-4 space-y-2">
-                <div className="flex items-center gap-2 text-sm">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Migrating {migrateProgress.current} of {migrateProgress.total}...
-                </div>
-                <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-primary transition-all"
-                    style={{ width: `${(migrateProgress.current / migrateProgress.total) * 100}%` }}
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button
-              variant="ghost"
-              onClick={() => setMigrateDialogOpen(false)}
-              disabled={migrating}
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleMigrateToCloud} disabled={migrating}>
-              {migrating ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Migrating...
-                </>
-              ) : (
-                <>
-                  <CloudUpload className="h-4 w-4 mr-2" />
-                  Migrate All
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        onOpenChange={setMigrateDialogOpen}
+        localPresets={localPresetsList}
+        migrating={migrating}
+        progress={migrateProgress}
+        onMigrate={handleMigrateToCloud}
+      />
 
-      {/* Overwrite Confirmation Dialog */}
-      <Dialog open={overwriteDialogOpen} onOpenChange={setOverwriteDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Overwrite Preset</DialogTitle>
-            <DialogDescription>
-              This will overwrite &ldquo;{selectedPreset?.name}&rdquo;. This action cannot be
-              undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setOverwriteDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={() => {
-                handleUpdatePreset();
-                setOverwriteDialogOpen(false);
-              }}
-            >
-              Overwrite
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <PresetOverwriteDialog
+        open={overwriteDialogOpen}
+        onOpenChange={setOverwriteDialogOpen}
+        presetName={selectedPreset?.name}
+        onConfirm={() => {
+          handleUpdatePreset();
+          setOverwriteDialogOpen(false);
+        }}
+      />
     </div>
   );
 }

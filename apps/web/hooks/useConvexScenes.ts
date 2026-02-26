@@ -54,13 +54,17 @@ export function useConvexScenes() {
   const updateSceneMutation = useMutation(api.model.scenes.public.updateScene);
   const deleteSceneMutation = useMutation(api.model.scenes.public.deleteScene);
   const updateConversationTitleMutation = useMutation(
-    api.model.scenes.public.updateConversationTitle
+    api.model.sceneConversations.public.updateConversationTitle
   );
-  const linkConversationMutation = useMutation(api.model.scenes.public.linkConversationToScene);
+  const linkConversationMutation = useMutation(
+    api.model.sceneConversations.public.linkConversationToScene
+  );
 
   const createSceneThreadAction = useAction(api.model.scenes.public.createSceneThread);
   const sendSceneMessageAction = useAction(api.model.scenes.public.sendSceneMessage);
-  const startSongGenerationAction = useAction(api.model.scenes.public.startSongGeneration);
+  const startSongGenerationAction = useAction(
+    api.model.generatedSongs.generation.startSongGeneration
+  );
   const triggerTranscriptionAction = useAction(api.model.transcriptions.public.trigger);
 
   const createSceneThread = async (sceneId?: string) => {
@@ -176,7 +180,7 @@ export function usePublicSceneWithDetails(sceneId: string | null) {
 
 export function useSceneConversations(sceneId: string | null) {
   const conversations = useQuery(
-    api.model.scenes.public.getSceneConversations,
+    api.model.sceneConversations.public.getSceneConversations,
     sceneId ? { sceneId: sceneId as Id<"scenes"> } : "skip"
   );
 
@@ -187,7 +191,7 @@ export function useSceneConversations(sceneId: string | null) {
 }
 
 export function useAllConversations() {
-  const conversations = useQuery(api.model.scenes.public.getAllConversations);
+  const conversations = useQuery(api.model.sceneConversations.public.getAllConversations);
   return {
     conversations: (conversations ?? []) as SceneConversation[],
     isLoading: conversations === undefined,
@@ -197,7 +201,7 @@ export function useAllConversations() {
 export function useMySongs() {
   const { isAuthenticated, isLoading: authLoading } = useConvexAuth();
 
-  const songs = useQuery(api.model.scenes.public.getMySongs, isAuthenticated ? {} : "skip");
+  const songs = useQuery(api.model.generatedSongs.public.getMySongs, isAuthenticated ? {} : "skip");
 
   return {
     songs: (songs ?? []) as GeneratedSongWithDetails[],
@@ -207,7 +211,7 @@ export function useMySongs() {
 
 export function useThreadSongs(threadId: string | null) {
   const songs = useQuery(
-    api.model.scenes.public.getSongsByThread,
+    api.model.generatedSongs.public.getSongsByThread,
     threadId ? { threadId } : "skip"
   );
 

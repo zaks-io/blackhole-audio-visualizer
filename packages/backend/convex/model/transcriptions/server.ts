@@ -77,7 +77,7 @@ export const start = internalAction({
     storageId: v.id("_storage"),
   },
   handler: async (ctx, { transcriptionId, storageId }) => {
-    await ctx.runMutation(internal.model.transcriptions.internal.updateStatus, {
+    await ctx.runMutation(internal.model.transcriptions.server.updateStatus, {
       transcriptionId,
       status: "processing",
     });
@@ -129,7 +129,7 @@ export const start = internalAction({
         })
       );
 
-      await ctx.runMutation(internal.model.transcriptions.internal.updateStatus, {
+      await ctx.runMutation(internal.model.transcriptions.server.updateStatus, {
         transcriptionId,
         status: "completed",
         languageCode: result.language_code,
@@ -138,7 +138,7 @@ export const start = internalAction({
         words,
       });
     } catch (error) {
-      await ctx.runMutation(internal.model.transcriptions.internal.updateStatus, {
+      await ctx.runMutation(internal.model.transcriptions.server.updateStatus, {
         transcriptionId,
         status: "failed",
         error: error instanceof Error ? error.message : "Unknown error",

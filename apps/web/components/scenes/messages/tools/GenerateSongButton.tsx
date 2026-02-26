@@ -62,7 +62,7 @@ export function GenerateSongButton({
   const songTitle = data?.songTitle || "Untitled";
 
   const song = useQuery(
-    api.model.scenes.public.getSongById,
+    api.model.generatedSongs.public.getSongById,
     songId ? { songId: songId as Id<"generatedSongs"> } : "skip"
   );
 
