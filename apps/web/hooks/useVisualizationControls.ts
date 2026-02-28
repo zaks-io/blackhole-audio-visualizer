@@ -39,6 +39,7 @@ export interface VisualizationControlsState {
   lifetimeGracePeriod: number;
   lifetimeMax: number;
   lifetimeGravityMultiplier: number;
+  frameDragging: number;
 
   // Emitters
   emitRadius: number;
@@ -125,6 +126,7 @@ export const pathToKey: Record<string, keyof VisualizationControlsState> = {
   "Physics.lifetimeGracePeriod": "lifetimeGracePeriod",
   "Physics.lifetimeMax": "lifetimeMax",
   "Physics.lifetimeGravityMultiplier": "lifetimeGravityMultiplier",
+  "Physics.frameDragging": "frameDragging",
   "Emitters.emitRadius": "emitRadius",
   "Emitters.emitterCount": "emitterCount",
   "Emitters.emitterAngle": "emitterAngle",
@@ -186,6 +188,7 @@ const DEFAULT_STATE: VisualizationControlsState = {
   lifetimeGracePeriod: PARAM_DEFAULTS.lifetimeGracePeriod,
   lifetimeMax: PARAM_DEFAULTS.lifetimeMax,
   lifetimeGravityMultiplier: PARAM_DEFAULTS.lifetimeGravityMultiplier,
+  frameDragging: PARAM_DEFAULTS.frameDragging,
   emitRadius: PARAM_DEFAULTS.emitRadius,
   emitterCount: PARAM_DEFAULTS.emitterCount,
   emitterAngle: PARAM_DEFAULTS.emitterAngle,

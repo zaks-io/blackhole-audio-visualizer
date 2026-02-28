@@ -24,6 +24,7 @@ uniform float uLifetimeGracePeriod;
 uniform float uLifetimeMax;
 uniform float uLifetimeGravityMultiplier;
 uniform float uOrbitDecay;
+uniform float uFrameDragging;
 
 // Multi-black hole uniforms
 uniform vec3 uBlackHolePos[MAX_BLACK_HOLES];
@@ -145,6 +146,18 @@ void main() {
 
         // HFC boost - punch on percussive hits (snare, hi-hat)
         vel *= (1.0 + uHFCBoost * 0.3);
+
+        // Inherit local frame rotation at spawn point
+        if (uFrameDragging > 0.0) {
+            vec3 spinAxis = vec3(0.0, 1.0, 0.0);
+            vec3 r_perp = toCenter - spinAxis * dot(toCenter, spinAxis);
+            float r_perp_len = length(r_perp);
+            if (r_perp_len > 0.1) {
+                float omega = uFrameDragging * nearestMass / (r_soft * r_soft * r_soft);
+                vec3 dragDir = normalize(cross(spinAxis, r_perp));
+                vel += dragDir * omega * r_perp_len;
+            }
+        }
     } else if (uDoKick) {
         // KICK: Apply gravitational acceleration from ALL sources (half-step)
         vec3 totalAccel = vec3(0.0);
@@ -344,6 +357,63 @@ void main() {
                 radialVel = min(radialVel, -orbitalSpeed * iscoDepth * uISCOStrength);
 
                 vel = nearestDir * radialVel + tangentialVel;
+            }
+        }
+
+        // Frame dragging (Lense-Thirring) — applied LAST
+        // Blends tangential velocity toward the local co-rotation speed rather
+        // than accumulating acceleration. This can't eject particles because it
+        // converges to a finite target (orbital speed), and only speeds up
+        // particles that are slower than co-rotation — never slows them down.
+        if (uFrameDragging > 0.0) {
+            vec3 spinAxis = vec3(0.0, 1.0, 0.0);
+            for (int i = 0; i < MAX_BLACK_HOLES; i++) {
+                if (i >= uBlackHoleCount) break;
+
+                vec3 toSource = uBlackHolePos[i] - pos;
+                float dist = length(toSource);
+                float dist_soft = dist + uSoftening;
+                float r_horizon = uBlackHoleRadius[i];
+
+                vec3 r_perp = toSource - spinAxis * dot(toSource, spinAxis);
+                float r_perp_len = length(r_perp);
+                if (r_perp_len > 0.1) {
+                    vec3 dragDir = normalize(cross(spinAxis, r_perp));
+
+                    // Target: co-rotate at orbital speed scaled by frame drag parameter
+                    float orbitalSpeed = sqrt(uBlackHoleMass[i] / dist_soft);
+                    float targetSpeed = orbitalSpeed * uFrameDragging;
+
+                    // Blend rate: how quickly to converge (scales with M/r²)
+                    float blendRate = uFrameDragging * uBlackHoleMass[i] / (dist_soft * dist_soft) * 0.001;
+
+                    // Ergosphere (r < 2×r_horizon): boost blend rate for co-rotation
+                    float ergosphere = 2.0 * r_horizon;
+                    if (dist < ergosphere) {
+                        float ergoDepth = 1.0 - (dist - r_horizon) / (ergosphere - r_horizon);
+                        ergoDepth = clamp(ergoDepth, 0.0, 1.0);
+                        blendRate = max(blendRate, ergoDepth * ergoDepth * 30.0);
+                        targetSpeed = max(targetSpeed, orbitalSpeed * ergoDepth);
+                    }
+
+                    // Inside ISCO: reduce co-rotation target so particles plunge.
+                    // Applied AFTER ergosphere so it wins — no stable orbits inside ISCO.
+                    if (dist < uISCORadius && dist > r_horizon) {
+                        float iscoDepth = 1.0 - (dist - r_horizon) / (uISCORadius - r_horizon);
+                        iscoDepth = clamp(iscoDepth, 0.0, 1.0);
+                        targetSpeed *= (1.0 - iscoDepth);
+                    }
+
+                    float blend = 1.0 - exp(-blendRate * uDeltaTime);
+
+                    // Only enforce co-rotation for particles slower than frame drag.
+                    // Faster prograde particles are left alone.
+                    float currentDragVel = dot(vel, dragDir);
+                    if (currentDragVel < targetSpeed) {
+                        float newDragVel = mix(currentDragVel, targetSpeed, blend);
+                        vel += dragDir * (newDragVel - currentDragVel);
+                    }
+                }
             }
         }
     }

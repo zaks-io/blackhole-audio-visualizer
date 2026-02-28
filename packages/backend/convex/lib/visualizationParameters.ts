@@ -137,7 +137,7 @@ export const PARAMS: Record<string, ParameterDef> = {
   },
   "Black Hole.blackHoleMassMax": {
     min: 0.1,
-    max: 1,
+    max: 5,
     default: 1,
     step: 0.1,
     description: "maximum mass ratio",
@@ -150,10 +150,10 @@ export const PARAMS: Record<string, ParameterDef> = {
     max: 20,
     default: 5,
     step: 0.5,
-    description: "base sphere size",
+    description: "base sphere size (derived from mass)",
     group: "Black Hole",
     label: "Event Horizon",
-    system: false,
+    system: true,
   },
   "Black Hole.iscoRatio": {
     min: 2,
@@ -363,6 +363,16 @@ export const PARAMS: Record<string, ParameterDef> = {
     label: "Gravity Boost",
     system: true,
   },
+  "Physics.frameDragging": {
+    min: 0,
+    max: 5,
+    default: 5,
+    step: 0.1,
+    description: "frame dragging strength (Lense-Thirring effect)",
+    group: "Physics",
+    label: "Frame Dragging",
+    system: true,
+  },
 
   // ===========================================================================
   // EMITTERS
@@ -538,12 +548,12 @@ export const PARAMS: Record<string, ParameterDef> = {
   "Audio.beatRepulsion": {
     min: 0,
     max: 100,
-    default: 20,
+    default: 5,
     step: 1,
     description: "beat push force from center",
     group: "Audio",
     label: "Beat Repulsion",
-    system: false,
+    system: true,
   },
 
   // ===========================================================================

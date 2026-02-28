@@ -68,6 +68,7 @@ export function ParticleSystem({
     setEventHorizon,
     setSoftening,
     setOrbitDecay,
+    setFrameDragging,
     setEmissionRadius,
     setEmitterCount,
     setEmitterAngle,
@@ -107,6 +108,7 @@ export function ParticleSystem({
     eventHorizonRadius: number;
     softening: number;
     orbitDecay: number;
+    frameDragging: number;
     emitRadius: number;
     emitterCount: number;
     emitterAngle: number;
@@ -313,6 +315,7 @@ export function ParticleSystem({
           new THREE.Vector3(0, 0, 0),
         ],
       },
+      uBlackHoleRadius: { value: [5, 5, 5, 5] },
       uBlackHoleCount: { value: 1 },
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -434,6 +437,7 @@ export function ParticleSystem({
         eventHorizonRadius: state.eventHorizonRadius,
         softening: state.softening,
         orbitDecay: state.orbitDecay,
+        frameDragging: state.frameDragging,
         emitRadius: state.emitRadius,
         emitterCount: state.emitterCount,
         emitterAngle: state.emitterAngle,
@@ -459,6 +463,7 @@ export function ParticleSystem({
       setEventHorizon(state.eventHorizonRadius);
       setSoftening(state.softening);
       setOrbitDecay(state.orbitDecay);
+      setFrameDragging(state.frameDragging);
       setEmissionRadius(state.emitRadius);
       setEmitterCount(state.emitterCount);
       setEmitterAngle(state.emitterAngle);
@@ -501,6 +506,10 @@ export function ParticleSystem({
       if (prev.orbitDecay !== state.orbitDecay) {
         prev.orbitDecay = state.orbitDecay;
         setOrbitDecay(state.orbitDecay);
+      }
+      if (prev.frameDragging !== state.frameDragging) {
+        prev.frameDragging = state.frameDragging;
+        setFrameDragging(state.frameDragging);
       }
       if (prev.emitRadius !== state.emitRadius) {
         prev.emitRadius = state.emitRadius;
@@ -581,13 +590,15 @@ export function ParticleSystem({
       blackHoleData.count
     );
 
-    // Update render shader uniforms for black hole positions
+    // Update render shader uniforms for black hole positions and pulsed radii
     if (materialRef.current) {
       for (let i = 0; i < 4; i++) {
         if (i < blackHoleData.count) {
           materialRef.current.uniforms.uBlackHolePos.value[i].copy(blackHoleData.positions[i]);
+          materialRef.current.uniforms.uBlackHoleRadius.value[i] = blackHoleData.radii[i];
         } else {
           materialRef.current.uniforms.uBlackHolePos.value[i].set(0, 0, 0);
+          materialRef.current.uniforms.uBlackHoleRadius.value[i] = 0;
         }
       }
       materialRef.current.uniforms.uBlackHoleCount.value = blackHoleData.count;

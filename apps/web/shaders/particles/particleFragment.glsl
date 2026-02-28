@@ -1,5 +1,6 @@
 varying vec3 vColor;
 varying vec2 vUV;
+varying float vRedshiftFade;
 
 uniform float uBrightness;
 uniform float uAlpha;
@@ -33,7 +34,7 @@ void main() {
     float tailFade = smoothstep(0.0, 0.3, t);
     shapeAlpha *= tailFade;
 
-    float finalAlpha = shapeAlpha * uAlpha;
+    float finalAlpha = shapeAlpha * uAlpha * vRedshiftFade;
 
     vec3 finalColor = min(vColor * uBrightness, vec3(1.5));
     gl_FragColor = vec4(finalColor, finalAlpha);

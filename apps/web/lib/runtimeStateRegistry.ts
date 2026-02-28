@@ -38,6 +38,7 @@ export const runtimeState = {
   lifetimeGracePeriod: PARAM_DEFAULTS.lifetimeGracePeriod,
   lifetimeMax: PARAM_DEFAULTS.lifetimeMax,
   lifetimeGravityMultiplier: PARAM_DEFAULTS.lifetimeGravityMultiplier,
+  frameDragging: PARAM_DEFAULTS.frameDragging,
 
   // Emitters
   emitRadius: PARAM_DEFAULTS.emitRadius,
@@ -106,6 +107,7 @@ const runtimePathToKey: Record<string, RuntimeStateKey> = {
   "Physics.lifetimeGracePeriod": "lifetimeGracePeriod",
   "Physics.lifetimeMax": "lifetimeMax",
   "Physics.lifetimeGravityMultiplier": "lifetimeGravityMultiplier",
+  "Physics.frameDragging": "frameDragging",
 
   // Emitters
   "Emitters.emitRadius": "emitRadius",
@@ -175,6 +177,7 @@ const storeKeyToRuntimeKey: Record<string, RuntimeStateKey> = {
   lifetimeGracePeriod: "lifetimeGracePeriod",
   lifetimeMax: "lifetimeMax",
   lifetimeGravityMultiplier: "lifetimeGravityMultiplier",
+  frameDragging: "frameDragging",
 
   // Emitters
   emitRadius: "emitRadius",

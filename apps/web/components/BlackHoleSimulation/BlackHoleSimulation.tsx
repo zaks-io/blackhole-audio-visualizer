@@ -32,6 +32,14 @@ const _layoutBaseRadii = [0, 0, 0, 0];
  * Compute orbital positions, masses, and base radii for `count` black holes.
  * Writes into the provided output arrays (caller-owned) to avoid allocations.
  */
+// Schwarzschild-like scaling: r = GM / k
+// Calibrated so GM=100,000 (default gravity) gives r≈5 (previous default eventHorizonRadius)
+const EVENT_HORIZON_SCALE = 20000;
+
+function massToRadius(mass: number): number {
+  return mass / EVENT_HORIZON_SCALE;
+}
+
 function calculateOrbitalLayout(
   count: number,
   elapsed: number,
@@ -40,7 +48,6 @@ function calculateOrbitalLayout(
   gravity: number,
   blackHoleMassMin: number,
   blackHoleMassMax: number,
-  eventHorizonRadius: number,
   outPositions: THREE.Vector3[],
   outMasses: number[],
   outBaseRadii: number[]
@@ -50,7 +57,7 @@ function calculateOrbitalLayout(
   if (count === 1) {
     outPositions[0].set(0, 0, 0);
     outMasses[0] = maxMass;
-    outBaseRadii[0] = eventHorizonRadius;
+    outBaseRadii[0] = massToRadius(maxMass);
     return;
   }
 
@@ -64,8 +71,9 @@ function calculateOrbitalLayout(
   }
   const avgMassRatio = totalMassRatio / count;
 
+  const maxRadius = massToRadius(maxMass);
   const spacingFactor = 2.5 / Math.sin(Math.PI / count);
-  const minOrbitRadius = eventHorizonRadius * spacingFactor;
+  const minOrbitRadius = maxRadius * spacingFactor;
   const effectiveOrbitRadius = Math.max(orbitRadius, minOrbitRadius);
 
   for (let i = 0; i < count; i++) {
@@ -77,7 +85,7 @@ function calculateOrbitalLayout(
 
     outPositions[i].set(Math.cos(angle) * r, 0, Math.sin(angle) * r);
     outMasses[i] = mass;
-    outBaseRadii[i] = eventHorizonRadius * (mass / maxMass);
+    outBaseRadii[i] = massToRadius(mass);
   }
 }
 
@@ -210,7 +218,6 @@ export function BlackHoleSimulation({
       initial.gravity,
       initial.blackHoleMassMin,
       initial.blackHoleMassMax,
-      initial.eventHorizonRadius,
       positions,
       masses,
       baseRadii
@@ -268,7 +275,6 @@ export function BlackHoleSimulation({
       gravity,
       blackHoleMassMin,
       blackHoleMassMax,
-      eventHorizonRadius,
       audioGain,
       spawnBurstMultiplier,
       hfcVelocityBoost,
@@ -301,7 +307,6 @@ export function BlackHoleSimulation({
       gravity,
       blackHoleMassMin,
       blackHoleMassMax,
-      eventHorizonRadius,
     ] as const;
 
     if (progress < 0.001 || stableCount === targetCount) {

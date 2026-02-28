@@ -237,6 +237,7 @@ export function useGPUCompute(
     velocityVariable.material.uniforms.uLifetimeMax = { value: 60.0 };
     velocityVariable.material.uniforms.uLifetimeGravityMultiplier = { value: 3.0 };
     velocityVariable.material.uniforms.uOrbitDecay = { value: 2.0 };
+    velocityVariable.material.uniforms.uFrameDragging = { value: 0.0 };
 
     // Multi-black hole uniforms for velocity shader
     velocityVariable.material.uniforms.uBlackHolePos = { value: bhPos };
@@ -274,6 +275,7 @@ export function useGPUCompute(
     velocityVariable.material.uniforms.uLifetimeGravityMultiplier.value =
       initial.lifetimeGravityMultiplier;
     velocityVariable.material.uniforms.uOrbitDecay.value = initial.orbitDecay;
+    velocityVariable.material.uniforms.uFrameDragging.value = initial.frameDragging;
 
     velocityVariable.material.uniforms.uISCORadius.value =
       initial.eventHorizonRadius * initial.iscoRatio;
@@ -617,6 +619,12 @@ export function useGPUCompute(
     }
   }, []);
 
+  const setFrameDragging = useCallback((value: number) => {
+    if (velocityVariableRef.current) {
+      velocityVariableRef.current.material.uniforms.uFrameDragging.value = value;
+    }
+  }, []);
+
   const setEmitterAngle = useCallback((value: number) => {
     if (positionVariableRef.current) {
       positionVariableRef.current.material.uniforms.uEmitterAngle.value = value;
@@ -893,6 +901,7 @@ export function useGPUCompute(
     registerGPUSetter("Physics.timeScale", setTimeScale);
     registerGPUSetter("Physics.softening", setSoftening);
     registerGPUSetter("Physics.orbitDecay", setOrbitDecay);
+    registerGPUSetter("Physics.frameDragging", setFrameDragging);
     registerGPUSetter("Physics.iscoStrength", setISCOStrength);
     registerGPUSetter("Physics.lifetimeGracePeriod", setLifetimeGracePeriod);
     registerGPUSetter("Physics.lifetimeMax", setLifetimeMax);
@@ -917,6 +926,7 @@ export function useGPUCompute(
     setTimeScale,
     setSoftening,
     setOrbitDecay,
+    setFrameDragging,
     setISCOStrength,
     setLifetimeGracePeriod,
     setLifetimeMax,
@@ -948,6 +958,7 @@ export function useGPUCompute(
     setEmissionRadius,
     setEmitterCount,
     setOrbitDecay,
+    setFrameDragging,
     setEmitterAngle,
     setEmitterTilt,
     setSpawnRate,

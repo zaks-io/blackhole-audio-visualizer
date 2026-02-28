@@ -10,11 +10,17 @@ uniform float uResolutionScale;
 uniform float uDebugMode;
 uniform vec2 uViewport;
 
+#define MAX_BLACK_HOLES 4
+uniform vec3 uBlackHolePos[MAX_BLACK_HOLES];
+uniform float uBlackHoleRadius[MAX_BLACK_HOLES];
+uniform int uBlackHoleCount;
+
 attribute vec2 reference;
 attribute float crossIndex;
 
 varying vec3 vColor;
 varying vec2 vUV;
+varying float vRedshiftFade;
 
 // Catmull-Rom spline - smooth curve through all 4 points
 vec3 catmullRom(vec3 p0, vec3 p1, vec3 p2, vec3 p3, float t) {
@@ -126,6 +132,17 @@ void main() {
     // NOTE: Standard Catmull-Rom(p0,p1,p2,p3,t) covers p1->p2, not p0->p3.
     // We explicitly build a 3-segment polycurve to span tail->head.
     vec3 curvePos = evalTrailCurve(p0, p1, p2, p3, t);
+
+    // Redshift fade: particles approaching any event horizon fade to transparent
+    float minFade = 1.0;
+    for (int i = 0; i < MAX_BLACK_HOLES; i++) {
+        if (i >= uBlackHoleCount) break;
+        float dist = length(curvePos - uBlackHolePos[i]);
+        // Fade from fully transparent at horizon to fully visible at 3× horizon
+        float fade = smoothstep(uBlackHoleRadius[i], uBlackHoleRadius[i] * 3.0, dist);
+        minFade = min(minFade, fade);
+    }
+    vRedshiftFade = minFade;
 
     // Transform curve position to view space
     vec4 viewPos = modelViewMatrix * vec4(curvePos, 1.0);
