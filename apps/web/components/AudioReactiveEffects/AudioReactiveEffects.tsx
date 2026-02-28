@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useCallback } from "react";
+import { useMemo, useRef, useCallback } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Bloom, ChromaticAberration, Vignette, ToneMapping } from "@react-three/postprocessing";
 import { BlendFunction, ToneMappingMode } from "postprocessing";
@@ -10,6 +10,7 @@ import { useVisualizationControls } from "@/hooks/useVisualizationControls";
 import { runtimeState } from "@/lib/runtimeStateRegistry";
 import { useUIState } from "@/hooks/useUIState";
 import { useFPSStore } from "@/hooks/useFPSMonitor";
+import { InvertEffect } from "@/lib/effects/InvertEffect";
 import type { AnalyzedAudio } from "@/hooks/useAudioAnalyzer";
 
 interface AudioReactiveEffectsProps {
@@ -48,6 +49,7 @@ let bloomInstance: any = null;
 let chromaticInstance: any = null;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let vignetteInstance: any = null;
+let invertInstance: InvertEffect | null = null;
 
 export function AudioReactiveEffects({ getAnalysis, isAudioConnected }: AudioReactiveEffectsProps) {
   // Only subscribe to toggle flags that affect the render output (conditionally rendering components)
@@ -61,6 +63,7 @@ export function AudioReactiveEffects({ getAnalysis, isAudioConnected }: AudioRea
   );
 
   const bassStrobeEnabled = useUIState((s) => s.bassStrobeEnabled);
+  const invertEffect = useMemo(() => new InvertEffect({ intensity: 0 }), []);
 
   // Envelope followers for smooth audio response
   const bloomEnvelope = useRef(new EnvelopeFollower(5, 200));
@@ -88,6 +91,10 @@ export function AudioReactiveEffects({ getAnalysis, isAudioConnected }: AudioRea
     vignetteInstance = effect;
   }, []);
 
+  const invertRefCallback = useCallback((effect: unknown) => {
+    invertInstance = effect as InvertEffect | null;
+  }, []);
+
   // Compute bloom levels based on particle size and FPS for performance
   const computeBloomLevels = (pointSize: number, fps: number): number => {
     if (fps < 50) return 1;
@@ -111,6 +118,10 @@ export function AudioReactiveEffects({ getAnalysis, isAudioConnected }: AudioRea
     if (vignetteInstance) {
       vignetteInstance.offset = vignetteOffset;
       vignetteInstance.darkness = vignetteEnabled ? vignetteDarkness : 0;
+    }
+
+    if (invertInstance) {
+      invertInstance.intensity = useVisualizationControls.getState().invertColors ? 1.0 : 0.0;
     }
 
     const bloomBase = bloomBaseIntensity;
@@ -203,6 +214,7 @@ export function AudioReactiveEffects({ getAnalysis, isAudioConnected }: AudioRea
         modulationOffset={0.15}
       />
       <Vignette ref={vignetteRefCallback} offset={0.5} darkness={0.5} />
+      <primitive ref={invertRefCallback} object={invertEffect} />
     </>
   );
 }

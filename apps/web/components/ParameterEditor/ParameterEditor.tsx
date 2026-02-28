@@ -35,7 +35,12 @@ const GROUP_IDS: Record<string, string> = {
 };
 
 const SPECIAL_CONTROLS: Record<string, React.ReactNode> = {
-  "Black Hole": <SwitchControl controlKey="coronaEnabled" label="Corona Glow" />,
+  "Black Hole": (
+    <>
+      <SwitchControl controlKey="coronaEnabled" label="Corona Glow" />
+      <SwitchControl controlKey="whiteBlackHole" label="White Black Hole" />
+    </>
+  ),
   Particles: (
     <SelectControl controlKey="colorPalette" label="Color Palette" options={PALETTE_IDS} />
   ),
@@ -87,6 +92,7 @@ function PostFXControls({ mode, duration }: { mode: "dev" | "preset"; duration: 
       <SwitchControl controlKey="vignetteEnabled" label="Vignette" />
       {getSlider("vignetteOffset")}
       {getSlider("vignetteDarkness")}
+      <SwitchControl controlKey="invertColors" label="Invert Colors" />
       {getSlider("hfcVelocityBoost")}
       {getSlider("spawnBurstMultiplier")}
     </ParameterGroup>
