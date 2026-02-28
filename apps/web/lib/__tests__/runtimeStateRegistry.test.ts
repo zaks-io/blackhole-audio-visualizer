@@ -81,6 +81,7 @@ describe("syncFromStore", () => {
       // Non-numeric fields required by the interface
       colorPalette: "default",
       coronaEnabled: false,
+      whiteBlackHole: false,
       showEmitters: false,
       skybox: "Procedural Stars",
       starLensingEnabled: true,
@@ -88,6 +89,7 @@ describe("syncFromStore", () => {
       bloomEnabled: true,
       chromaticEnabled: true,
       vignetteEnabled: true,
+      invertColors: false,
       // Fill in remaining numeric fields with defaults
       iscoRatio: PARAM_DEFAULTS.iscoRatio,
       beatPulse: PARAM_DEFAULTS.beatPulse,

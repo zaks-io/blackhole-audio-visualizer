@@ -37,12 +37,13 @@ const coronaFragmentShader = /* glsl */ `
   uniform vec3 uGlowColor;
   uniform float uGlowIntensity;
   uniform float uFresnelPower;
+  uniform vec3 uBaseColor;
 
   void main() {
     vec3 viewDir = normalize(cameraPosition - vWorldPosition);
     vec3 normal = normalize(vWorldNormal);
     float fresnel = pow(1.0 - abs(dot(viewDir, normal)), uFresnelPower);
-    vec3 color = uGlowColor * fresnel * uGlowIntensity;
+    vec3 color = uBaseColor + uGlowColor * fresnel * uGlowIntensity;
     gl_FragColor = vec4(color, 1.0);
   }
 `;
@@ -57,6 +58,7 @@ export function BlackHole({ blackHoleDataRef, index }: BlackHoleProps) {
       uGlowColor: { value: new THREE.Color(0.6, 0.6, 0.65) },
       uGlowIntensity: { value: 0.8 },
       uFresnelPower: { value: 2.0 },
+      uBaseColor: { value: new THREE.Color(0, 0, 0) },
     }),
     []
   );
@@ -65,7 +67,8 @@ export function BlackHole({ blackHoleDataRef, index }: BlackHoleProps) {
     if (!meshRef.current || !blackHoleDataRef.current || !materialRef.current) return;
 
     const bhData = blackHoleDataRef.current;
-    const { coronaEnabled, coronaIntensity, coronaPower } = useVisualizationControls.getState();
+    const { coronaEnabled, coronaIntensity, coronaPower, whiteBlackHole } =
+      useVisualizationControls.getState();
 
     if (index >= bhData.count) {
       meshRef.current.visible = false;
@@ -76,6 +79,7 @@ export function BlackHole({ blackHoleDataRef, index }: BlackHoleProps) {
     // When corona is disabled, set intensity to 0 (renders as solid black sphere)
     materialRef.current.uniforms.uGlowIntensity.value = coronaEnabled ? coronaIntensity : 0;
     materialRef.current.uniforms.uFresnelPower.value = coronaPower;
+    materialRef.current.uniforms.uBaseColor.value.setScalar(whiteBlackHole ? 1 : 0);
 
     meshRef.current.visible = true;
     meshRef.current.position.copy(bhData.positions[index]);

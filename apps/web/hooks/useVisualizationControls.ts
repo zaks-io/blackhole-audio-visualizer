@@ -17,6 +17,7 @@ export interface VisualizationControlsState {
   coronaIntensity: number;
   coronaPower: number;
   blackHoleOffsetY: number;
+  whiteBlackHole: boolean;
 
   // Particles
   textureSize: number;
@@ -77,6 +78,7 @@ export interface VisualizationControlsState {
   vignetteEnabled: boolean;
   vignetteOffset: number;
   vignetteDarkness: number;
+  invertColors: boolean;
   hfcVelocityBoost: number;
   spawnBurstMultiplier: number;
 }
@@ -107,6 +109,7 @@ export const pathToKey: Record<string, keyof VisualizationControlsState> = {
   "Black Hole.coronaIntensity": "coronaIntensity",
   "Black Hole.coronaPower": "coronaPower",
   "Black Hole.blackHoleOffsetY": "blackHoleOffsetY",
+  "Black Hole.whiteBlackHole": "whiteBlackHole",
   "Particles.textureSize": "textureSize",
   "Particles.pointSize": "pointSize",
   "Particles.brightness": "brightness",
@@ -156,6 +159,7 @@ export const pathToKey: Record<string, keyof VisualizationControlsState> = {
   "Post-FX.vignetteEnabled": "vignetteEnabled",
   "Post-FX.vignetteOffset": "vignetteOffset",
   "Post-FX.vignetteDarkness": "vignetteDarkness",
+  "Post-FX.invertColors": "invertColors",
   "Post-FX.hfcVelocityBoost": "hfcVelocityBoost",
   "Post-FX.spawnBurstMultiplier": "spawnBurstMultiplier",
 };
@@ -216,6 +220,7 @@ const DEFAULT_STATE: VisualizationControlsState = {
 
   // Non-numeric defaults (not in PARAMS)
   coronaEnabled: false,
+  whiteBlackHole: false,
   colorPalette: "grayscale" as ColorPaletteId,
   motionBlurScale: 0.5,
   motionBlurLength: 8.0,
@@ -226,6 +231,7 @@ const DEFAULT_STATE: VisualizationControlsState = {
   bloomEnabled: true,
   chromaticEnabled: true,
   vignetteEnabled: true,
+  invertColors: false,
 };
 
 export const useVisualizationControls = create<VisualizationControlsStore>((set, get) => ({
