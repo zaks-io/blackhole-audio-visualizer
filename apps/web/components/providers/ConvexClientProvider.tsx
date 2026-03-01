@@ -1,13 +1,11 @@
 "use client";
 
-import { ReactNode, useSyncExternalStore } from "react";
+import { ReactNode, useMemo, useSyncExternalStore } from "react";
 import { ConvexReactClient, ConvexProviderWithAuth } from "convex/react";
 import { Auth0Provider } from "@auth0/auth0-react";
 import { ConvexProviderWithAuth0 } from "convex/react-auth0";
 import { useUserInitialization } from "@/hooks/useUserInitialization";
 import { ElectronAuthProvider, useAuthFromElectron } from "@/lib/auth/ElectronAuthProvider";
-
-const convex = new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
 // Detect Electron using useSyncExternalStore to avoid hydration mismatch
 function useIsElectronApp(): boolean | null {
@@ -29,6 +27,7 @@ function UserInitializer({ children }: { children: ReactNode }) {
 
 // Web provider using Auth0
 function WebAuthProvider({ children }: { children: ReactNode }) {
+  const convex = useMemo(() => new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL!), []);
   return (
     <Auth0Provider
       domain={process.env.NEXT_PUBLIC_AUTH0_DOMAIN!}
@@ -49,6 +48,7 @@ function WebAuthProvider({ children }: { children: ReactNode }) {
 
 // Electron provider using custom PKCE auth
 function ElectronConvexProvider({ children }: { children: ReactNode }) {
+  const convex = useMemo(() => new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL!), []);
   return (
     <ElectronAuthProvider>
       <ConvexProviderWithAuth client={convex} useAuth={useAuthFromElectron}>
