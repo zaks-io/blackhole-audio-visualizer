@@ -4,6 +4,8 @@ import { api } from "@blackhole/backend/convex/_generated/api";
 import { Id } from "@blackhole/backend/convex/_generated/dataModel";
 import { WatchPageClient } from "./WatchPageClient";
 
+export const dynamic = "force-dynamic";
+
 interface WatchPageProps {
   params: Promise<{ id: string }>;
 }

@@ -3,6 +3,8 @@ import { api } from "@blackhole/backend/convex/_generated/api";
 import { SceneModeUIClient } from "./SceneModeUIClient";
 import { Id } from "@blackhole/backend/convex/_generated/dataModel";
 
+export const dynamic = "force-dynamic";
+
 interface PageProps {
   params: Promise<{ id: string }>;
 }

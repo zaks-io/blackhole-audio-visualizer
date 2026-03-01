@@ -2,6 +2,8 @@ import { preloadQuery } from "convex/nextjs";
 import { api } from "@blackhole/backend/convex/_generated/api";
 import { LiveModeUIClient } from "./LiveModeUIClient";
 
+export const dynamic = "force-dynamic";
+
 export default async function LiveModeUI() {
   const [preloadedPresets, preloadedPlaylists] = await Promise.all([
     preloadQuery(api.model.presets.public.getPublicPresets),
