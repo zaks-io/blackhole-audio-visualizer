@@ -1,7 +1,5 @@
-import { ConvexHttpClient } from "convex/browser";
+import { fetchQuery, fetchMutation } from "convex/nextjs";
 import { api } from "@blackhole/backend/convex/_generated/api";
-
-const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
 export async function GET(
   request: Request,
@@ -15,8 +13,8 @@ export async function GET(
 
   const release =
     version === "latest"
-      ? await convex.query(api.model.releases.public.getLatestByPlatform, { platform })
-      : await convex.query(api.model.releases.public.getReleaseByPlatformVersion, {
+      ? await fetchQuery(api.model.releases.public.getLatestByPlatform, { platform })
+      : await fetchQuery(api.model.releases.public.getReleaseByPlatformVersion, {
           platform,
           version,
         });
@@ -26,7 +24,7 @@ export async function GET(
   }
 
   // Increment download count
-  await convex.mutation(api.model.releases.public.incrementDownloadCount, {
+  await fetchMutation(api.model.releases.public.incrementDownloadCount, {
     releaseId: release._id,
   });
 
