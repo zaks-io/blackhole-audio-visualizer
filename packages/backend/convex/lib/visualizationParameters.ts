@@ -168,7 +168,7 @@ export const PARAMS: Record<string, ParameterDef> = {
   "Black Hole.beatPulse": {
     min: 0,
     max: 5,
-    default: 3,
+    default: 1,
     step: 0.1,
     description: "beat-reactive pulse intensity",
     group: "Black Hole",
@@ -277,6 +277,16 @@ export const PARAMS: Record<string, ParameterDef> = {
     description: "motion blur fade rate",
     group: "Particles",
     label: "Motion Blur Fade",
+    system: true,
+  },
+  "Particles.particleLensingStrength": {
+    min: 0,
+    max: 5,
+    default: 0,
+    step: 0.1,
+    description: "gravitational lensing distortion on particles",
+    group: "Particles",
+    label: "Particle Lensing",
     system: true,
   },
 
@@ -548,7 +558,7 @@ export const PARAMS: Record<string, ParameterDef> = {
   "Audio.beatRepulsion": {
     min: 0,
     max: 100,
-    default: 5,
+    default: 1,
     step: 1,
     description: "beat push force from center",
     group: "Audio",

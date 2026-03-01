@@ -27,6 +27,7 @@ export const runtimeState = {
   maxDistance: PARAM_DEFAULTS.maxDistance,
   motionBlurTaper: PARAM_DEFAULTS.motionBlurTaper,
   motionBlurFade: PARAM_DEFAULTS.motionBlurFade,
+  particleLensingStrength: PARAM_DEFAULTS.particleLensingStrength,
   colorPaletteOffset: 0, // Palette offset for GPU - updated via callGPUSetter
 
   // Physics
@@ -95,6 +96,7 @@ const runtimePathToKey: Record<string, RuntimeStateKey> = {
   "Particles.maxDistance": "maxDistance",
   "Particles.motionBlurTaper": "motionBlurTaper",
   "Particles.motionBlurFade": "motionBlurFade",
+  "Particles.particleLensingStrength": "particleLensingStrength",
   "Particles.colorPaletteOffset": "colorPaletteOffset",
 
   // Physics
@@ -166,6 +168,7 @@ const storeKeyToRuntimeKey: Record<string, RuntimeStateKey> = {
   maxDistance: "maxDistance",
   motionBlurTaper: "motionBlurTaper",
   motionBlurFade: "motionBlurFade",
+  particleLensingStrength: "particleLensingStrength",
   // Note: colorPaletteOffset is NOT synced from store - it's set directly via callGPUSetter
 
   // Physics

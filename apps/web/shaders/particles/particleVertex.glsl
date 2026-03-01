@@ -14,6 +14,7 @@ uniform vec2 uViewport;
 uniform vec3 uBlackHolePos[MAX_BLACK_HOLES];
 uniform float uBlackHoleRadius[MAX_BLACK_HOLES];
 uniform int uBlackHoleCount;
+uniform float uParticleLensingStrength;
 
 attribute vec2 reference;
 attribute float crossIndex;
@@ -62,6 +63,52 @@ vec3 evalTrailCurve(vec3 p0, vec3 p1, vec3 p2, vec3 p3, float t01) {
     }
 
     return catmullRom(a, b, c, d, u);
+}
+
+// Gravitational lensing: displace apparent particle position away from the
+// BH center (perpendicular to camera ray), simulating light bending around it.
+vec3 applyGravitationalLensing(vec3 worldPos) {
+    if (uParticleLensingStrength <= 0.0 || uBlackHoleCount <= 0) return worldPos;
+
+    vec3 displaced = worldPos;
+    vec3 rayDir = normalize(cameraPosition - worldPos);
+
+    for (int i = 0; i < MAX_BLACK_HOLES; i++) {
+        if (i >= uBlackHoleCount) break;
+
+        vec3 bhPos = uBlackHolePos[i];
+        float bhRadius = uBlackHoleRadius[i];
+        if (bhRadius <= 0.0) continue;
+
+        vec3 toBH = bhPos - worldPos;
+        float distToBH = length(toBH);
+        float projLen = dot(toBH, rayDir);
+        vec3 closestApproach = toBH - rayDir * projLen;
+        float impactParam = length(closestApproach);
+
+        // Photon sphere at 1.5 Rs — light inside this gets captured, not deflected
+        float photonSphere = bhRadius * 1.5;
+
+        // Smooth clamping at photon sphere — avoids singularity, physically motivated
+        // sqrt(b² + r_ph²) transitions smoothly from ~r_ph when b≈0 to ~b when b>>r_ph
+        float safeB = sqrt(impactParam * impactParam + photonSphere * photonSphere);
+
+        // Deflection: Rs²/b, visible at simulation scale
+        float deflection = uParticleLensingStrength * bhRadius * bhRadius / safeB;
+
+        // Cap at critical impact parameter (~2.6 Rs) — max deflection for grazing photons
+        deflection = min(deflection, bhRadius * 2.6);
+
+        // Gentle falloff — effect visible out to ~15× event horizon
+        float x = distToBH / (bhRadius * 15.0);
+        float falloff = 1.0 / (1.0 + x * x);
+
+        if (impactParam > 0.001) {
+            // Displace AWAY from BH center (outward) — light bends around the BH
+            displaced -= (closestApproach / impactParam) * deflection * falloff;
+        }
+    }
+    return displaced;
 }
 
 void main() {
@@ -133,16 +180,19 @@ void main() {
     // We explicitly build a 3-segment polycurve to span tail->head.
     vec3 curvePos = evalTrailCurve(p0, p1, p2, p3, t);
 
-    // Redshift fade: particles approaching any event horizon fade to transparent
+    // Schwarzschild gravitational redshift: sqrt(1 - Rs/r)
+    // 0 at event horizon, rises steeply, ~0.82 at ISCO (3Rs)
     float minFade = 1.0;
     for (int i = 0; i < MAX_BLACK_HOLES; i++) {
         if (i >= uBlackHoleCount) break;
         float dist = length(curvePos - uBlackHolePos[i]);
-        // Fade from fully transparent at horizon to fully visible at 3× horizon
-        float fade = smoothstep(uBlackHoleRadius[i], uBlackHoleRadius[i] * 3.0, dist);
+        float fade = sqrt(max(0.0, 1.0 - uBlackHoleRadius[i] / max(dist, 0.001)));
         minFade = min(minFade, fade);
     }
     vRedshiftFade = minFade;
+
+    // Gravitational lensing displacement (visual only, camera-dependent)
+    curvePos = applyGravitationalLensing(curvePos);
 
     // Transform curve position to view space
     vec4 viewPos = modelViewMatrix * vec4(curvePos, 1.0);

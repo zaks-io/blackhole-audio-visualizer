@@ -175,6 +175,7 @@ export function ParticleSystem({
     brightness: number;
     alpha: number;
     maxDistance: number;
+    particleLensingStrength: number;
   } | null>(null);
 
   const quadGeometry = useMemo(() => {
@@ -317,6 +318,7 @@ export function ParticleSystem({
       },
       uBlackHoleRadius: { value: [5, 5, 5, 5] },
       uBlackHoleCount: { value: 1 },
+      uParticleLensingStrength: { value: initialControls.particleLensingStrength ?? 0.5 },
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [colorLUT, resolutionScale]
@@ -373,6 +375,7 @@ export function ParticleSystem({
           brightness: state.brightness,
           alpha: state.alpha,
           maxDistance: state.maxDistance,
+          particleLensingStrength: state.particleLensingStrength,
         };
         materialRef.current.uniforms.uBaseSize.value = state.pointSize;
         materialRef.current.uniforms.uMotionBlurTaper.value = state.motionBlurTaper;
@@ -380,6 +383,7 @@ export function ParticleSystem({
         materialRef.current.uniforms.uBrightness.value = state.brightness;
         materialRef.current.uniforms.uAlpha.value = state.alpha;
         materialRef.current.uniforms.uMaxDistance.value = state.maxDistance;
+        materialRef.current.uniforms.uParticleLensingStrength.value = state.particleLensingStrength;
       } else {
         const prevR = prevRenderUniformsRef.current;
         if (prevR.pointSize !== state.pointSize) {
@@ -405,6 +409,11 @@ export function ParticleSystem({
         if (prevR.maxDistance !== state.maxDistance) {
           prevR.maxDistance = state.maxDistance;
           materialRef.current.uniforms.uMaxDistance.value = state.maxDistance;
+        }
+        if (prevR.particleLensingStrength !== state.particleLensingStrength) {
+          prevR.particleLensingStrength = state.particleLensingStrength;
+          materialRef.current.uniforms.uParticleLensingStrength.value =
+            state.particleLensingStrength;
         }
       }
 

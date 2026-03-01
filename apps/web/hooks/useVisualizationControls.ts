@@ -30,6 +30,7 @@ export interface VisualizationControlsState {
   motionBlurLength: number;
   motionBlurTaper: number;
   motionBlurFade: number;
+  particleLensingStrength: number;
 
   // Physics
   gravity: number;
@@ -120,6 +121,7 @@ export const pathToKey: Record<string, keyof VisualizationControlsState> = {
   "Particles.motionBlurLength": "motionBlurLength",
   "Particles.motionBlurTaper": "motionBlurTaper",
   "Particles.motionBlurFade": "motionBlurFade",
+  "Particles.particleLensingStrength": "particleLensingStrength",
   "Physics.gravity": "gravity",
   "Physics.timeScale": "timeScale",
   "Physics.softening": "softening",
@@ -205,6 +207,7 @@ const DEFAULT_STATE: VisualizationControlsState = {
   emitterLineWidth: PARAM_DEFAULTS.emitterLineWidth,
   starDensity: PARAM_DEFAULTS.starDensity,
   starBrightness: PARAM_DEFAULTS.starBrightness,
+  particleLensingStrength: PARAM_DEFAULTS.particleLensingStrength,
   starLensingStrength: PARAM_DEFAULTS.starLensingStrength,
   amplitude: PARAM_DEFAULTS.amplitude,
   onsetDecay: PARAM_DEFAULTS.onsetDecay,

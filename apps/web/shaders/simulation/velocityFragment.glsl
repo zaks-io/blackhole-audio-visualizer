@@ -387,8 +387,8 @@ void main() {
                     // Blend rate: how quickly to converge (scales with M/r²)
                     float blendRate = uFrameDragging * uBlackHoleMass[i] / (dist_soft * dist_soft) * 0.001;
 
-                    // Ergosphere (r < 2×r_horizon): boost blend rate for co-rotation
-                    float ergosphere = 2.0 * r_horizon;
+                    // Ergosphere boost zone: extends to photon sphere (1.5 Rs)
+                    float ergosphere = r_horizon * 1.5;
                     if (dist < ergosphere) {
                         float ergoDepth = 1.0 - (dist - r_horizon) / (ergosphere - r_horizon);
                         ergoDepth = clamp(ergoDepth, 0.0, 1.0);
