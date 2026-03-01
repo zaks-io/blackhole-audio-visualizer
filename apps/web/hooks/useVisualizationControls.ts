@@ -17,7 +17,7 @@ export interface VisualizationControlsState {
   coronaIntensity: number;
   coronaPower: number;
   blackHoleOffsetY: number;
-  whiteBlackHole: boolean;
+  whiteBlackHole: number;
 
   // Particles
   textureSize: number;
@@ -179,6 +179,7 @@ const DEFAULT_STATE: VisualizationControlsState = {
   coronaIntensity: PARAM_DEFAULTS.coronaIntensity,
   coronaPower: PARAM_DEFAULTS.coronaPower,
   blackHoleOffsetY: PARAM_DEFAULTS.blackHoleOffsetY,
+  whiteBlackHole: PARAM_DEFAULTS.whiteBlackHole,
   textureSize: PARAM_DEFAULTS.textureSize,
   pointSize: PARAM_DEFAULTS.pointSize,
   brightness: PARAM_DEFAULTS.brightness,
@@ -223,7 +224,6 @@ const DEFAULT_STATE: VisualizationControlsState = {
 
   // Non-numeric defaults (not in PARAMS)
   coronaEnabled: false,
-  whiteBlackHole: false,
   colorPalette: "grayscale" as ColorPaletteId,
   motionBlurScale: 0.5,
   motionBlurLength: 8.0,

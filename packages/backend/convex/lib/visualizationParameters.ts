@@ -205,6 +205,16 @@ export const PARAMS: Record<string, ParameterDef> = {
     label: "Offset Y",
     system: false,
   },
+  "Black Hole.whiteBlackHole": {
+    min: 0,
+    max: 1,
+    default: 0,
+    step: 1,
+    description: "white (1) or black (0) hole color",
+    group: "Black Hole",
+    label: "White Black Hole",
+    system: false,
+  },
 
   // ===========================================================================
   // PARTICLES

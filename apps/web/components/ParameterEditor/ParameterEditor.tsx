@@ -38,7 +38,6 @@ const SPECIAL_CONTROLS: Record<string, React.ReactNode> = {
   "Black Hole": (
     <>
       <SwitchControl controlKey="coronaEnabled" label="Corona Glow" />
-      <SwitchControl controlKey="whiteBlackHole" label="White Black Hole" />
     </>
   ),
   Particles: (

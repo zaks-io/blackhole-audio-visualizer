@@ -19,6 +19,7 @@ export const runtimeState = {
   blackHoleMassMin: PARAM_DEFAULTS.blackHoleMassMin,
   blackHoleMassMax: PARAM_DEFAULTS.blackHoleMassMax,
   blackHoleOffsetY: PARAM_DEFAULTS.blackHoleOffsetY,
+  whiteBlackHole: PARAM_DEFAULTS.whiteBlackHole,
 
   // Particles / Render
   pointSize: PARAM_DEFAULTS.pointSize,
@@ -88,6 +89,7 @@ const runtimePathToKey: Record<string, RuntimeStateKey> = {
   "Black Hole.blackHoleMassMin": "blackHoleMassMin",
   "Black Hole.blackHoleMassMax": "blackHoleMassMax",
   "Black Hole.blackHoleOffsetY": "blackHoleOffsetY",
+  "Black Hole.whiteBlackHole": "whiteBlackHole",
 
   // Particles
   "Particles.pointSize": "pointSize",
@@ -160,6 +162,7 @@ const storeKeyToRuntimeKey: Record<string, RuntimeStateKey> = {
   blackHoleMassMin: "blackHoleMassMin",
   blackHoleMassMax: "blackHoleMassMax",
   blackHoleOffsetY: "blackHoleOffsetY",
+  whiteBlackHole: "whiteBlackHole",
 
   // Particles
   pointSize: "pointSize",

@@ -5,6 +5,7 @@ import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { useVisualizationControls } from "@/hooks/useVisualizationControls";
+import { runtimeState } from "@/lib/runtimeStateRegistry";
 
 export interface BlackHoleData {
   positions: THREE.Vector3[];
@@ -67,8 +68,7 @@ export function BlackHole({ blackHoleDataRef, index }: BlackHoleProps) {
     if (!meshRef.current || !blackHoleDataRef.current || !materialRef.current) return;
 
     const bhData = blackHoleDataRef.current;
-    const { coronaEnabled, coronaIntensity, coronaPower, whiteBlackHole } =
-      useVisualizationControls.getState();
+    const { coronaEnabled, coronaIntensity, coronaPower } = useVisualizationControls.getState();
 
     if (index >= bhData.count) {
       meshRef.current.visible = false;
@@ -79,7 +79,7 @@ export function BlackHole({ blackHoleDataRef, index }: BlackHoleProps) {
     // When corona is disabled, set intensity to 0 (renders as solid black sphere)
     materialRef.current.uniforms.uGlowIntensity.value = coronaEnabled ? coronaIntensity : 0;
     materialRef.current.uniforms.uFresnelPower.value = coronaPower;
-    materialRef.current.uniforms.uBaseColor.value.setScalar(whiteBlackHole ? 1 : 0);
+    materialRef.current.uniforms.uBaseColor.value.setScalar(runtimeState.whiteBlackHole);
 
     meshRef.current.visible = true;
     meshRef.current.position.copy(bhData.positions[index]);
