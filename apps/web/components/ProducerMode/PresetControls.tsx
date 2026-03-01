@@ -87,6 +87,7 @@ export function PresetControls() {
   const resetAllTweens = useProducerMode((s) => s.resetAllTweens);
 
   const [activePresetId, setActivePresetId] = useState<string | null>(null);
+  const setVotingPresetId = usePresetSelector((s) => s.setActivePresetId);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
@@ -154,7 +155,10 @@ export function PresetControls() {
         parameters,
         false
       );
-      setActivePresetId(result.presetId as string);
+      const id = result.presetId as string;
+      setActivePresetId(id);
+      setVotingPresetId(id);
+      triggerStop();
     } else {
       const newId = localPresets.savePreset(presetName.trim());
       setActivePresetId(newId);
@@ -202,6 +206,7 @@ export function PresetControls() {
       localPresets.deletePreset(activePresetId);
     }
     setActivePresetId(null);
+    setVotingPresetId(null);
   };
 
   const handleTogglePublic = async () => {
@@ -237,15 +242,21 @@ export function PresetControls() {
       try {
         const imported = JSON.parse(importJson);
         const presets = Array.isArray(imported) ? imported : [imported];
+        let lastCreatedId: string | null = null;
         for (const preset of presets) {
           if (preset.name && preset.colorPalette && Array.isArray(preset.parameters)) {
-            await convexPresets.createPreset(
+            const result = await convexPresets.createPreset(
               preset.name,
               preset.colorPalette,
               preset.parameters,
               false
             );
+            lastCreatedId = result.presetId as string;
           }
+        }
+        if (lastCreatedId) {
+          setActivePresetId(lastCreatedId);
+          setVotingPresetId(lastCreatedId);
         }
         setImportDialogOpen(false);
         setImportJson("");
@@ -307,6 +318,7 @@ export function PresetControls() {
     if (id) {
       const preset = unifiedPresets.find((p) => p.id === id);
       if (preset) {
+        setVotingPresetId(preset.source === "convex" ? id : null);
         if (preset.source === "local") {
           localPresets.setActivePreset(id);
         }
@@ -319,6 +331,7 @@ export function PresetControls() {
         });
       }
     } else {
+      setVotingPresetId(null);
       localPresets.setActivePreset(null);
     }
   };
