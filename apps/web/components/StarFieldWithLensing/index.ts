@@ -1,1 +1,0 @@
-export { StarFieldWithLensing } from "./StarFieldWithLensing";

@@ -195,7 +195,6 @@ export function ParticleSystem({
     maxDistance: number;
     densityScale: number;
     centerBiasStrength: number;
-    particleLensingStrength: number;
     iscoRadius: number;
   } | null>(null);
 
@@ -428,7 +427,6 @@ export function ParticleSystem({
       },
       uBlackHoleRadius: { value: [5, 5, 5, 5] },
       uBlackHoleCount: { value: 1 },
-      uParticleLensingStrength: { value: initialControls.particleLensingStrength ?? 0.5 },
       uISCORadius: { value: initialControls.eventHorizonRadius * initialControls.iscoRatio },
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -548,7 +546,6 @@ export function ParticleSystem({
           maxDistance: state.maxDistance,
           densityScale,
           centerBiasStrength,
-          particleLensingStrength: state.particleLensingStrength,
           iscoRadius,
         };
         materialRef.current.uniforms.uBaseSize.value = state.pointSize;
@@ -559,7 +556,6 @@ export function ParticleSystem({
         materialRef.current.uniforms.uMaxDistance.value = state.maxDistance;
         materialRef.current.uniforms.uDensityScale.value = densityScale;
         materialRef.current.uniforms.uCenterBiasStrength.value = centerBiasStrength;
-        materialRef.current.uniforms.uParticleLensingStrength.value = state.particleLensingStrength;
         materialRef.current.uniforms.uISCORadius.value = iscoRadius;
       } else {
         const prevR = prevRenderUniformsRef.current;
@@ -594,11 +590,6 @@ export function ParticleSystem({
         if (prevR.centerBiasStrength !== centerBiasStrength) {
           prevR.centerBiasStrength = centerBiasStrength;
           materialRef.current.uniforms.uCenterBiasStrength.value = centerBiasStrength;
-        }
-        if (prevR.particleLensingStrength !== state.particleLensingStrength) {
-          prevR.particleLensingStrength = state.particleLensingStrength;
-          materialRef.current.uniforms.uParticleLensingStrength.value =
-            state.particleLensingStrength;
         }
         if (prevR.iscoRadius !== iscoRadius) {
           prevR.iscoRadius = iscoRadius;

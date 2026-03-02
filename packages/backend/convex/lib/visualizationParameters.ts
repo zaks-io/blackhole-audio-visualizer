@@ -289,16 +289,6 @@ export const PARAMS: Record<string, ParameterDef> = {
     label: "Motion Blur Fade",
     system: true,
   },
-  "Particles.particleLensingStrength": {
-    min: 0,
-    max: 5,
-    default: 0,
-    step: 0.1,
-    description: "gravitational lensing distortion on particles",
-    group: "Particles",
-    label: "Particle Lensing",
-    system: true,
-  },
   "Particles.denseGuardEnterFps": {
     min: 20,
     max: 60,
@@ -591,17 +581,6 @@ export const PARAMS: Record<string, ParameterDef> = {
     label: "Star Brightness",
     system: true,
   },
-  "Skybox.starLensingStrength": {
-    min: 0,
-    max: 1,
-    default: 0.5,
-    step: 0.05,
-    description: "gravitational lensing strength on stars",
-    group: "Skybox",
-    label: "Gravitational Lensing",
-    system: true,
-  },
-
   // ===========================================================================
   // AUDIO
   // ===========================================================================
