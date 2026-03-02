@@ -2,15 +2,13 @@
 
 import { Suspense, useRef, useEffect, useMemo, useCallback } from "react";
 import { Environment } from "@react-three/drei";
-import { useFrame, useThree } from "@react-three/fiber";
+import { useFrame } from "@react-three/fiber";
 import { useShallow } from "zustand/shallow";
 import * as THREE from "three";
 import { ParticleSystem } from "./ParticleSystem";
 import { BlackHole } from "./BlackHole";
 import { CameraSystem } from "@/components/CameraSystem";
 import { StarField } from "@/components/StarField";
-import { StarFieldWithLensing } from "@/components/StarFieldWithLensing";
-import { updateBlackHoleScreenData } from "@/components/GravitationalLensing";
 import { useVisualizationControls } from "@/hooks/useVisualizationControls";
 import { usePresetSelector } from "@/components/playlist/usePresetSelector";
 import { runtimeState } from "@/lib/runtimeStateRegistry";
@@ -172,7 +170,6 @@ export function BlackHoleSimulation({
       skybox: s.skybox,
       starDensity: s.starDensity,
       starBrightness: s.starBrightness,
-      starLensingEnabled: s.starLensingEnabled,
     }))
   );
 
@@ -185,15 +182,13 @@ export function BlackHoleSimulation({
   }, [onsetDecay, setOnsetDecay]);
 
   const beatIntensityRef = useRef(0);
-  const { camera } = useThree();
-
   // Black hole positions and masses for N-body system (for GPU compute)
   // Keep stable arrays/Vector3s and mutate in-place to avoid per-frame allocations / GC hiccups.
   const blackHoleDataRef = useRef<{
     positions: THREE.Vector3[];
     masses: number[];
     radii: number[];
-    baseRadii: number[]; // Un-pulsed radii for lensing (no audio reactivity)
+    baseRadii: number[]; // Un-pulsed radii (no audio reactivity)
     count: number;
   } | null>(null);
 
@@ -447,22 +442,6 @@ export function BlackHoleSimulation({
     }
   });
 
-  // Update screen-space BH lensing data after camera controllers have run.
-  // Priority 1 keeps this aligned with the frame's final camera transform.
-  useFrame(() => {
-    const bhData = blackHoleDataRef.current;
-    if (!bhData) return;
-
-    updateBlackHoleScreenData(
-      bhData.positions,
-      bhData.radii,
-      bhData.masses,
-      runtimeState.gravity * runtimeState.blackHoleMassMax,
-      bhData.count,
-      camera
-    );
-  }, 1);
-
   // Memoized callbacks to avoid per-render allocations
   const getAudioData = useCallback(() => audioDataRef.current, []);
   const getBlackHoleData = useCallback(() => blackHoleDataRef.current!, []);
@@ -475,15 +454,7 @@ export function BlackHoleSimulation({
     <>
       <color attach="background" args={["#000000"]} />
       {isProceduralStars ? (
-        perfFlags?.noStars ? null : skyboxControls.starLensingEnabled ? (
-          <StarFieldWithLensing
-            key={skyboxControls.starDensity}
-            beatIntensityRef={beatIntensityRef}
-            starCount={skyboxControls.starDensity}
-            brightnessBoost={skyboxControls.starBrightness}
-            resolutionScale={resolutionScale}
-          />
-        ) : (
+        perfFlags?.noStars ? null : (
           <StarField
             key={skyboxControls.starDensity}
             beatIntensityRef={beatIntensityRef}

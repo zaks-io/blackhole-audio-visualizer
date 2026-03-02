@@ -21,7 +21,6 @@ uniform float uMotionBlurTaper;
 uniform vec3 uBlackHolePos[MAX_BLACK_HOLES];
 uniform float uBlackHoleRadius[MAX_BLACK_HOLES];
 uniform int uBlackHoleCount;
-uniform float uParticleLensingStrength;
 uniform float uISCORadius;
 
 attribute vec2 reference;
@@ -71,81 +70,6 @@ vec3 evalTrailCurve(vec3 p0, vec3 p1, vec3 p2, vec3 p3, float t01) {
     }
 
     return catmullRom(a, b, c, d, u);
-}
-
-// Gravitational lensing in screen space: cheap, stable, and aligned to the
-// rendered black-hole silhouette (projected center + projected radius).
-vec2 computeGravitationalLensingNDCOffset(vec4 centerViewPos, vec4 centerClipPos) {
-    if (uParticleLensingStrength <= 0.0 || uBlackHoleCount <= 0) return vec2(0.0);
-
-    if (centerClipPos.w <= 0.00001) return vec2(0.0);
-    float centerW = centerClipPos.w;
-    vec2 centerNdc = centerClipPos.xy / centerW;
-    float particleDepth = max(0.001, -centerViewPos.z);
-
-    float aspect = max(uViewport.x / max(uViewport.y, 1.0), 0.1);
-    float strength = max(uParticleLensingStrength, 0.0);
-
-    vec2 totalOffset = vec2(0.0);
-    float maxRadiusNdc = 0.0;
-
-    for (int i = 0; i < MAX_BLACK_HOLES; i++) {
-        if (i >= uBlackHoleCount) break;
-
-        float bhRadius = uBlackHoleRadius[i];
-        if (bhRadius <= 0.0) continue;
-
-        vec4 bhView = modelViewMatrix * vec4(uBlackHolePos[i], 1.0);
-        float bhDepth = -bhView.z;
-        if (bhDepth <= 0.001) continue;
-
-        vec4 bhClip = projectionMatrix * bhView;
-        if (bhClip.w <= 0.00001) continue;
-        float bhW = bhClip.w;
-        vec2 bhNdc = bhClip.xy / bhW;
-
-        // Approx projected radius in NDC (y-space); robust for a spherical silhouette.
-        float bhRadiusNdc = abs(projectionMatrix[1][1] * bhRadius / bhDepth);
-        bhRadiusNdc = clamp(bhRadiusNdc, 0.0003, 0.9);
-        maxRadiusNdc = max(maxRadiusNdc, bhRadiusNdc);
-
-        vec2 delta = centerNdc - bhNdc;
-        delta.x *= aspect;
-        float dist = length(delta);
-        if (dist <= 0.00001) continue;
-
-        // Monotonic profile: strongest near silhouette and smoothly decays outward,
-        // avoiding the "bubble/donut" look of ring-shaped warp curves.
-        float impactNorm = max(dist / max(bhRadiusNdc, 0.0001), 0.0001);
-        float outerBand = max(impactNorm - 1.0, 0.0);
-        float outerFalloff = 1.0 / (1.0 + outerBand * outerBand * 2.8);
-        float invImpact = 1.0 / max(impactNorm, 1.0);
-        float insideFade = smoothstep(0.12, 0.85, impactNorm);
-
-        // Favor particles behind the BH for physically coherent lensing.
-        float depthDelta = particleDepth - bhDepth;
-        float depthWeight = smoothstep(-bhRadius * 0.6, bhRadius * 2.4, depthDelta);
-
-        float warp = strength * bhRadiusNdc * 0.72 * invImpact * outerFalloff * insideFade * depthWeight;
-
-        // Per-hole cap to keep silhouettes coherent and avoid edge explosions.
-        float maxWarp = bhRadiusNdc * (0.62 + 0.1 * min(strength, 4.0));
-        warp = min(warp, maxWarp);
-
-        vec2 dir = delta / dist;
-        totalOffset += vec2(dir.x / aspect, dir.y) * warp;
-    }
-
-    // Global cap across all BH contributions.
-    float offsetLen = length(vec2(totalOffset.x * aspect, totalOffset.y));
-    if (offsetLen > 0.0 && maxRadiusNdc > 0.0) {
-        float maxTotal = maxRadiusNdc * (0.95 + 0.14 * min(strength, 4.0));
-        if (offsetLen > maxTotal) {
-            totalOffset *= maxTotal / offsetLen;
-        }
-    }
-
-    return totalOffset;
 }
 
 // Arithmetic hash — decorrelates regular grid inputs (reference UVs)
@@ -316,8 +240,6 @@ void main() {
 
     // Transform curve position to view space
     vec4 viewPos = modelViewMatrix * vec4(curvePos, 1.0);
-    vec4 centerClipPos = projectionMatrix * viewPos;
-    vec2 lensOffsetNdc = computeGravitationalLensingNDCOffset(viewPos, centerClipPos);
     float viewDist = max(0.001, -viewPos.z);
     float nearProxy = clamp((90.0 - viewDist) / 90.0, 0.0, 1.0);
     float closeDenseProxy = nearProxy * softDensityProxy * guard;
@@ -391,13 +313,5 @@ void main() {
     // Offset vertex position in view space along the selected ribbon direction
     vec3 offsetViewPos = viewPos.xyz + offsetDir * position.x * halfW;
 
-    // Project to clip space and apply lensing as an NDC offset so the whole
-    // ribbon segment warps coherently around the BH silhouette.
-    vec4 clipPos = projectionMatrix * vec4(offsetViewPos, 1.0);
-    if (clipPos.w > 0.00001) {
-        float clipW = clipPos.w;
-        vec2 ndc = clipPos.xy / clipW + lensOffsetNdc;
-        clipPos.xy = ndc * clipPos.w;
-    }
-    gl_Position = clipPos;
+    gl_Position = projectionMatrix * vec4(offsetViewPos, 1.0);
 }
