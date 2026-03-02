@@ -116,6 +116,13 @@ vec3 applyGravitationalLensing(vec3 worldPos) {
     return displaced;
 }
 
+// Arithmetic hash — decorrelates regular grid inputs (reference UVs)
+float hash21(vec2 p) {
+    vec3 p3 = fract(vec3(p.xyx) * vec3(443.8975, 397.2973, 491.1871));
+    p3 += dot(p3, p3.yzx + 19.19);
+    return fract((p3.x + p3.y) * p3.z);
+}
+
 void main() {
     vec4 posData = texture2D(texturePosition, reference);
     vec4 prevPosData = texture2D(texturePrevPosition, reference);
@@ -179,6 +186,18 @@ void main() {
 
     // Kill second ribbon in dense zones — invisible when many particles overlap
     if (crossIndex > 0.5 && densityProxy > 0.15) {
+        gl_Position = vec4(0.0, 0.0, -1000.0, 1.0);
+        vColor = vec3(0.0);
+        vDensityAlphaScale = 0.0;
+        return;
+    }
+
+    // Stochastic particle culling: deterministically cull entire particles in dense
+    // zones. Hash of reference is constant across all 64 vertices of an instance,
+    // so no partial artifacts or temporal flickering.
+    float particleHash = hash21(reference);
+    float cullProb = smoothstep(0.3, 1.0, densityProxy) * 0.7;
+    if (particleHash < cullProb) {
         gl_Position = vec4(0.0, 0.0, -1000.0, 1.0);
         vColor = vec3(0.0);
         vDensityAlphaScale = 0.0;

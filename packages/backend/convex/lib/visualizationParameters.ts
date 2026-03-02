@@ -222,7 +222,7 @@ export const PARAMS: Record<string, ParameterDef> = {
   "Particles.textureSize": {
     min: 128,
     max: 1024,
-    default: 384,
+    default: 256,
     step: 128,
     description: "number of particles",
     group: "Particles",
