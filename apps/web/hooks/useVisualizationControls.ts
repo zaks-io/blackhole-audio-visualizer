@@ -71,6 +71,7 @@ export interface VisualizationControlsState {
   onsetDecay: number;
   audioGain: number;
   beatRepulsion: number;
+  beatTimeScale: number;
   autoColorChange: boolean;
 
   // Post-Processing (dev controls)
@@ -159,6 +160,7 @@ export const pathToKey: Record<string, keyof VisualizationControlsState> = {
   "Audio.onsetDecay": "onsetDecay",
   "Audio.audioGain": "audioGain",
   "Audio.beatRepulsion": "beatRepulsion",
+  "Audio.beatTimeScale": "beatTimeScale",
   "Audio.autoColorChange": "autoColorChange",
   "Post-FX.bloomEnabled": "bloomEnabled",
   "Post-FX.bloomBaseIntensity": "bloomBaseIntensity",
@@ -226,6 +228,7 @@ const DEFAULT_STATE: VisualizationControlsState = {
   onsetDecay: PARAM_DEFAULTS.onsetDecay,
   audioGain: PARAM_DEFAULTS.audioGain,
   beatRepulsion: PARAM_DEFAULTS.beatRepulsion,
+  beatTimeScale: PARAM_DEFAULTS.beatTimeScale,
   bloomBaseIntensity: PARAM_DEFAULTS.bloomBaseIntensity,
   bloomAudioReactivity: PARAM_DEFAULTS.bloomAudioReactivity,
   chromaticAudioReactivity: PARAM_DEFAULTS.chromaticAudioReactivity,

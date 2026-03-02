@@ -25,6 +25,7 @@ interface ParticleAudioData {
   hfcBoost: number;
   spawnBurst: number;
   beatIntensity: number;
+  beatTimePulse: number;
 }
 
 interface BlackHoleData {
@@ -101,6 +102,7 @@ export function ParticleSystem({
     setLifetimeMax,
     setLifetimeGravityMultiplier,
     setBlackHoles,
+    setBeatTimeScaleMultiplier,
   } = useGPUCompute(textureSize, { enableHistory, onError: onGPUError });
 
   const { gl, size, camera } = useThree();
@@ -805,6 +807,9 @@ export function ParticleSystem({
         prev.spawnBurst = audioData.spawnBurst;
         setSpawnBurst(audioData.spawnBurst);
       }
+
+      // Beat-driven time scale modulation (sharp envelope, not smoothed beatIntensity)
+      setBeatTimeScaleMultiplier(1.0 + audioData.beatTimePulse * (state.beatTimeScale ?? 0));
     } else {
       // When audio is disabled, avoid spamming identical updates each frame.
       // Only refresh when emitterCount changes (it affects how many bands are read).
@@ -818,6 +823,7 @@ export function ParticleSystem({
         setPositionBeatIntensity(0);
         setHFCBoost(0);
         setSpawnBurst(1);
+        setBeatTimeScaleMultiplier(1.0);
         // Clear spectrum so spawn-time audioEnergy doesn't keep oscillating after pause.
         setSpectrum(undefined);
       }

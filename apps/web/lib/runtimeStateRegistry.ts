@@ -64,6 +64,7 @@ export const runtimeState = {
   amplitude: PARAM_DEFAULTS.amplitude,
   audioGain: PARAM_DEFAULTS.audioGain,
   beatRepulsion: PARAM_DEFAULTS.beatRepulsion,
+  beatTimeScale: PARAM_DEFAULTS.beatTimeScale,
 
   // Post-Processing
   bloomBaseIntensity: PARAM_DEFAULTS.bloomBaseIntensity,
@@ -141,6 +142,7 @@ const runtimePathToKey: Record<string, RuntimeStateKey> = {
   "Audio.amplitude": "amplitude",
   "Audio.audioGain": "audioGain",
   "Audio.beatRepulsion": "beatRepulsion",
+  "Audio.beatTimeScale": "beatTimeScale",
 
   // Post-FX
   "Post-FX.bloomBaseIntensity": "bloomBaseIntensity",
@@ -219,6 +221,7 @@ const storeKeyToRuntimeKey: Record<string, RuntimeStateKey> = {
   amplitude: "amplitude",
   audioGain: "audioGain",
   beatRepulsion: "beatRepulsion",
+  beatTimeScale: "beatTimeScale",
 
   // Post-FX
   bloomBaseIntensity: "bloomBaseIntensity",

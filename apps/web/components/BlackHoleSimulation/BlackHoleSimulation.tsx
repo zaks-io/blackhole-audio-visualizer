@@ -243,8 +243,10 @@ export function BlackHoleSimulation({
   // Spawn burst: instant attack, 100ms decay (for bass-triggered spawn bursts)
   const hfcBoostRef = useRef(0);
   const spawnBurstRef = useRef(1);
+  const beatTimePulseRef = useRef(0); // Sharp envelope for beat-driven time modulation
   const hfcDecayCoef = useRef(Math.exp(-1 / (0.15 * 60))); // 150ms decay at 60fps
   const spawnDecayCoef = useRef(Math.exp(-1 / (0.1 * 60))); // 100ms decay at 60fps
+  const beatTimeDecayCoef = useRef(Math.exp(-1 / (0.15 * 60))); // 150ms decay at 60fps
   const beatHistoryRef = useRef<number[]>([0, 0, 0, 0]); // 4-frame rolling average for beat smoothing
 
   // Cached audio data object - updated in-place to avoid per-frame allocations
@@ -257,6 +259,7 @@ export function BlackHoleSimulation({
     hfcBoost: number;
     spawnBurst: number;
     beatIntensity: number;
+    beatTimePulse: number;
   }>({
     bandEnergies: new Float32Array(36),
     bandOnsets: scaledOnsetsRef.current,
@@ -265,6 +268,7 @@ export function BlackHoleSimulation({
     hfcBoost: 0,
     spawnBurst: 1,
     beatIntensity: 0,
+    beatTimePulse: 0,
   });
 
   useFrame((state) => {
@@ -377,6 +381,7 @@ export function BlackHoleSimulation({
         beatIntensityRef.current *= 0.85;
         hfcBoostRef.current *= 0.85;
         spawnBurstRef.current = 1 + (spawnBurstRef.current - 1) * 0.85;
+        beatTimePulseRef.current *= 0.85;
         beatHistoryRef.current = beatHistoryRef.current.map((v) => v * 0.85);
       } else {
         // Use bass peak detection for beat intensity, or fall back to band onsets
@@ -406,9 +411,11 @@ export function BlackHoleSimulation({
         // Spawn burst - trigger on bass peaks, decay back to 1
         if (analysis.peaks.bass) {
           spawnBurstRef.current = spawnBurstMultiplier;
+          beatTimePulseRef.current = 1;
         } else {
           // Decay back toward 1.0
           spawnBurstRef.current = 1.0 + (spawnBurstRef.current - 1.0) * spawnDecayCoef.current;
+          beatTimePulseRef.current *= beatTimeDecayCoef.current;
         }
 
         if (autoColorChange && isLuckyPlaying) {
@@ -429,16 +436,19 @@ export function BlackHoleSimulation({
       audioData.hfcBoost = (hfcBoostRef.current * hfcVelocityBoost) / 0.3;
       audioData.spawnBurst = spawnBurstRef.current;
       audioData.beatIntensity = beatIntensityRef.current;
+      audioData.beatTimePulse = beatTimePulseRef.current;
     } else {
       beatIntensityRef.current = 0;
       hfcBoostRef.current = 0;
       spawnBurstRef.current = 1;
+      beatTimePulseRef.current = 0;
 
       // Update cached audio data for disabled state
       const audioData = audioDataRef.current;
       audioData.hfcBoost = 0;
       audioData.spawnBurst = 1;
       audioData.beatIntensity = 0;
+      audioData.beatTimePulse = 0;
     }
   });
 

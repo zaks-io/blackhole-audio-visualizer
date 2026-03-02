@@ -165,16 +165,6 @@ export const PARAMS: Record<string, ParameterDef> = {
     label: "ISCO Ratio",
     system: true,
   },
-  "Black Hole.beatPulse": {
-    min: 0,
-    max: 5,
-    default: 0.5,
-    step: 0.1,
-    description: "beat-reactive pulse intensity",
-    group: "Black Hole",
-    label: "Beat Pulse",
-    system: true,
-  },
   "Black Hole.coronaIntensity": {
     min: 0,
     max: 0.5,
@@ -624,7 +614,26 @@ export const PARAMS: Record<string, ParameterDef> = {
     label: "Beat Repulsion",
     system: true,
   },
-
+  "Audio.beatTimeScale": {
+    min: -10,
+    max: 10,
+    default: 1.5,
+    step: 0.05,
+    description: "how much beats modulate simulation speed (negative = reverse on beat)",
+    group: "Audio",
+    label: "Beat Time Scale",
+    system: true,
+  },
+  "Audio.beatPulse": {
+    min: 0,
+    max: 5,
+    default: 1.0,
+    step: 0.1,
+    description: "beat-reactive pulse intensity",
+    group: "Audio",
+    label: "Beat Pulse",
+    system: true,
+  },
   // ===========================================================================
   // POST-FX
   // ===========================================================================
@@ -641,7 +650,7 @@ export const PARAMS: Record<string, ParameterDef> = {
   "Post-FX.bloomAudioReactivity": {
     min: 0,
     max: 1,
-    default: 0.8,
+    default: 1.5,
     step: 0.1,
     description: "bloom audio reactivity",
     group: "Post-FX",

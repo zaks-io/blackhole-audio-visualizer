@@ -34,6 +34,7 @@ export function useGPUCompute(
   const positionVariableRef = useRef<Variable | null>(null);
   const velocityVariableRef = useRef<Variable | null>(null);
   const timeScaleRef = useRef(0.5);
+  const beatTimeScaleMultiplierRef = useRef(1.0);
   const bandOnsetsTextureRef = useRef<THREE.DataTexture | null>(null);
   const bandOnsetsDirtyRef = useRef(false);
   const spectrumTextureRef = useRef<THREE.DataTexture | null>(null);
@@ -438,8 +439,10 @@ export function useGPUCompute(
       return;
     }
 
+    // Apply frame-drop safety cap on base time scale, then layer beat modulation on top
     const scaledTime = state.clock.elapsedTime * timeScaleRef.current;
-    const scaledDelta = Math.min(delta * timeScaleRef.current, 0.05); // Cap at 50ms
+    const baseDelta = Math.min(delta * timeScaleRef.current, 0.05);
+    const scaledDelta = baseDelta * beatTimeScaleMultiplierRef.current;
 
     // Update time uniforms
     positionVariableRef.current.material.uniforms.uTime.value = scaledTime;
@@ -536,6 +539,10 @@ export function useGPUCompute(
 
   const setTimeScale = useCallback((value: number) => {
     timeScaleRef.current = value;
+  }, []);
+
+  const setBeatTimeScaleMultiplier = useCallback((value: number) => {
+    beatTimeScaleMultiplierRef.current = value;
   }, []);
 
   const setEventHorizon = useCallback((value: number) => {
@@ -945,5 +952,6 @@ export function useGPUCompute(
     setLifetimeMax,
     setLifetimeGravityMultiplier,
     setBlackHoles,
+    setBeatTimeScaleMultiplier,
   };
 }
