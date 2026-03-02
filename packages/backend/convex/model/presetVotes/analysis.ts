@@ -15,6 +15,26 @@ import { requireAdmin } from "../../lib/auth";
 // User-facing params only (system: false)
 const USER_PARAMS = Object.entries(PARAMS).filter(([, p]) => !p.system);
 
+export function pearsonCorrelation(x: number[], y: number[]): number {
+  const n = x.length;
+  if (n < 3) return 0;
+  let sumX = 0,
+    sumY = 0,
+    sumXY = 0,
+    sumX2 = 0,
+    sumY2 = 0;
+  for (let i = 0; i < n; i++) {
+    sumX += x[i];
+    sumY += y[i];
+    sumXY += x[i] * y[i];
+    sumX2 += x[i] * x[i];
+    sumY2 += y[i] * y[i];
+  }
+  const denom = Math.sqrt((n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY));
+  if (denom === 0) return 0;
+  return (n * sumXY - sumX * sumY) / denom;
+}
+
 // ─── Internal Queries ────────────────────────────────────────────────────────
 
 export const getAllVotes = internalQuery({
@@ -66,6 +86,9 @@ export const upsertAnalysis = internalMutation({
         params: v.array(v.object({ param: v.string(), range: v.string() })),
         avgScore: v.number(),
       })
+    ),
+    parameterImportance: v.optional(
+      v.array(v.object({ param: v.string(), correlation: v.number() }))
     ),
   },
   handler: async (ctx, args) => {
@@ -126,60 +149,36 @@ export const runAnalysis = internalAction({
       presets.push(...results);
     }
 
-    if (presets.length < 3) return; // Need minimum data for clustering
+    if (presets.length < 20) return; // Need enough data for meaningful clustering
 
-    // 3. Build feature vectors (normalized 0-1)
+    // 3. Build normalized parameter values and scores
     const paramNames = USER_PARAMS.map(([name]) => name);
     const paramDefs = USER_PARAMS.map(([, def]) => def);
 
-    // Collect unique palettes and camera modes for one-hot encoding
-    const paletteSet = new Set<string>();
-    const cameraSet = new Set<string>();
-    for (const preset of presets) {
-      paletteSet.add(preset.colorPalette);
-      cameraSet.add(preset.cameraMode ?? "circle");
-    }
-    const paletteList = [...paletteSet].sort();
-    const cameraList = [...cameraSet].sort();
-    // Weight categorical dimensions so they contribute without dominating
-    // Each one-hot group sums to this weight (equivalent to ~2 numerical params)
-    const categoricalWeight = 2 / Math.max(paletteList.length, 1);
-    const cameraWeight = 2 / Math.max(cameraList.length, 1);
-
-    const featureVectors: number[][] = [];
     const presetMeta: Array<{
       id: string;
       score: number;
       palette: string;
       camera: string;
     }> = [];
+    // Normalized parameter values per preset (rows = presets, cols = params)
+    const normalizedParams: number[][] = [];
 
     for (const preset of presets) {
       const score = scoreMap.get(preset._id);
       if (score === undefined) continue;
 
       const paramMap = new Map(preset.parameters.map((p) => [p.path, p.value]));
-      const vector: number[] = [];
+      const row: number[] = [];
 
       for (let i = 0; i < paramNames.length; i++) {
         const def = paramDefs[i];
         const raw = paramMap.get(paramNames[i]) ?? def.default;
         const range = def.max - def.min;
-        vector.push(range > 0 ? (raw - def.min) / range : 0);
+        row.push(range > 0 ? (raw - def.min) / range : 0);
       }
 
-      // One-hot encode colorPalette
-      for (const p of paletteList) {
-        vector.push(preset.colorPalette === p ? categoricalWeight : 0);
-      }
-
-      // One-hot encode cameraMode
-      const cam = preset.cameraMode ?? "circle";
-      for (const c of cameraList) {
-        vector.push(cam === c ? cameraWeight : 0);
-      }
-
-      featureVectors.push(vector);
+      normalizedParams.push(row);
       presetMeta.push({
         id: preset._id,
         score,
@@ -188,7 +187,58 @@ export const runAnalysis = internalAction({
       });
     }
 
-    // 4. Run k-means
+    const scores = presetMeta.map((m) => m.score);
+
+    // 4. Compute per-parameter importance (Pearson correlation with vote score)
+    const parameterImportance: Array<{ param: string; correlation: number }> = [];
+    for (let i = 0; i < paramNames.length; i++) {
+      const values = normalizedParams.map((row) => row[i]);
+      const r = pearsonCorrelation(values, scores);
+      if (Math.abs(r) > 0.1) {
+        parameterImportance.push({
+          param: paramNames[i],
+          correlation: Math.round(r * 1000) / 1000,
+        });
+      }
+    }
+    parameterImportance.sort((a, b) => Math.abs(b.correlation) - Math.abs(a.correlation));
+
+    // 5. Build feature vectors for clustering using only significant params + categoricals
+    const significantIndices = parameterImportance.map((p) => paramNames.indexOf(p.param));
+    // Fall back to all params if nothing is significant yet
+    const clusterParamIndices =
+      significantIndices.length >= 3 ? significantIndices : paramNames.map((_, i) => i);
+
+    // Collect unique palettes and camera modes for one-hot encoding
+    const paletteSet = new Set<string>();
+    const cameraSet = new Set<string>();
+    for (const m of presetMeta) {
+      paletteSet.add(m.palette);
+      cameraSet.add(m.camera);
+    }
+    const paletteList = [...paletteSet].sort();
+    const cameraList = [...cameraSet].sort();
+    const categoricalWeight = 2 / Math.max(paletteList.length, 1);
+    const cameraWeight = 2 / Math.max(cameraList.length, 1);
+
+    const featureVectors: number[][] = [];
+    for (let p = 0; p < normalizedParams.length; p++) {
+      const vector: number[] = [];
+      for (const idx of clusterParamIndices) {
+        vector.push(normalizedParams[p][idx]);
+      }
+      // One-hot palette
+      for (const pal of paletteList) {
+        vector.push(presetMeta[p].palette === pal ? categoricalWeight : 0);
+      }
+      // One-hot camera
+      for (const cam of cameraList) {
+        vector.push(presetMeta[p].camera === cam ? cameraWeight : 0);
+      }
+      featureVectors.push(vector);
+    }
+
+    // 6. Run k-means
     const k = Math.min(5, Math.floor(featureVectors.length / 3));
     if (k < 1) return;
 
@@ -197,7 +247,7 @@ export const runAnalysis = internalAction({
       initialization: "kmeans++",
     });
 
-    // 5. Build cluster stats
+    // 7. Build cluster stats (using significant params for centroids)
     const clusters: Array<{
       label: string;
       size: number;
@@ -207,14 +257,14 @@ export const runAnalysis = internalAction({
       topCameraModes: string[];
     }> = [];
 
-    // Compute global mean for anti-pattern detection (numerical params only)
-    const globalMean = new Array(paramNames.length).fill(0);
+    // Global mean of significant params for anti-pattern detection
+    const globalMean = new Array(clusterParamIndices.length).fill(0);
     for (const vec of featureVectors) {
-      for (let i = 0; i < paramNames.length; i++) {
+      for (let i = 0; i < clusterParamIndices.length; i++) {
         globalMean[i] += vec[i];
       }
     }
-    for (let i = 0; i < paramNames.length; i++) {
+    for (let i = 0; i < clusterParamIndices.length; i++) {
       globalMean[i] /= featureVectors.length;
     }
 
@@ -226,32 +276,30 @@ export const runAnalysis = internalAction({
 
       if (memberIndices.length === 0) continue;
 
-      // Avg score
       let scoreSum = 0;
       for (const idx of memberIndices) {
         scoreSum += presetMeta[idx].score;
       }
       const avgScore = scoreSum / memberIndices.length;
 
-      // Denormalize centroid
+      // Denormalize centroid — only significant params
       const rawCentroid = result.centroids[c];
       const centroid: Array<{ param: string; value: number }> = [];
       const deviations: Array<{ param: string; value: number; deviation: number }> = [];
 
-      for (let i = 0; i < paramNames.length; i++) {
-        const def = paramDefs[i];
+      for (let i = 0; i < clusterParamIndices.length; i++) {
+        const origIdx = clusterParamIndices[i];
+        const def = paramDefs[origIdx];
         const normalizedValue = rawCentroid[i];
         const realValue = normalizedValue * (def.max - def.min) + def.min;
-        // Round to step precision
         const rounded = Math.round(realValue / def.step) * def.step;
         const defaultNorm = (def.default - def.min) / (def.max - def.min || 1);
         const deviation = Math.abs(normalizedValue - defaultNorm);
 
-        centroid.push({ param: paramNames[i], value: rounded });
-        deviations.push({ param: paramNames[i], value: rounded, deviation });
+        centroid.push({ param: paramNames[origIdx], value: rounded });
+        deviations.push({ param: paramNames[origIdx], value: rounded, deviation });
       }
 
-      // Top 3 deviating params for label
       deviations.sort((a, b) => b.deviation - a.deviation);
       const topParams = deviations.slice(0, 3);
       const label = topParams
@@ -261,12 +309,11 @@ export const runAnalysis = internalAction({
         })
         .join(", ");
 
-      // Count palettes and camera modes
       const paletteCounts = new Map<string, number>();
       const cameraCounts = new Map<string, number>();
       for (const idx of memberIndices) {
-        const p = presetMeta[idx].palette;
-        paletteCounts.set(p, (paletteCounts.get(p) ?? 0) + 1);
+        const pal = presetMeta[idx].palette;
+        paletteCounts.set(pal, (paletteCounts.get(pal) ?? 0) + 1);
         const cam = presetMeta[idx].camera;
         cameraCounts.set(cam, (cameraCounts.get(cam) ?? 0) + 1);
       }
@@ -291,30 +338,31 @@ export const runAnalysis = internalAction({
       });
     }
 
-    // 6. Anti-patterns: clusters with avgScore < 0
+    // 8. Filter out tiny clusters — not real patterns
+    const filteredClusters = clusters.filter((c) => c.size >= 3);
+
+    // 9. Anti-patterns: clusters with avgScore < 0
     const antiPatterns: Array<{
       description: string;
       params: Array<{ param: string; range: string }>;
       avgScore: number;
     }> = [];
 
-    for (const cluster of clusters) {
+    for (const cluster of filteredClusters) {
       if (cluster.avgScore >= 0) continue;
 
-      // Find params deviating most from global mean
-      const rawCentroidForCluster = cluster.centroid;
       const deviatingParams: Array<{ param: string; range: string }> = [];
-
-      for (let i = 0; i < paramNames.length; i++) {
-        const def = paramDefs[i];
-        const centroidEntry = rawCentroidForCluster.find((c) => c.param === paramNames[i]);
+      for (let i = 0; i < clusterParamIndices.length; i++) {
+        const origIdx = clusterParamIndices[i];
+        const def = paramDefs[origIdx];
+        const centroidEntry = cluster.centroid.find((ce) => ce.param === paramNames[origIdx]);
         if (!centroidEntry) continue;
 
         const centroidNorm = (centroidEntry.value - def.min) / (def.max - def.min || 1);
         const diff = Math.abs(centroidNorm - globalMean[i]);
         if (diff > 0.2) {
           deviatingParams.push({
-            param: paramNames[i],
+            param: paramNames[origIdx],
             range: `~${centroidEntry.value}`,
           });
         }
@@ -329,28 +377,30 @@ export const runAnalysis = internalAction({
       }
     }
 
-    // 7. Generate prompt fragment
+    // 10. Generate prompt fragment
     const promptFragment = generatePromptFragment({
       totalVotes: votes.length,
       presetsAnalyzed: presets.length,
-      clusters,
+      clusters: filteredClusters,
       antiPatterns,
+      parameterImportance,
     });
 
-    // 8. Upsert analysis
+    // 11. Upsert analysis
     await ctx.runMutation(internal.model.presetVotes.analysis.upsertAnalysis, {
       totalVotes: votes.length,
       upvotes: totalUpvotes,
       downvotes: totalDownvotes,
       presetsAnalyzed: presets.length,
       promptFragment,
-      clusters,
+      clusters: filteredClusters,
       antiPatterns,
+      parameterImportance,
     });
   },
 });
 
-function generatePromptFragment(data: {
+export function generatePromptFragment(data: {
   totalVotes: number;
   presetsAnalyzed: number;
   clusters: Array<{
@@ -366,11 +416,27 @@ function generatePromptFragment(data: {
     params: Array<{ param: string; range: string }>;
     avgScore: number;
   }>;
+  parameterImportance: Array<{ param: string; correlation: number }>;
 }): string {
   const lines: string[] = [];
   lines.push(
     `## Preset Quality Insights (based on ${data.totalVotes} votes across ${data.presetsAnalyzed} presets)`
   );
+
+  // Show which parameters matter
+  if (data.parameterImportance.length > 0) {
+    lines.push("");
+    lines.push(
+      "### Parameters that matter most: " +
+        data.parameterImportance
+          .slice(0, 8)
+          .map((p) => {
+            const shortName = p.param.split(".")[1] ?? p.param;
+            return shortName;
+          })
+          .join(", ")
+    );
+  }
 
   const good = data.clusters.filter((c) => c.avgScore > 0).sort((a, b) => b.avgScore - a.avgScore);
 
@@ -382,7 +448,6 @@ function generatePromptFragment(data: {
         `**"${cluster.label}" pattern (${cluster.size} presets, avg score ${cluster.avgScore})**`
       );
 
-      // Show centroid params that deviate >20% from default
       for (const c of cluster.centroid) {
         const def = PARAMS[c.param];
         if (!def) continue;
@@ -391,7 +456,10 @@ function generatePromptFragment(data: {
         const defaultNorm = (def.default - def.min) / range;
         const valueNorm = (c.value - def.min) / range;
         if (Math.abs(valueNorm - defaultNorm) > 0.2) {
-          lines.push(`- ${c.param}: ${c.value}`);
+          const direction = valueNorm > defaultNorm ? "higher than default" : "lower than default";
+          const intensity = Math.abs(valueNorm - defaultNorm) > 0.5 ? "much " : "somewhat ";
+          const shortName = c.param.split(".")[1] ?? c.param;
+          lines.push(`- ${shortName}: tends ${intensity}${direction}`);
         }
       }
 
@@ -411,13 +479,25 @@ function generatePromptFragment(data: {
     for (const pattern of bad) {
       lines.push(`**${pattern.description} (avg score ${pattern.avgScore})**`);
       for (const p of pattern.params) {
-        lines.push(`- ${p.param}: ${p.range}`);
+        const def = PARAMS[p.param];
+        const shortName = p.param.split(".")[1] ?? p.param;
+        if (def) {
+          const approxValue = parseFloat(p.range.replace("~", ""));
+          const range = def.max - def.min;
+          const valueNorm = range > 0 ? (approxValue - def.min) / range : 0.5;
+          const region = valueNorm < 0.33 ? "low" : valueNorm > 0.66 ? "high" : "mid-range";
+          lines.push(`- ${shortName} in the ${region} range`);
+        } else {
+          lines.push(`- ${shortName}: ${p.range}`);
+        }
       }
     }
   }
 
   lines.push("");
-  lines.push("Use these insights to bias toward preferred patterns while still being creative.");
+  lines.push(
+    "These are weak signals from a small sample. Prioritize creating a diverse, surprising playlist over matching these patterns."
+  );
 
   return lines.join("\n");
 }

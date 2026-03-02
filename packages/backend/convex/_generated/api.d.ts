@@ -10,6 +10,7 @@
 
 import type * as http from "../http.js";
 import type * as lib_auth from "../lib/auth.js";
+import type * as lib_buildVoteGuidance from "../lib/buildVoteGuidance.js";
 import type * as lib_mimeTypes from "../lib/mimeTypes.js";
 import type * as lib_r2 from "../lib/r2.js";
 import type * as lib_validators from "../lib/validators.js";
@@ -44,6 +45,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   http: typeof http;
   "lib/auth": typeof lib_auth;
+  "lib/buildVoteGuidance": typeof lib_buildVoteGuidance;
   "lib/mimeTypes": typeof lib_mimeTypes;
   "lib/r2": typeof lib_r2;
   "lib/validators": typeof lib_validators;

@@ -5,6 +5,7 @@ import { components, internal } from "../../_generated/api";
 import { z } from "zod";
 import type { Id, Doc } from "../../_generated/dataModel";
 import { presetSchema, parametersToArray } from "../../lib/visualizationParameters";
+import { buildVoteGuidance } from "../../lib/buildVoteGuidance";
 
 if (!process.env.OPENROUTER_API_KEY) {
   throw new Error("OPENROUTER_API_KEY is not set");
@@ -311,6 +312,16 @@ const VISUALIZATION_INSTRUCTIONS = `You are a visualization designer for the Bla
 
 Given a song's composition plan with sections, moods, and timing, create synchronized visualization presets for a song.
 
+## DIVERSITY REQUIREMENTS
+
+Each preset in a playlist MUST be meaningfully distinct from every other preset:
+- Vary parameters across their full valid ranges. Do NOT cluster values around defaults or safe midpoints.
+- Use at least 4 different color palettes per playlist. Never repeat the same palette on consecutive presets.
+- Use at least 2 different camera modes per playlist.
+- For numerical parameters, explore the extremes. A gravity of 10000 is just as valid as 1000000. An emitRadius of 100 is just as valid as 500.
+- Each preset should have a distinct visual identity. If two presets would look similar, one needs to change.
+- Include at least one preset with an unconventional parameter combination.
+
 ## COLOR PALETTES
 
 Each pallete has 8 colors except for grayscale which is basically white.
@@ -338,7 +349,7 @@ none, power1.inOut, power2.inOut, power3.inOut, power4.inOut
 
 ## SECTION GUIDELINES
 
-Be creative. Create 1 preset every 10-20 seconds, aligned with song structure and lyrics. Presets must cover the entire song duration and should be distinct from each other. Take into consideration tween times and transitions between presets for best impact.
+Create 1 preset every 10-20 seconds, aligned with song structure and lyrics. Each preset must be visually distinct — do not produce similar-looking presets even for similar sections. Presets must cover the entire song duration. Take into consideration tween times and transitions between presets for best impact.
 
 ### SECTION IDEAS & NOTES
 
@@ -347,7 +358,7 @@ Be creative. Create 1 preset every 10-20 seconds, aligned with song structure an
 - Emitters and black hole orbits at same radius => particles don't flow to the center but instead the nearest black hole or stretch across lagrange point
 - Zero orbital decay, 1000000 gravity, ten softening => forces particles into tight orbits around each blackhole and then collapse into the center
 - Use higher particles sizes when using more spread as they are harder to see spread out
-- Do not repeat preset parameters, use a variety of values to keep the visualization interesting.
+- Do not repeat preset parameters. If two presets share similar gravity, emitRadius, and orbitRadius, they will look the same regardless of other differences.
 - Consider if a tween should start before or at a section
 - Use smaller black hole orbits when using the closeup camera mode.
 
@@ -449,14 +460,15 @@ Negative (avoid): ${composition.negative_global_styles.join(", ")}
 
 ${args.customInstructions ? `## Custom Instructions\n${args.customInstructions}` : ""}`.trim();
 
-    // Inject voting analysis insights if sufficient data exists
-    const analysis = await ctx.runQuery(
-      internal.model.presetVotes.analysis.getAnalysisInternal,
-      {}
-    );
-    if (analysis && analysis.totalVotes >= 10) {
-      prompt += `\n\n${analysis.promptFragment}`;
-    }
+    // Vote analysis is collected but not injected until data quality improves
+    // TODO: Re-enable when presetsAnalyzed >= 20 with meaningful clusters
+    // const analysis = await ctx.runQuery(
+    //   internal.model.presetVotes.analysis.getAnalysisInternal,
+    //   {}
+    // );
+    // if (analysis && analysis.presetsAnalyzed >= 20) {
+    //   prompt += `\n\n${buildVoteGuidance(analysis)}`;
+    // }
 
     // Use generateObject with Gemini 3 Pro for structured output
     const result: GenerateObjectResult<PlaylistOutput> = await generateObject({

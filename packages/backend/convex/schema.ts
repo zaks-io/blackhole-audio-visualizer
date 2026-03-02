@@ -213,5 +213,13 @@ export default defineSchema({
         avgScore: v.number(),
       })
     ),
+    parameterImportance: v.optional(
+      v.array(
+        v.object({
+          param: v.string(),
+          correlation: v.number(),
+        })
+      )
+    ),
   }),
 });
