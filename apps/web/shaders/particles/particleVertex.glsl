@@ -77,50 +77,79 @@ vec3 evalTrailCurve(vec3 p0, vec3 p1, vec3 p2, vec3 p3, float t01) {
     return catmullRom(a, b, c, d, u);
 }
 
-// Gravitational lensing: displace apparent particle position away from the
-// BH center (perpendicular to camera ray), simulating light bending around it.
-vec3 applyGravitationalLensing(vec3 worldPos) {
-    if (uParticleLensingStrength <= 0.0 || uBlackHoleCount <= 0) return worldPos;
+// Gravitational lensing in screen space: cheap, stable, and aligned to the
+// rendered black-hole silhouette (projected center + projected radius).
+vec2 computeGravitationalLensingNDCOffset(vec4 centerViewPos, vec4 centerClipPos) {
+    if (uParticleLensingStrength <= 0.0 || uBlackHoleCount <= 0) return vec2(0.0);
 
-    vec3 displaced = worldPos;
-    vec3 rayDir = normalize(cameraPosition - worldPos);
+    if (centerClipPos.w <= 0.00001) return vec2(0.0);
+    float centerW = centerClipPos.w;
+    vec2 centerNdc = centerClipPos.xy / centerW;
+    float particleDepth = max(0.001, -centerViewPos.z);
+
+    float aspect = max(uViewport.x / max(uViewport.y, 1.0), 0.1);
+    float strength = max(uParticleLensingStrength, 0.0);
+
+    vec2 totalOffset = vec2(0.0);
+    float maxRadiusNdc = 0.0;
 
     for (int i = 0; i < MAX_BLACK_HOLES; i++) {
         if (i >= uBlackHoleCount) break;
 
-        vec3 bhPos = uBlackHolePos[i];
         float bhRadius = uBlackHoleRadius[i];
         if (bhRadius <= 0.0) continue;
 
-        vec3 toBH = bhPos - worldPos;
-        float distToBH = length(toBH);
-        float projLen = dot(toBH, rayDir);
-        vec3 closestApproach = toBH - rayDir * projLen;
-        float impactParam = length(closestApproach);
+        vec4 bhView = modelViewMatrix * vec4(uBlackHolePos[i], 1.0);
+        float bhDepth = -bhView.z;
+        if (bhDepth <= 0.001) continue;
 
-        // Photon sphere at 1.5 Rs — light inside this gets captured, not deflected
-        float photonSphere = bhRadius * 1.5;
+        vec4 bhClip = projectionMatrix * bhView;
+        if (bhClip.w <= 0.00001) continue;
+        float bhW = bhClip.w;
+        vec2 bhNdc = bhClip.xy / bhW;
 
-        // Smooth clamping at photon sphere — avoids singularity, physically motivated
-        // sqrt(b² + r_ph²) transitions smoothly from ~r_ph when b≈0 to ~b when b>>r_ph
-        float safeB = sqrt(impactParam * impactParam + photonSphere * photonSphere);
+        // Approx projected radius in NDC (y-space); robust for a spherical silhouette.
+        float bhRadiusNdc = abs(projectionMatrix[1][1] * bhRadius / bhDepth);
+        bhRadiusNdc = clamp(bhRadiusNdc, 0.0003, 0.9);
+        maxRadiusNdc = max(maxRadiusNdc, bhRadiusNdc);
 
-        // Deflection: Rs²/b, visible at simulation scale
-        float deflection = uParticleLensingStrength * bhRadius * bhRadius / safeB;
+        vec2 delta = centerNdc - bhNdc;
+        delta.x *= aspect;
+        float dist = length(delta);
+        if (dist <= 0.00001) continue;
 
-        // Cap at critical impact parameter (~2.6 Rs) — max deflection for grazing photons
-        deflection = min(deflection, bhRadius * 2.6);
+        // Monotonic profile: strongest near silhouette and smoothly decays outward,
+        // avoiding the "bubble/donut" look of ring-shaped warp curves.
+        float impactNorm = max(dist / max(bhRadiusNdc, 0.0001), 0.0001);
+        float outerBand = max(impactNorm - 1.0, 0.0);
+        float outerFalloff = 1.0 / (1.0 + outerBand * outerBand * 2.8);
+        float invImpact = 1.0 / max(impactNorm, 1.0);
+        float insideFade = smoothstep(0.12, 0.85, impactNorm);
 
-        // Gentle falloff — effect visible out to ~15× event horizon
-        float x = distToBH / (bhRadius * 15.0);
-        float falloff = 1.0 / (1.0 + x * x);
+        // Favor particles behind the BH for physically coherent lensing.
+        float depthDelta = particleDepth - bhDepth;
+        float depthWeight = smoothstep(-bhRadius * 0.6, bhRadius * 2.4, depthDelta);
 
-        if (impactParam > 0.001) {
-            // Displace AWAY from BH center (outward) — light bends around the BH
-            displaced -= (closestApproach / impactParam) * deflection * falloff;
+        float warp = strength * bhRadiusNdc * 0.72 * invImpact * outerFalloff * insideFade * depthWeight;
+
+        // Per-hole cap to keep silhouettes coherent and avoid edge explosions.
+        float maxWarp = bhRadiusNdc * (0.62 + 0.1 * min(strength, 4.0));
+        warp = min(warp, maxWarp);
+
+        vec2 dir = delta / dist;
+        totalOffset += vec2(dir.x / aspect, dir.y) * warp;
+    }
+
+    // Global cap across all BH contributions.
+    float offsetLen = length(vec2(totalOffset.x * aspect, totalOffset.y));
+    if (offsetLen > 0.0 && maxRadiusNdc > 0.0) {
+        float maxTotal = maxRadiusNdc * (0.95 + 0.14 * min(strength, 4.0));
+        if (offsetLen > maxTotal) {
+            totalOffset *= maxTotal / offsetLen;
         }
     }
-    return displaced;
+
+    return totalOffset;
 }
 
 // Arithmetic hash — decorrelates regular grid inputs (reference UVs)
@@ -220,15 +249,27 @@ void main() {
     // Use screen density only when dense-guard is active to avoid visible patchiness in normal mode.
     float guard = clamp(uDenseGuardStrength, 0.0, 1.0);
     float softScreenProxy = clamp(screenDensity * 0.85 + centerProxy * 0.3, 0.0, 1.0) * guard;
-    float softDensityProxy = max(bhDensityProxy, softScreenProxy);
+    // Keep BH proximity as a soft cue, but gate by projected density so we don't
+    // over-trim at camera angles where clusters spread out on screen.
+    float bhSoftProxy = bhDensityProxy * mix(0.45, 1.0, screenDensity);
+    float softDensityProxy = max(bhSoftProxy, softScreenProxy);
 
     // Hard culling proxy: keep conservative and trigger only in extreme screen-density zones.
     float extremeScreenProxy = smoothstep(0.8, 1.0, screenDensity) * guard;
-    float cullDensityProxy = max(bhDensityProxy, extremeScreenProxy);
+    float bhHardProxy = bhDensityProxy * mix(0.15, 1.0, screenDensity);
+    float cullDensityProxy = max(bhHardProxy, extremeScreenProxy);
+
+    // Camera-angle relief: when streak motion is close to view direction, heavy
+    // culling can create artificial faded line bands. Ease culling in that case.
+    vec3 velocityView = mat3(modelViewMatrix) * velocity;
+    float velocityViewLen = length(velocityView);
+    float viewAlignment = (velocityViewLen > 0.0001) ? abs(velocityView.z) / velocityViewLen : 0.0;
+    float angleCullRelief = smoothstep(0.55, 0.92, viewAlignment);
 
     // Kill second ribbon in dense zones — invisible when many particles overlap
     float denseRibbonThreshold = mix(0.28, 0.18, guard);
-    if (crossIndex > 0.5 && cullDensityProxy > denseRibbonThreshold) {
+    float depthRibbonCullProxy = cullDensityProxy * mix(1.0, 0.45, angleCullRelief);
+    if (crossIndex > 0.5 && depthRibbonCullProxy > denseRibbonThreshold) {
         gl_Position = vec4(0.0, 0.0, -1000.0, 1.0);
         vColor = vec3(0.0);
         vDensityAlphaScale = 0.0;
@@ -239,7 +280,7 @@ void main() {
     // zones. Hash of reference is constant across all 64 vertices of an instance,
     // so no partial artifacts or temporal flickering.
     float particleHash = hash21(reference);
-    float denseCullGain = mix(0.12, 0.3, guard);
+    float denseCullGain = mix(0.12, 0.3, guard) * mix(1.0, 0.6, angleCullRelief);
     float cullProb = smoothstep(0.65, 1.0, cullDensityProxy) * denseCullGain;
     if (particleHash < cullProb) {
         gl_Position = vec4(0.0, 0.0, -1000.0, 1.0);
@@ -300,11 +341,10 @@ void main() {
     }
     vRedshiftFade = minFade;
 
-    // Gravitational lensing displacement (visual only, camera-dependent)
-    curvePos = applyGravitationalLensing(curvePos);
-
     // Transform curve position to view space
     vec4 viewPos = modelViewMatrix * vec4(curvePos, 1.0);
+    vec4 centerClipPos = projectionMatrix * viewPos;
+    vec2 lensOffsetNdc = computeGravitationalLensingNDCOffset(viewPos, centerClipPos);
     float viewDist = max(0.001, -viewPos.z);
     float nearProxy = clamp((90.0 - viewDist) / 90.0, 0.0, 1.0);
     float closeDenseProxy = nearProxy * softDensityProxy * guard;
@@ -378,6 +418,13 @@ void main() {
     // Offset vertex position in view space along the selected ribbon direction
     vec3 offsetViewPos = viewPos.xyz + offsetDir * position.x * halfW;
 
-    // Project to clip space
-    gl_Position = projectionMatrix * vec4(offsetViewPos, 1.0);
+    // Project to clip space and apply lensing as an NDC offset so the whole
+    // ribbon segment warps coherently around the BH silhouette.
+    vec4 clipPos = projectionMatrix * vec4(offsetViewPos, 1.0);
+    if (clipPos.w > 0.00001) {
+        float clipW = clipPos.w;
+        vec2 ndc = clipPos.xy / clipW + lensOffsetNdc;
+        clipPos.xy = ndc * clipPos.w;
+    }
+    gl_Position = clipPos;
 }
