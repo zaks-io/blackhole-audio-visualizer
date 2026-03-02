@@ -222,7 +222,7 @@ export const PARAMS: Record<string, ParameterDef> = {
   "Particles.textureSize": {
     min: 128,
     max: 1024,
-    default: 256,
+    default: 384,
     step: 128,
     description: "number of particles",
     group: "Particles",
@@ -252,7 +252,7 @@ export const PARAMS: Record<string, ParameterDef> = {
   "Particles.alpha": {
     min: 0.1,
     max: 1,
-    default: 1,
+    default: 0.8,
     step: 0.1,
     description: "particle opacity",
     group: "Particles",
@@ -326,12 +326,12 @@ export const PARAMS: Record<string, ParameterDef> = {
   "Physics.softening": {
     min: 0,
     max: 10,
-    default: 1,
+    default: 0,
     step: 0.1,
     description: "smooths extreme forces near horizons",
     group: "Physics",
     label: "Softening",
-    system: false,
+    system: true,
   },
   "Physics.orbitDecay": {
     min: 0.3,
@@ -366,7 +366,7 @@ export const PARAMS: Record<string, ParameterDef> = {
   "Physics.lifetimeMax": {
     min: 5,
     max: 120,
-    default: 30,
+    default: 20,
     step: 5,
     description: "maximum particle lifetime",
     group: "Physics",
@@ -399,7 +399,7 @@ export const PARAMS: Record<string, ParameterDef> = {
   // ===========================================================================
   "Emitters.emitRadius": {
     min: 100,
-    max: 500,
+    max: 300,
     default: 200,
     step: 1,
     description: "spawn distance from center / line half-height",
@@ -458,10 +458,10 @@ export const PARAMS: Record<string, ParameterDef> = {
     system: true,
   },
   "Emitters.emitterSpread": {
-    min: 0,
-    max: 50,
-    default: 0,
-    step: 0.05,
+    min: 0.1,
+    max: 1,
+    default: 0.1,
+    step: 0.1,
     description: "width: 0=clean lines, higher=wider spread",
     group: "Emitters",
     label: "Spread",
@@ -529,7 +529,7 @@ export const PARAMS: Record<string, ParameterDef> = {
     description: "gravitational lensing strength on stars",
     group: "Skybox",
     label: "Gravitational Lensing",
-    system: false,
+    system: true,
   },
 
   // ===========================================================================
@@ -563,7 +563,7 @@ export const PARAMS: Record<string, ParameterDef> = {
     description: "input amplification",
     group: "Audio",
     label: "Gain",
-    system: false,
+    system: true,
   },
   "Audio.beatRepulsion": {
     min: 0,
@@ -582,7 +582,7 @@ export const PARAMS: Record<string, ParameterDef> = {
   "Post-FX.bloomBaseIntensity": {
     min: 0,
     max: 2,
-    default: 0.2,
+    default: 0.1,
     step: 0.1,
     description: "bloom base intensity",
     group: "Post-FX",
@@ -597,7 +597,7 @@ export const PARAMS: Record<string, ParameterDef> = {
     description: "bloom audio reactivity",
     group: "Post-FX",
     label: "Bloom Reactivity",
-    system: false,
+    system: true,
   },
   "Post-FX.chromaticAudioReactivity": {
     min: 0,
