@@ -1,5 +1,8 @@
-import { useRef, useCallback, useEffect, useState } from "react";
+import { useRef, useCallback, useEffect, useMemo, useState } from "react";
 import gsap from "gsap";
+import { useQuery } from "convex/react";
+import { api } from "@blackhole/backend/convex/_generated/api";
+import type { Id } from "@blackhole/backend/convex/_generated/dataModel";
 import { usePlayPreset } from "@/components/ProducerMode/usePlayPreset";
 import { useCameraMode } from "@/components/CameraSystem";
 import { usePresetSelector } from "@/components/playlist/usePresetSelector";
@@ -37,6 +40,20 @@ export function useFeelingLucky(allPresets: ConvexPreset[]) {
   const { playPreset, stopAll } = usePlayPreset();
   const { setMode: setCameraMode } = useCameraMode();
 
+  const presetIds = useMemo(() => allPresets.map((p) => p._id as Id<"presets">), [allPresets]);
+  const presetMap = useMemo(() => {
+    const map = new Map<string, ConvexPreset>();
+    for (const p of allPresets) map.set(p._id, p);
+    return map;
+  }, [allPresets]);
+
+  const [seed, setSeed] = useState(() => Math.floor(Math.random() * 2147483647));
+
+  const shuffledIds = useQuery(
+    api.model.presetVotes.public.getShuffledPresetsForLucky,
+    presetIds.length > 0 ? { presetIds, seed } : "skip"
+  );
+
   const mode = usePresetSelector((s) => s.mode);
   const isLuckyPlaying = usePresetSelector((s) => s.isLuckyPlaying);
   const setLuckyPlaying = usePresetSelector((s) => s.setLuckyPlaying);
@@ -49,11 +66,10 @@ export function useFeelingLucky(allPresets: ConvexPreset[]) {
   const isActiveRef = useRef(false);
   const playNextRef = useRef<() => void>(() => {});
 
-  // Shuffle state
-  const presetOrderRef = useRef<number[]>([]);
   const presetIndexRef = useRef(0);
   const cameraOrderRef = useRef<number[]>([]);
   const cameraIndexRef = useRef(0);
+  const pendingAdvanceRef = useRef(false);
 
   const [state, setState] = useState<FeelingLuckyState>({
     isPlaying: false,
@@ -63,19 +79,16 @@ export function useFeelingLucky(allPresets: ConvexPreset[]) {
 
   useEffect(() => {
     playNextRef.current = () => {
-      if (!isActiveRef.current || allPresets.length === 0) return;
+      if (!isActiveRef.current || !shuffledIds || shuffledIds.length === 0) return;
 
-      // Kill any existing timer
       timerRef.current?.kill();
 
-      // Shuffle presets if needed (first run or reached end)
-      if (
-        presetOrderRef.current.length === 0 ||
-        presetIndexRef.current >= presetOrderRef.current.length
-      ) {
-        const indices = allPresets.map((_, i) => i);
-        presetOrderRef.current = shuffleArray(indices);
+      // When we've exhausted the list, bump seed to get a fresh shuffle
+      if (presetIndexRef.current >= shuffledIds.length) {
         presetIndexRef.current = 0;
+        pendingAdvanceRef.current = true;
+        setSeed((s) => (s + 1) % 2147483647);
+        return;
       }
 
       // Shuffle cameras if needed
@@ -83,30 +96,29 @@ export function useFeelingLucky(allPresets: ConvexPreset[]) {
         cameraOrderRef.current.length === 0 ||
         cameraIndexRef.current >= cameraOrderRef.current.length
       ) {
-        const indices = CAMERA_MODES.map((_, i) => i);
-        cameraOrderRef.current = shuffleArray(indices);
+        cameraOrderRef.current = shuffleArray(CAMERA_MODES.map((_, i) => i));
         cameraIndexRef.current = 0;
       }
 
-      // Get next preset and camera from shuffled order
-      const presetIdx = presetOrderRef.current[presetIndexRef.current];
-      const nextPreset = allPresets[presetIdx];
+      const nextId = shuffledIds[presetIndexRef.current];
+      const nextPreset = presetMap.get(String(nextId));
       presetIndexRef.current++;
+
+      if (!nextPreset) {
+        queueMicrotask(() => playNextRef.current());
+        return;
+      }
 
       const cameraIdx = cameraOrderRef.current[cameraIndexRef.current];
       const nextCamera = CAMERA_MODES[cameraIdx];
       cameraIndexRef.current++;
 
       setCameraMode(nextCamera);
-
-      // Play the preset and track it
       playPreset(convexPresetToPreset(nextPreset));
       usePresetSelector.getState().setActivePresetId(nextPreset._id);
 
-      // Increment cycleKey to reset CSS animation
       setState((s) => ({ ...s, cycleKey: s.cycleKey + 1 }));
 
-      // Start timer for next cycle
       const timerObj = { progress: 0 };
       timerRef.current = gsap.to(timerObj, {
         progress: 1,
@@ -120,25 +132,35 @@ export function useFeelingLucky(allPresets: ConvexPreset[]) {
         },
       });
     };
-  }, [allPresets, playPreset, setCameraMode]);
+  }, [shuffledIds, presetMap, playPreset, setCameraMode]);
+
+  // Resume playback after a seed bump delivers a fresh shuffled list
+  useEffect(() => {
+    if (pendingAdvanceRef.current && isActiveRef.current && shuffledIds && shuffledIds.length > 0) {
+      pendingAdvanceRef.current = false;
+      playNextRef.current();
+    }
+  }, [shuffledIds]);
 
   const start = useCallback(() => {
-    if (allPresets.length === 0) return;
+    if (!shuffledIds || shuffledIds.length === 0) return;
 
+    presetIndexRef.current = 0;
+    cameraOrderRef.current = [];
+    cameraIndexRef.current = 0;
     isActiveRef.current = true;
     setLuckyPlaying(true);
     setState((s) => ({ isPlaying: true, isPaused: false, cycleKey: s.cycleKey + 1 }));
     playNextRef.current();
-  }, [allPresets.length, setLuckyPlaying]);
+  }, [shuffledIds, setLuckyPlaying]);
 
   const stop = useCallback(() => {
     isActiveRef.current = false;
+    pendingAdvanceRef.current = false;
     timerRef.current?.kill();
     timerRef.current = null;
     stopAll();
     setLuckyPlaying(false);
-    // Reset shuffle state
-    presetOrderRef.current = [];
     presetIndexRef.current = 0;
     cameraOrderRef.current = [];
     cameraIndexRef.current = 0;

@@ -93,3 +93,82 @@ export const getVoteSummary = query({
     return { upvotes, downvotes, userVote };
   },
 });
+
+const UPVOTE_WEIGHT = 3;
+const MAX_PRESET_IDS = 500;
+
+function mulberry32(seed: number) {
+  let s = seed | 0;
+  return () => {
+    s = (s + 0x6d2b79f5) | 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function weightedShuffle<T>(items: T[], weights: number[], rand: () => number): T[] {
+  const result: T[] = [];
+  const remaining = items.map((item, i) => ({ item, weight: weights[i] }));
+
+  while (remaining.length > 0) {
+    const totalWeight = remaining.reduce((sum, r) => sum + r.weight, 0);
+    let pick = rand() * totalWeight;
+    let idx = remaining.length - 1;
+    for (let i = 0; i < remaining.length; i++) {
+      pick -= remaining[i].weight;
+      if (pick <= 0) {
+        idx = i;
+        break;
+      }
+    }
+    result.push(remaining[idx].item);
+    remaining.splice(idx, 1);
+  }
+
+  return result;
+}
+
+export const getShuffledPresetsForLucky = query({
+  args: {
+    presetIds: v.array(v.id("presets")),
+    seed: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const presetIds = args.presetIds.slice(0, MAX_PRESET_IDS);
+    if (presetIds.length === 0) return [];
+
+    const voteMap = new Map<string, number>();
+
+    const identity = await ctx.auth.getUserIdentity();
+    if (identity) {
+      const user = await ctx.db
+        .query("users")
+        .withIndex("by_token_identifier", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
+        .first();
+
+      if (user) {
+        const votes = await ctx.db
+          .query("presetVotes")
+          .withIndex("by_user_preset", (q) => q.eq("userId", user._id))
+          .collect();
+
+        for (const vote of votes) {
+          if (vote.vote === 1 || vote.vote === -1) {
+            voteMap.set(String(vote.presetId), vote.vote);
+          }
+        }
+      }
+    }
+
+    let candidates = presetIds.filter((id) => voteMap.get(String(id)) !== -1);
+    if (candidates.length === 0) {
+      candidates = [...presetIds];
+    }
+
+    const weights = candidates.map((id) => (voteMap.get(String(id)) === 1 ? UPVOTE_WEIGHT : 1));
+
+    const rand = mulberry32(args.seed);
+    return weightedShuffle(candidates, weights, rand);
+  },
+});
