@@ -222,7 +222,7 @@ export const PARAMS: Record<string, ParameterDef> = {
   "Particles.textureSize": {
     min: 128,
     max: 1024,
-    default: 384,
+    default: 256,
     step: 128,
     description: "number of particles",
     group: "Particles",
@@ -252,7 +252,7 @@ export const PARAMS: Record<string, ParameterDef> = {
   "Particles.alpha": {
     min: 0.1,
     max: 1,
-    default: 0.5,
+    default: 1,
     step: 0.1,
     description: "particle opacity",
     group: "Particles",
@@ -450,7 +450,7 @@ export const PARAMS: Record<string, ParameterDef> = {
   "Emitters.spawnRate": {
     min: 500,
     max: 10000,
-    default: 3000,
+    default: 2000,
     step: 500,
     description: "particles per second",
     group: "Emitters",

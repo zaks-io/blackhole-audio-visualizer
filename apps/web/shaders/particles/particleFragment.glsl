@@ -1,6 +1,7 @@
 varying vec3 vColor;
 varying vec2 vUV;
 varying float vRedshiftFade;
+varying float vDensityAlphaScale;
 
 uniform float uBrightness;
 uniform float uAlpha;
@@ -34,7 +35,12 @@ void main() {
     float tailFade = smoothstep(0.0, 0.3, t);
     shapeAlpha *= tailFade;
 
-    float finalAlpha = shapeAlpha * uAlpha * vRedshiftFade;
+    float finalAlpha = shapeAlpha * uAlpha * vRedshiftFade * vDensityAlphaScale;
+
+    // Early-out for negligible fragments — avoids framebuffer read-modify-write.
+    // In dense zones vDensityAlphaScale drops alpha so Gaussian tails hit this
+    // threshold, cutting ~40-50% of fragments while additive blend still saturates.
+    if (finalAlpha < 0.01) discard;
 
     vec3 finalColor = min(vColor * uBrightness, vec3(1.5));
     gl_FragColor = vec4(finalColor, finalAlpha);

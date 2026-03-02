@@ -15,6 +15,7 @@ uniform vec3 uBlackHolePos[MAX_BLACK_HOLES];
 uniform float uBlackHoleRadius[MAX_BLACK_HOLES];
 uniform int uBlackHoleCount;
 uniform float uParticleLensingStrength;
+uniform float uISCORadius;
 
 attribute vec2 reference;
 attribute float crossIndex;
@@ -22,6 +23,7 @@ attribute float crossIndex;
 varying vec3 vColor;
 varying vec2 vUV;
 varying float vRedshiftFade;
+varying float vDensityAlphaScale;
 
 // Catmull-Rom spline - smooth curve through all 4 points
 vec3 catmullRom(vec3 p0, vec3 p1, vec3 p2, vec3 p3, float t) {
@@ -158,6 +160,32 @@ void main() {
         p2 = p3;
     }
 
+    // Dense zone detection: estimate proximity to particle clustering regions
+    // (ISCO capture zone, frame dragging). Used to reduce per-particle rendering
+    // cost via ribbon kill, width reduction, and alpha scaling.
+    float densityProxy = 0.0;
+    for (int i = 0; i < MAX_BLACK_HOLES; i++) {
+        if (i >= uBlackHoleCount) break;
+        float bhR = uBlackHoleRadius[i];
+        if (bhR <= 0.0) continue;
+        float dist = length(p3 - uBlackHolePos[i]);
+        float zoneOuter = max(uISCORadius * 2.0, bhR * 6.0);
+        float prox = clamp(1.0 - (dist - bhR) / (zoneOuter - bhR), 0.0, 1.0);
+        densityProxy = max(densityProxy, prox);
+    }
+
+    // Kill second ribbon in dense zones — invisible when many particles overlap
+    if (crossIndex > 0.5 && densityProxy > 0.15) {
+        gl_Position = vec4(0.0, 0.0, -1000.0, 1.0);
+        vColor = vec3(0.0);
+        vDensityAlphaScale = 0.0;
+        return;
+    }
+
+    // Scale down alpha in dense zones so Gaussian tails hit the discard threshold.
+    // Additive blend still saturates from the remaining particle cores.
+    vDensityAlphaScale = mix(1.0, 0.15, densityProxy * densityProxy);
+
     // Color from LUT
     float idx = clamp(floor(colorIndex + 0.5), 0.0, uColorLUTSize - 1.0);
     vColor = texture2D(uColorLUT, vec2((idx + 0.5) / uColorLUTSize, 0.5)).rgb;
@@ -242,6 +270,9 @@ void main() {
     float baseWidth = uBaseSize * max(uResolutionScale, 0.0001) * 0.65;
     float taperT = pow(t, 0.5);
     float halfW = baseWidth * (0.3 + 0.7 * taperT);
+
+    // Shrink ribbons in dense zones to reduce rasterized fragment count
+    halfW *= mix(1.0, 0.4, densityProxy * densityProxy);
 
     // Prevent subpixel “holes”/moiré by enforcing a minimum screen-space width.
     // Convert 1 pixel to view-space units at this depth using projectionMatrix and viewport height.
