@@ -312,7 +312,6 @@ export function BlackHoleSimulation({
     const masses = bh.masses;
     const radii = bh.radii;
     const baseRadii = bh.baseRadii;
-    const maxMass = gravity * blackHoleMassMax;
 
     // Shift BH position history before computing new positions
     // Mirrors particle history shift in useGPUCompute.useFrame
@@ -475,18 +474,23 @@ export function BlackHoleSimulation({
       audioData.spawnBurst = 1;
       audioData.beatIntensity = 0;
     }
+  });
 
-    // Update black hole screen positions for gravitational lensing post-processing
-    const bhData = blackHoleDataRef.current!;
+  // Update screen-space BH lensing data after camera controllers have run.
+  // Priority 1 keeps this aligned with the frame's final camera transform.
+  useFrame(() => {
+    const bhData = blackHoleDataRef.current;
+    if (!bhData) return;
+
     updateBlackHoleScreenData(
       bhData.positions,
       bhData.radii,
       bhData.masses,
-      maxMass,
+      runtimeState.gravity * runtimeState.blackHoleMassMax,
       bhData.count,
       camera
     );
-  });
+  }, 1);
 
   // Memoized callbacks to avoid per-render allocations
   const getAudioData = useCallback(() => audioDataRef.current, []);

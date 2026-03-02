@@ -43,23 +43,28 @@ void main() {
     vec2 bhPos = uBlackHoles[i].xy;
     float bhRadius = uBlackHoles[i].z;
     float bhMass = uBlackHoles[i].w;
+    if (bhRadius <= 0.0 || bhMass <= 0.0) continue;
 
     vec2 delta = vUv - bhPos;
     delta.x *= aspect;
 
     float dist = length(delta);
-    float edgeRadius = bhRadius * aspect;
+    float edgeRadius = max(bhRadius * aspect, 1e-4);
+    if (dist <= edgeRadius || dist <= 1e-5) continue;
 
-    float distFromEdge = dist - edgeRadius;
-    if (distFromEdge > 0.0) {
-      float normalizedMass = bhMass / uMaxMass;
-      float falloff = edgeRadius / (distFromEdge + edgeRadius);
-      float distortion = uStrength * normalizedMass * falloff * falloff * 0.15;
+    float normalizedMass = clamp(bhMass / max(uMaxMass, 1e-5), 0.0, 1.0);
 
-      // Sample TOWARD the black hole (light bends around mass)
-      vec2 dir = normalize(delta);
-      warpedUv -= vec2(dir.x / aspect, dir.y) * distortion;
-    }
+    float distFromEdge = max(dist - edgeRadius, 1e-5);
+    float falloff = edgeRadius / (distFromEdge + edgeRadius);
+
+    // Keep the look tied to apparent lens size while preserving punch near edges.
+    float radiusScale = clamp(edgeRadius / 0.04, 0.35, 1.4);
+    float distortion = uStrength * normalizedMass * falloff * falloff * 0.12 * radiusScale;
+    distortion = min(distortion, edgeRadius * 0.9);
+
+    // Sample toward the lens center so apparent star positions shift outward.
+    vec2 dir = delta / dist;
+    warpedUv -= vec2(dir.x / aspect, dir.y) * distortion;
   }
 
   gl_FragColor = texture2D(uTexture, warpedUv);
@@ -91,8 +96,8 @@ export function StarFieldWithLensing({
 
   // Create FBO for rendering starfield (key forces recreation on resize)
   const fbo = useFBO(size.width, size.height, {
-    minFilter: THREE.LinearFilter,
-    magFilter: THREE.LinearFilter,
+    minFilter: THREE.NearestFilter,
+    magFilter: THREE.NearestFilter,
     format: THREE.RGBAFormat,
     type: THREE.HalfFloatType,
   });
@@ -138,6 +143,14 @@ export function StarFieldWithLensing({
     // Copy main camera state to starfield camera
     starfieldCamera.position.copy(mainCamera.position);
     starfieldCamera.quaternion.copy(mainCamera.quaternion);
+    starfieldCamera.up.copy(mainCamera.up);
+    const perspectiveMainCamera = mainCamera as THREE.PerspectiveCamera;
+    if (perspectiveMainCamera.isPerspectiveCamera) {
+      starfieldCamera.fov = perspectiveMainCamera.fov;
+      starfieldCamera.near = perspectiveMainCamera.near;
+      starfieldCamera.far = perspectiveMainCamera.far;
+      starfieldCamera.zoom = perspectiveMainCamera.zoom;
+    }
     starfieldCamera.aspect = size.width / size.height;
     starfieldCamera.updateProjectionMatrix();
     /* eslint-enable react-hooks/immutability */
@@ -171,7 +184,7 @@ export function StarFieldWithLensing({
         }
       }
     }
-  });
+  }, 2);
 
   return (
     <>
