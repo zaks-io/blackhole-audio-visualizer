@@ -2,18 +2,6 @@ import { useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { create } from "zustand";
 
-interface ParticleStatsState {
-  activeCount: number;
-  totalCount: number;
-  updateStats: (active: number, total: number) => void;
-}
-
-export const useParticleStatsStore = create<ParticleStatsState>((set) => ({
-  activeCount: 0,
-  totalCount: 0,
-  updateStats: (active, total) => set({ activeCount: active, totalCount: total }),
-}));
-
 const HISTORY_SIZE = 60;
 const SPIKE_THRESHOLD_MS = 30;
 // FPSTracker updates its sample ~15fps (every ~66ms), so 60s ~= 900 samples.

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useEffect } from "react";
-import { useFPSStore, useParticleStatsStore } from "@/hooks/useFPSMonitor";
+import { useFPSStore } from "@/hooks/useFPSMonitor";
 import { useProducerMode } from "@/components/ProducerMode/useProducerMode";
 import { cn } from "@/lib/utils";
 
@@ -20,9 +20,6 @@ export function FPSMeter() {
   const historyVersion = useFPSStore((s) => s.historyVersion);
   const maxDeltaMs = useFPSStore((s) => s.maxDeltaMs);
   const low1Percent = useFPSStore((s) => s.getLow1Percent());
-
-  const activeCount = useParticleStatsStore((s) => s.activeCount);
-  const totalCount = useParticleStatsStore((s) => s.totalCount);
 
   const producerPanelOpen = useProducerMode((s) => s.isOpen);
 
@@ -110,19 +107,6 @@ export function FPSMeter() {
           <span>{Math.round(maxDeltaMs)}ms</span>
         </div>
       </div>
-
-      {totalCount > 0 && (
-        <div className="flex flex-col gap-0.5 leading-none border-l border-white/10 pl-3">
-          <div className="flex items-baseline gap-1">
-            <span className="text-sm font-bold font-mono tracking-tight text-white">
-              {Math.round((activeCount / totalCount) * 100)}%
-            </span>
-          </div>
-          <div className="text-[9px] font-mono text-white/50">
-            {(activeCount / 1000).toFixed(1)}k/{(totalCount / 1000).toFixed(0)}k
-          </div>
-        </div>
-      )}
     </div>
   );
 }

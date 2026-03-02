@@ -16,7 +16,6 @@ import {
 import { useVisualizationControls } from "@/hooks/useVisualizationControls";
 import { registerGPUSetter, clearGPUSetters } from "@/lib/gpuSetterRegistry";
 import { PALETTE_OFFSETS } from "@/components/ColorModeSystem";
-import { useParticleStatsStore } from "@/hooks/useFPSMonitor";
 import positionFragmentShader from "@/shaders/simulation/positionFragment.glsl";
 import velocityFragmentShader from "@/shaders/simulation/velocityFragment.glsl";
 import copyTextureShader from "@/shaders/simulation/copyTexture.glsl";
@@ -49,10 +48,6 @@ export function useGPUCompute(
   const copyMaterialRef = useRef<THREE.ShaderMaterial | null>(null);
   const copySceneRef = useRef<THREE.Scene | null>(null);
   const copyCameraRef = useRef<THREE.Camera | null>(null);
-  // Particle stats sampling
-  const lastParticleSampleRef = useRef(0);
-  const particleReadBufferRef = useRef<Float32Array | null>(null);
-  const updateParticleStats = useParticleStatsStore((s) => s.updateStats);
   const loggedCapsRef = useRef(false);
 
   const textures = useMemo(() => {
@@ -504,39 +499,6 @@ export function useGPUCompute(
     } catch (e) {
       console.error("GPU compute failed, triggering recovery:", e);
       onError?.();
-    }
-
-    // Sample particle stats periodically (every 500ms)
-    const now = performance.now();
-    if (now - lastParticleSampleRef.current > 500) {
-      lastParticleSampleRef.current = now;
-      const posRT = gpuComputeRef.current.getCurrentRenderTarget(positionVariableRef.current);
-      const totalCount = textureSize * textureSize;
-
-      // Lazy-init read buffer
-      if (
-        !particleReadBufferRef.current ||
-        particleReadBufferRef.current.length !== totalCount * 4
-      ) {
-        particleReadBufferRef.current = new Float32Array(totalCount * 4);
-      }
-
-      gl.readRenderTargetPixels(
-        posRT,
-        0,
-        0,
-        textureSize,
-        textureSize,
-        particleReadBufferRef.current
-      );
-
-      // Count active particles (lifetime > 0, stored in .w component)
-      let activeCount = 0;
-      const data = particleReadBufferRef.current;
-      for (let i = 0; i < totalCount; i++) {
-        if (data[i * 4 + 3] > 0) activeCount++;
-      }
-      updateParticleStats(activeCount, totalCount);
     }
   });
 
