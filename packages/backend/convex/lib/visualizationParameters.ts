@@ -354,9 +354,9 @@ export const PARAMS: Record<string, ParameterDef> = {
     system: true,
   },
   "Physics.lifetimeGracePeriod": {
-    min: 5,
+    min: 0,
     max: 120,
-    default: 10,
+    default: 0,
     step: 5,
     description: "initial lifetime grace period",
     group: "Physics",
@@ -366,7 +366,7 @@ export const PARAMS: Record<string, ParameterDef> = {
   "Physics.lifetimeMax": {
     min: 5,
     max: 120,
-    default: 20,
+    default: 120,
     step: 5,
     description: "maximum particle lifetime",
     group: "Physics",
@@ -375,8 +375,8 @@ export const PARAMS: Record<string, ParameterDef> = {
   },
   "Physics.lifetimeGravityMultiplier": {
     min: 1,
-    max: 50,
-    default: 50,
+    max: 100,
+    default: 100,
     step: 0.5,
     description: "gravity boost for aging particles",
     group: "Physics",
@@ -399,7 +399,7 @@ export const PARAMS: Record<string, ParameterDef> = {
   // ===========================================================================
   "Emitters.emitRadius": {
     min: 100,
-    max: 300,
+    max: 200,
     default: 200,
     step: 1,
     description: "spawn distance from center / line half-height",
