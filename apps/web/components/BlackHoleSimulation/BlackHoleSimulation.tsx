@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, useMemo, useCallback } from "react";
+import { Suspense, useRef, useEffect, useMemo, useCallback } from "react";
 import { Environment } from "@react-three/drei";
 import { useFrame, useThree } from "@react-three/fiber";
 import { useShallow } from "zustand/shallow";
@@ -522,7 +522,16 @@ export function BlackHoleSimulation({
           />
         )
       ) : (
-        skyboxPath && <Environment files={skyboxPath} background />
+        skyboxPath && (
+          <Suspense fallback={null}>
+            <Environment
+              files={skyboxPath}
+              background
+              backgroundIntensity={0.15}
+              environmentIntensity={0}
+            />
+          </Suspense>
+        )
       )}
 
       <ParticleSystem
