@@ -268,7 +268,9 @@ void main() {
     }
 
     // t: 0 = tail (p0), 1 = head (p3)
-    float t = position.y + 0.5;
+    // Geometry extends slightly beyond [-0.5, 0.5] for ribbon shaping, so clamp
+    // to avoid extrapolating BH history (causes offset fade lobes) and NaN taper.
+    float t = clamp(position.y + 0.5, 0.0, 1.0);
 
     // Position along the curve using ACTUAL historical positions.
     // NOTE: Standard Catmull-Rom(p0,p1,p2,p3,t) covers p1->p2, not p0->p3.
