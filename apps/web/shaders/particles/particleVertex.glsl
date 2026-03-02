@@ -19,9 +19,6 @@ uniform float uMotionBlurTaper;
 
 #define MAX_BLACK_HOLES 4
 uniform vec3 uBlackHolePos[MAX_BLACK_HOLES];
-uniform vec3 uBlackHolePrevPos[MAX_BLACK_HOLES];
-uniform vec3 uBlackHoleHist1Pos[MAX_BLACK_HOLES];
-uniform vec3 uBlackHoleHist2Pos[MAX_BLACK_HOLES];
 uniform float uBlackHoleRadius[MAX_BLACK_HOLES];
 uniform int uBlackHoleCount;
 uniform float uParticleLensingStrength;
@@ -32,7 +29,6 @@ attribute float crossIndex;
 
 varying vec3 vColor;
 varying vec2 vUV;
-varying float vRedshiftFade;
 varying float vDensityAlphaScale;
 
 // Catmull-Rom spline - smooth curve through all 4 points
@@ -317,29 +313,6 @@ void main() {
     // NOTE: Standard Catmull-Rom(p0,p1,p2,p3,t) covers p1->p2, not p0->p3.
     // We explicitly build a 3-segment polycurve to span tail->head.
     vec3 curvePos = evalTrailCurve(p0, p1, p2, p3, t);
-
-    // Schwarzschild gravitational redshift: sqrt(1 - Rs/r)
-    // 0 at event horizon, rises steeply, ~0.82 at ISCO (3Rs)
-    // Interpolate BH position history to match trail curve time t,
-    // so the redshift fade tracks where each BH actually was at each trail segment.
-    float minFade = 1.0;
-    for (int i = 0; i < MAX_BLACK_HOLES; i++) {
-        if (i >= uBlackHoleCount) break;
-        // Piecewise linear interpolation matching the 3-segment trail:
-        // t=0 (tail/oldest) -> history2, t=1 (head/current) -> current
-        vec3 bhAtT;
-        if (t < 0.333333) {
-            bhAtT = mix(uBlackHoleHist2Pos[i], uBlackHoleHist1Pos[i], t * 3.0);
-        } else if (t < 0.666667) {
-            bhAtT = mix(uBlackHoleHist1Pos[i], uBlackHolePrevPos[i], (t - 0.333333) * 3.0);
-        } else {
-            bhAtT = mix(uBlackHolePrevPos[i], uBlackHolePos[i], (t - 0.666667) * 3.0);
-        }
-        float dist = length(curvePos - bhAtT);
-        float fade = sqrt(max(0.0, 1.0 - uBlackHoleRadius[i] / max(dist, 0.001)));
-        minFade = min(minFade, fade);
-    }
-    vRedshiftFade = minFade;
 
     // Transform curve position to view space
     vec4 viewPos = modelViewMatrix * vec4(curvePos, 1.0);

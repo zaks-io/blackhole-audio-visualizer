@@ -1,6 +1,5 @@
 varying vec3 vColor;
 varying vec2 vUV;
-varying float vRedshiftFade;
 varying float vDensityAlphaScale;
 
 uniform float uBrightness;
@@ -38,7 +37,7 @@ void main() {
     float tailFade = smoothstep(0.0, fadeEdge, t);
     shapeAlpha *= tailFade;
 
-    float finalAlpha = shapeAlpha * uAlpha * vRedshiftFade * vDensityAlphaScale;
+    float finalAlpha = shapeAlpha * uAlpha * vDensityAlphaScale;
 
     // Early-out for negligible fragments — avoids framebuffer read-modify-write.
     // In dense zones vDensityAlphaScale drops alpha so Gaussian tails hit this
