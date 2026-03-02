@@ -116,7 +116,7 @@ export const PARAMS: Record<string, ParameterDef> = {
     system: false,
   },
   "Black Hole.orbitSpeed": {
-    min: 0,
+    min: 0.1,
     max: 2,
     default: 0.3,
     step: 0.1,
@@ -126,9 +126,9 @@ export const PARAMS: Record<string, ParameterDef> = {
     system: true,
   },
   "Black Hole.blackHoleMassMin": {
-    min: 0.3,
+    min: 0.4,
     max: 1,
-    default: 0.3,
+    default: 0.4,
     step: 0.1,
     description: "minimum mass ratio for size variation",
     group: "Black Hole",
@@ -168,7 +168,7 @@ export const PARAMS: Record<string, ParameterDef> = {
   "Black Hole.beatPulse": {
     min: 0,
     max: 5,
-    default: 1,
+    default: 0.5,
     step: 0.1,
     description: "beat-reactive pulse intensity",
     group: "Black Hole",
@@ -232,12 +232,12 @@ export const PARAMS: Record<string, ParameterDef> = {
   "Particles.pointSize": {
     min: 1,
     max: 3,
-    default: 1,
+    default: 1.5,
     step: 0.5,
     description: "particle size",
     group: "Particles",
     label: "Point Size",
-    system: false,
+    system: true,
   },
   "Particles.brightness": {
     min: 0.1,
@@ -252,7 +252,7 @@ export const PARAMS: Record<string, ParameterDef> = {
   "Particles.alpha": {
     min: 0.1,
     max: 1,
-    default: 0.8,
+    default: 0.5,
     step: 0.1,
     description: "particle opacity",
     group: "Particles",
@@ -468,7 +468,7 @@ export const PARAMS: Record<string, ParameterDef> = {
   // EMITTERS
   // ===========================================================================
   "Emitters.emitRadius": {
-    min: 100,
+    min: 3,
     max: 200,
     default: 200,
     step: 1,
@@ -672,7 +672,7 @@ export const PARAMS: Record<string, ParameterDef> = {
   "Post-FX.chromaticAudioReactivity": {
     min: 0,
     max: 1,
-    default: 0.2,
+    default: 0.5,
     step: 0.1,
     description: "chromatic aberration reactivity",
     group: "Post-FX",
