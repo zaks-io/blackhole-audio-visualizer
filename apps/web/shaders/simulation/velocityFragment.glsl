@@ -69,7 +69,7 @@ void main() {
     vec3 vel = velData.xyz;
     float colorIndex = velData.w;
 
-    if (lifetime < 0.0) {
+    if (lifetime <= 0.0) {
         // Compute emitter index consistently with position shader (same hash seed)
         float emitterIndex = floor(hash2(ip, 100.0) * uEmitterCount);
 

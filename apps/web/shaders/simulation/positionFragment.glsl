@@ -234,12 +234,14 @@ void main() {
         }
 
         if (shouldRecycle) {
-            // HIT BLACK HOLE or MAX LIFETIME: recycle to emitter queue
+            // HIT BLACK HOLE or MAX LIFETIME: recycle to emitter queue.
+            // Lifetime must stay strictly negative so recycled particles remain hidden
+            // until they are explicitly respawned by the queue logic above.
             float recycleRand = hash2(ip, uTime + 500.0);
             if (uParticlesPerSecond <= 0.0) {
-                lifetime = 0.0;  // Instant respawn
+                lifetime = -1.0;
             } else {
-                lifetime = -recycleRand;  // 0 to -1 second queue position
+                lifetime = -max(recycleRand, 0.001);
             }
             pos = vec3(0.0, 0.0, 0.0);  // Reset position for recycled particles
         } else {

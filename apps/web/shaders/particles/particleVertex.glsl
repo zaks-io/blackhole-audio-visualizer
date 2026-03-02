@@ -149,8 +149,8 @@ void main() {
 
     vUV = uv;
 
-    // Hide unspawned particles
-    if (lifetime < 0.0) {
+    // Hide queued/unspawned particles
+    if (lifetime <= 0.0) {
         gl_Position = vec4(0.0, 0.0, -1000.0, 1.0);
         vColor = vec3(0.0);
         return;
