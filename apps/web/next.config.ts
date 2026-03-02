@@ -4,7 +4,7 @@ const isElectronBuild = process.env.BUILD_TARGET === "electron";
 
 const nextConfig: NextConfig = {
   reactCompiler: true,
-  ...(isElectronBuild && { output: "export", assetPrefix: "./" }),
+  ...(isElectronBuild && { output: "export", assetPrefix: "/" }),
   // For Electron, exclude .web.ts files (web-only routes)
   // For web, include both regular and .web.ts files
   pageExtensions: isElectronBuild

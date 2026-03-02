@@ -7,9 +7,9 @@
     "dev": "concurrently \"cd ../web && bun dev\" \"wait-on http://localhost:3000 && bun run compile && cross-env NODE_ENV=development electron .\"",
     "compile": "tsc",
     "typecheck": "tsc --noEmit",
-    "package": "bun run compile && electron-builder",
-    "package:mac": "bun run compile && electron-builder --mac",
-    "package:win": "bun run compile && electron-builder --win"
+    "package": "bun run compile && electron-builder -c electron-builder.config.js",
+    "package:mac": "bun run compile && electron-builder -c electron-builder.config.js --mac",
+    "package:win": "bun run compile && electron-builder -c electron-builder.config.js --win"
   },
   "dependencies": {
     "electron-audio-loopback": "^1.0.6"
