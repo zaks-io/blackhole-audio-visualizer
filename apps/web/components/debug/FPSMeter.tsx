@@ -20,6 +20,11 @@ export function FPSMeter() {
   const historyVersion = useFPSStore((s) => s.historyVersion);
   const maxDeltaMs = useFPSStore((s) => s.maxDeltaMs);
   const low1Percent = useFPSStore((s) => s.getLow1Percent());
+  const particleGpuMs = useFPSStore((s) => s.particleGpuMs);
+  const postGpuMs = useFPSStore((s) => s.postGpuMs);
+  const frameCpuMs = useFPSStore((s) => s.frameCpuMs);
+  const showPerfDebug =
+    typeof window !== "undefined" && new URLSearchParams(window.location.search).has("perfDebug");
 
   const producerPanelOpen = useProducerMode((s) => s.isOpen);
 
@@ -106,6 +111,15 @@ export function FPSMeter() {
           <span className="opacity-50">|</span>
           <span>{Math.round(maxDeltaMs)}ms</span>
         </div>
+        {showPerfDebug && (
+          <div className="flex items-center gap-2 text-[9px] font-mono text-cyan-200/80">
+            <span>P {particleGpuMs.toFixed(2)}ms</span>
+            <span>|</span>
+            <span>FX {postGpuMs.toFixed(2)}ms</span>
+            <span>|</span>
+            <span>CPU {frameCpuMs.toFixed(1)}ms</span>
+          </div>
+        )}
       </div>
     </div>
   );

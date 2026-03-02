@@ -29,6 +29,13 @@ export const runtimeState = {
   motionBlurTaper: PARAM_DEFAULTS.motionBlurTaper,
   motionBlurFade: PARAM_DEFAULTS.motionBlurFade,
   particleLensingStrength: PARAM_DEFAULTS.particleLensingStrength,
+  denseGuardEnterFps: PARAM_DEFAULTS.denseGuardEnterFps,
+  denseGuardExitFps: PARAM_DEFAULTS.denseGuardExitFps,
+  denseGuardEnterFrames: PARAM_DEFAULTS.denseGuardEnterFrames,
+  denseGuardExitFrames: PARAM_DEFAULTS.denseGuardExitFrames,
+  denseGuardStrength: PARAM_DEFAULTS.denseGuardStrength,
+  denseCenterBias: PARAM_DEFAULTS.denseCenterBias,
+  densityScale: PARAM_DEFAULTS.densityScale,
   colorPaletteOffset: 0, // Palette offset for GPU - updated via callGPUSetter
 
   // Physics
@@ -99,6 +106,13 @@ const runtimePathToKey: Record<string, RuntimeStateKey> = {
   "Particles.motionBlurTaper": "motionBlurTaper",
   "Particles.motionBlurFade": "motionBlurFade",
   "Particles.particleLensingStrength": "particleLensingStrength",
+  "Particles.denseGuardEnterFps": "denseGuardEnterFps",
+  "Particles.denseGuardExitFps": "denseGuardExitFps",
+  "Particles.denseGuardEnterFrames": "denseGuardEnterFrames",
+  "Particles.denseGuardExitFrames": "denseGuardExitFrames",
+  "Particles.denseGuardStrength": "denseGuardStrength",
+  "Particles.denseCenterBias": "denseCenterBias",
+  "Particles.densityScale": "densityScale",
   "Particles.colorPaletteOffset": "colorPaletteOffset",
 
   // Physics
@@ -172,6 +186,13 @@ const storeKeyToRuntimeKey: Record<string, RuntimeStateKey> = {
   motionBlurTaper: "motionBlurTaper",
   motionBlurFade: "motionBlurFade",
   particleLensingStrength: "particleLensingStrength",
+  denseGuardEnterFps: "denseGuardEnterFps",
+  denseGuardExitFps: "denseGuardExitFps",
+  denseGuardEnterFrames: "denseGuardEnterFrames",
+  denseGuardExitFrames: "denseGuardExitFrames",
+  denseGuardStrength: "denseGuardStrength",
+  denseCenterBias: "denseCenterBias",
+  densityScale: "densityScale",
   // Note: colorPaletteOffset is NOT synced from store - it's set directly via callGPUSetter
 
   // Physics

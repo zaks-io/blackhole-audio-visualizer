@@ -4,11 +4,18 @@ uniform sampler2D textureHistory1;
 uniform sampler2D textureHistory2;
 uniform sampler2D textureVelocity;
 uniform sampler2D uColorLUT;
+uniform sampler2D uDensityTexture;
 uniform float uColorLUTSize;
 uniform float uBaseSize;
 uniform float uResolutionScale;
 uniform float uDebugMode;
 uniform vec2 uViewport;
+uniform vec2 uDensityTexel;
+uniform float uDensityScale;
+uniform float uDenseGuardStrength;
+uniform float uCenterBiasStrength;
+uniform float uMaxDistance;
+uniform float uMotionBlurTaper;
 
 #define MAX_BLACK_HOLES 4
 uniform vec3 uBlackHolePos[MAX_BLACK_HOLES];
@@ -149,6 +156,13 @@ void main() {
         return;
     }
 
+    // Very cheap distance cull. Keep scale conservative to preserve existing look.
+    if (length(p3) > max(1.0, uMaxDistance * 10.0)) {
+        gl_Position = vec4(0.0, 0.0, -1000.0, 1.0);
+        vColor = vec3(0.0);
+        return;
+    }
+
     // Detect respawn: if any position jumped too far, collapse to current
     float jump01 = length(p1 - p0);
     float jump12 = length(p2 - p1);
@@ -173,7 +187,7 @@ void main() {
     // Dense zone detection: estimate proximity to particle clustering regions
     // (ISCO capture zone, frame dragging). Used to reduce per-particle rendering
     // cost via ribbon kill, width reduction, and alpha scaling.
-    float densityProxy = 0.0;
+    float bhDensityProxy = 0.0;
     for (int i = 0; i < MAX_BLACK_HOLES; i++) {
         if (i >= uBlackHoleCount) break;
         float bhR = uBlackHoleRadius[i];
@@ -181,11 +195,40 @@ void main() {
         float dist = length(p3 - uBlackHolePos[i]);
         float zoneOuter = max(uISCORadius * 2.0, bhR * 6.0);
         float prox = clamp(1.0 - (dist - bhR) / (zoneOuter - bhR), 0.0, 1.0);
-        densityProxy = max(densityProxy, prox);
+        bhDensityProxy = max(bhDensityProxy, prox);
     }
 
+    // Screen-space density proxy from low-resolution occupancy buffer.
+    // This catches particle clumps anywhere on screen, not only around BH zones.
+    vec4 headClip = projectionMatrix * modelViewMatrix * vec4(p3, 1.0);
+    vec2 headNdc = headClip.xy / max(1e-5, headClip.w);
+    vec2 headUv = headNdc * 0.5 + 0.5;
+    float screenDensity = 0.0;
+    if (headUv.x >= 0.0 && headUv.x <= 1.0 && headUv.y >= 0.0 && headUv.y <= 1.0) {
+        float d0 = texture2D(uDensityTexture, headUv).r;
+        float d1 = texture2D(uDensityTexture, headUv + vec2(uDensityTexel.x, 0.0)).r;
+        float d2 = texture2D(uDensityTexture, headUv - vec2(uDensityTexel.x, 0.0)).r;
+        float d3 = texture2D(uDensityTexture, headUv + vec2(0.0, uDensityTexel.y)).r;
+        float d4 = texture2D(uDensityTexture, headUv - vec2(0.0, uDensityTexel.y)).r;
+        float densitySample = (d0 + d1 + d2 + d3 + d4) * 0.2;
+        screenDensity = clamp(densitySample * uDensityScale, 0.0, 1.0);
+    }
+
+    // Center-weighted bias: user-reported hotspots are predominantly center-screen.
+    float centerProxy = clamp(1.0 - length(headNdc), 0.0, 1.0) * uCenterBiasStrength;
+
+    // Use screen density only when dense-guard is active to avoid visible patchiness in normal mode.
+    float guard = clamp(uDenseGuardStrength, 0.0, 1.0);
+    float softScreenProxy = clamp(screenDensity * 0.85 + centerProxy * 0.3, 0.0, 1.0) * guard;
+    float softDensityProxy = max(bhDensityProxy, softScreenProxy);
+
+    // Hard culling proxy: keep conservative and trigger only in extreme screen-density zones.
+    float extremeScreenProxy = smoothstep(0.8, 1.0, screenDensity) * guard;
+    float cullDensityProxy = max(bhDensityProxy, extremeScreenProxy);
+
     // Kill second ribbon in dense zones — invisible when many particles overlap
-    if (crossIndex > 0.5 && densityProxy > 0.15) {
+    float denseRibbonThreshold = mix(0.28, 0.18, guard);
+    if (crossIndex > 0.5 && cullDensityProxy > denseRibbonThreshold) {
         gl_Position = vec4(0.0, 0.0, -1000.0, 1.0);
         vColor = vec3(0.0);
         vDensityAlphaScale = 0.0;
@@ -196,7 +239,8 @@ void main() {
     // zones. Hash of reference is constant across all 64 vertices of an instance,
     // so no partial artifacts or temporal flickering.
     float particleHash = hash21(reference);
-    float cullProb = smoothstep(0.3, 1.0, densityProxy) * 0.7;
+    float denseCullGain = mix(0.12, 0.3, guard);
+    float cullProb = smoothstep(0.65, 1.0, cullDensityProxy) * denseCullGain;
     if (particleHash < cullProb) {
         gl_Position = vec4(0.0, 0.0, -1000.0, 1.0);
         vColor = vec3(0.0);
@@ -206,7 +250,8 @@ void main() {
 
     // Scale down alpha in dense zones so Gaussian tails hit the discard threshold.
     // Additive blend still saturates from the remaining particle cores.
-    vDensityAlphaScale = mix(1.0, 0.15, densityProxy * densityProxy);
+    float denseAlphaFloor = mix(0.72, 0.55, guard);
+    vDensityAlphaScale = mix(1.0, denseAlphaFloor, softDensityProxy * softDensityProxy);
 
     // Color from LUT
     float idx = clamp(floor(colorIndex + 0.5), 0.0, uColorLUTSize - 1.0);
@@ -258,6 +303,9 @@ void main() {
 
     // Transform curve position to view space
     vec4 viewPos = modelViewMatrix * vec4(curvePos, 1.0);
+    float viewDist = max(0.001, -viewPos.z);
+    float nearProxy = clamp((90.0 - viewDist) / 90.0, 0.0, 1.0);
+    float closeDenseProxy = nearProxy * softDensityProxy * guard;
 
     // Local tangent in view space (finite difference on the same polycurve).
     // This ensures the streak width is oriented correctly even on curved/off-axis trails.
@@ -302,16 +350,27 @@ void main() {
     // Width in view space - scale with uBaseSize
     // Global width trim so trails read more like thin star streaks at typical pointSize values.
     float baseWidth = uBaseSize * max(uResolutionScale, 0.0001) * 0.65;
-    float taperT = pow(t, 0.5);
+    float taperExponent = mix(0.5, 2.5, clamp(uMotionBlurTaper, 0.0, 1.0));
+    float taperT = pow(t, taperExponent);
     float halfW = baseWidth * (0.3 + 0.7 * taperT);
 
     // Shrink ribbons in dense zones to reduce rasterized fragment count
-    halfW *= mix(1.0, 0.4, densityProxy * densityProxy);
+    float denseWidthFloor = mix(0.78, 0.58, guard);
+    halfW *= mix(1.0, denseWidthFloor, softDensityProxy * softDensityProxy);
+
+    // Close-camera safeguard: when dense clusters get very near camera, cap
+    // maximum on-screen ribbon width to avoid catastrophic overdraw spikes.
+    float projY = projectionMatrix[1][1]; // f = 1/tan(fov/2)
+    float viewPerPixel = (2.0 * viewDist) / (max(1.0, uViewport.y) * projY);
+    float maxHalfPixels = mix(120.0, 22.0, closeDenseProxy);
+    halfW = min(halfW, viewPerPixel * maxHalfPixels);
+
+    // Additional mild alpha trim only for close+dense cases to cut blend load
+    // without introducing hard cull artifacts.
+    vDensityAlphaScale *= mix(1.0, 0.84, closeDenseProxy * closeDenseProxy);
 
     // Prevent subpixel “holes”/moiré by enforcing a minimum screen-space width.
     // Convert 1 pixel to view-space units at this depth using projectionMatrix and viewport height.
-    float projY = projectionMatrix[1][1]; // f = 1/tan(fov/2)
-    float viewPerPixel = (2.0 * max(0.001, -viewPos.z)) / (max(1.0, uViewport.y) * projY);
     halfW = max(halfW, viewPerPixel * 1.5); // ~1.5 px minimum half-width
 
     // Offset vertex position in view space along the selected ribbon direction

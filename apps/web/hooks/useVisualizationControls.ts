@@ -31,6 +31,13 @@ export interface VisualizationControlsState {
   motionBlurTaper: number;
   motionBlurFade: number;
   particleLensingStrength: number;
+  denseGuardEnterFps: number;
+  denseGuardExitFps: number;
+  denseGuardEnterFrames: number;
+  denseGuardExitFrames: number;
+  denseGuardStrength: number;
+  denseCenterBias: number;
+  densityScale: number;
 
   // Physics
   gravity: number;
@@ -122,6 +129,13 @@ export const pathToKey: Record<string, keyof VisualizationControlsState> = {
   "Particles.motionBlurTaper": "motionBlurTaper",
   "Particles.motionBlurFade": "motionBlurFade",
   "Particles.particleLensingStrength": "particleLensingStrength",
+  "Particles.denseGuardEnterFps": "denseGuardEnterFps",
+  "Particles.denseGuardExitFps": "denseGuardExitFps",
+  "Particles.denseGuardEnterFrames": "denseGuardEnterFrames",
+  "Particles.denseGuardExitFrames": "denseGuardExitFrames",
+  "Particles.denseGuardStrength": "denseGuardStrength",
+  "Particles.denseCenterBias": "denseCenterBias",
+  "Particles.densityScale": "densityScale",
   "Physics.gravity": "gravity",
   "Physics.timeScale": "timeScale",
   "Physics.softening": "softening",
@@ -187,6 +201,13 @@ const DEFAULT_STATE: VisualizationControlsState = {
   maxDistance: PARAM_DEFAULTS.maxDistance,
   motionBlurTaper: PARAM_DEFAULTS.motionBlurTaper,
   motionBlurFade: PARAM_DEFAULTS.motionBlurFade,
+  denseGuardEnterFps: PARAM_DEFAULTS.denseGuardEnterFps,
+  denseGuardExitFps: PARAM_DEFAULTS.denseGuardExitFps,
+  denseGuardEnterFrames: PARAM_DEFAULTS.denseGuardEnterFrames,
+  denseGuardExitFrames: PARAM_DEFAULTS.denseGuardExitFrames,
+  denseGuardStrength: PARAM_DEFAULTS.denseGuardStrength,
+  denseCenterBias: PARAM_DEFAULTS.denseCenterBias,
+  densityScale: PARAM_DEFAULTS.densityScale,
   gravity: PARAM_DEFAULTS.gravity,
   timeScale: PARAM_DEFAULTS.timeScale,
   softening: PARAM_DEFAULTS.softening,

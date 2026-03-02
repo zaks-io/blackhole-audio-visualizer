@@ -47,6 +47,7 @@ import { useViewerMode } from "@/hooks/useViewerMode";
 import { useUnifiedAudio } from "@/hooks/useUnifiedAudio";
 import { usePublicSceneWithDetails } from "@/hooks/useConvexScenes";
 import { useUnifiedPlayer } from "@/hooks/useUnifiedPlayer";
+import { isElectron } from "@/lib/platform";
 import type { Resolution } from "@/hooks/useUIState";
 import type { PlaylistWithPresets } from "@/components/ProducerMode/types";
 
@@ -82,13 +83,17 @@ export default function CanvasSlot() {
   // Perf/bisection flags (URL-driven so we can test prod + Electron builds)
   const perfFlags = useMemo(() => {
     if (typeof window === "undefined") {
-      return { noPostFX: false, noStars: false, noHistory: false };
+      return { noPostFX: false, noStars: false, noHistory: false, desktopAdvancedParticles: false };
     }
     const params = new URLSearchParams(window.location.search);
+    const electronApp = isElectron();
     return {
       noPostFX: params.has("noPostFX"),
       noStars: params.has("noStars"),
       noHistory: params.has("noHistory"),
+      desktopAdvancedParticles: params.has("desktopAdvancedParticles")
+        ? params.get("desktopAdvancedParticles") !== "0"
+        : electronApp,
     };
   }, []);
 

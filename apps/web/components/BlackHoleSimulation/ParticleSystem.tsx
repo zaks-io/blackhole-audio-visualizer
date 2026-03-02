@@ -1,15 +1,19 @@
 "use client";
 
-import { useRef, useMemo, useEffect, useState } from "react";
+import { useRef, useMemo, useEffect, useState, useCallback } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { useGPUCompute } from "@/hooks/useGPUCompute";
 import { DEFAULT_TEXTURE_SIZE } from "@/lib/gpu/verletPhysics";
 import particleVertexShader from "@/shaders/particles/particleVertex.glsl";
 import particleFragmentShader from "@/shaders/particles/particleFragment.glsl";
+import particleDensityVertexShader from "@/shaders/particles/particleDensityVertex.glsl";
+import particleDensityFragmentShader from "@/shaders/particles/particleDensityFragment.glsl";
 import { getAllColors } from "@/components/ColorModeSystem";
 import { useVisualizationControls } from "@/hooks/useVisualizationControls";
 import { runtimeState } from "@/lib/runtimeStateRegistry";
+import { GpuTimerQuery } from "@/lib/perf/gpuTimerQuery";
+import { useFPSStore } from "@/hooks/useFPSMonitor";
 
 const DEFAULT_ALL_COLORS = getAllColors();
 
@@ -40,6 +44,7 @@ interface ParticleSystemProps {
   getBlackHoleData: () => BlackHoleData;
   enableHistory?: boolean;
   resolutionScale?: number;
+  desktopAdvancedMode?: boolean;
   onGPUError?: () => void;
 }
 
@@ -50,6 +55,7 @@ export function ParticleSystem({
   getBlackHoleData,
   enableHistory = true,
   resolutionScale = 1,
+  desktopAdvancedMode = false,
   onGPUError,
 }: ParticleSystemProps) {
   // Debug: visualize position fractional components to detect quantization.
@@ -100,8 +106,17 @@ export function ParticleSystem({
     setBlackHoles,
   } = useGPUCompute(textureSize, { enableHistory, onError: onGPUError });
 
-  const { gl, size } = useThree();
+  const { gl, size, camera } = useThree();
+  const setParticleGpuMs = useFPSStore((s) => s.setParticleGpuMs);
   const materialRef = useRef<THREE.ShaderMaterial>(null);
+  const particleTimerRef = useRef<GpuTimerQuery | null>(null);
+  const densitySceneRef = useRef<THREE.Scene | null>(null);
+  const densityMaterialRef = useRef<THREE.ShaderMaterial | null>(null);
+  const densityRTRef = useRef<THREE.WebGLRenderTarget | null>(null);
+  const denseGuardActiveRef = useRef(false);
+  const denseGuardValueRef = useRef(0);
+  const denseGuardLowFramesRef = useRef(0);
+  const denseGuardHighFramesRef = useRef(0);
   const prevFirstColorRef = useRef<string>(allColors[0]);
   const emptyOnsetsRef = useRef<Float32Array>(new Float32Array(36));
   const prevControlsRef = useRef<{
@@ -178,6 +193,8 @@ export function ParticleSystem({
     brightness: number;
     alpha: number;
     maxDistance: number;
+    densityScale: number;
+    centerBiasStrength: number;
     particleLensingStrength: number;
     iscoRadius: number;
   } | null>(null);
@@ -257,6 +274,19 @@ export function ParticleSystem({
     return geo;
   }, [particleCount, textureSize]);
 
+  const densityGeometry = useMemo(() => {
+    const geo = new THREE.BufferGeometry();
+    const positions = new Float32Array(particleCount * 3);
+    const refs = new Float32Array(particleCount * 2);
+    for (let i = 0; i < particleCount; i++) {
+      refs[i * 2] = ((i % textureSize) + 0.5) / textureSize;
+      refs[i * 2 + 1] = (Math.floor(i / textureSize) + 0.5) / textureSize;
+    }
+    geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    geo.setAttribute("reference", new THREE.BufferAttribute(refs, 2));
+    return geo;
+  }, [particleCount, textureSize]);
+
   // Create color array for shader (all palettes)
   const colorLUT = useMemo(() => {
     // Keep this stable; update the underlying data when the palette changes.
@@ -287,8 +317,55 @@ export function ParticleSystem({
     return () => {
       colorLUT.tex.dispose();
       quadGeometry.dispose();
+      densityGeometry.dispose();
     };
-  }, [colorLUT, quadGeometry]);
+  }, [colorLUT, quadGeometry, densityGeometry]);
+
+  useEffect(() => {
+    const timer = new GpuTimerQuery();
+    timer.init(gl.getContext());
+    particleTimerRef.current = timer;
+
+    const densityScene = new THREE.Scene();
+    const densityMaterial = new THREE.ShaderMaterial({
+      vertexShader: particleDensityVertexShader,
+      fragmentShader: particleDensityFragmentShader,
+      uniforms: {
+        texturePosition: { value: null as THREE.Texture | null },
+      },
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthTest: false,
+      depthWrite: false,
+    });
+    const densityPoints = new THREE.Points(densityGeometry, densityMaterial);
+    densityPoints.frustumCulled = false;
+    densityScene.add(densityPoints);
+
+    const densitySize = desktopAdvancedMode ? 256 : 192;
+    const densityRT = new THREE.WebGLRenderTarget(densitySize, densitySize, {
+      minFilter: THREE.LinearFilter,
+      magFilter: THREE.LinearFilter,
+      format: THREE.RGBAFormat,
+      type: THREE.HalfFloatType,
+      depthBuffer: false,
+      stencilBuffer: false,
+    });
+
+    densitySceneRef.current = densityScene;
+    densityMaterialRef.current = densityMaterial;
+    densityRTRef.current = densityRT;
+
+    return () => {
+      particleTimerRef.current?.dispose(gl.getContext());
+      particleTimerRef.current = null;
+      densityRT.dispose();
+      densityMaterial.dispose();
+      densitySceneRef.current = null;
+      densityMaterialRef.current = null;
+      densityRTRef.current = null;
+    };
+  }, [densityGeometry, desktopAdvancedMode, gl]);
 
   // Get initial values for uniforms to prevent flicker
   const initialControls = useVisualizationControls.getState();
@@ -309,6 +386,11 @@ export function ParticleSystem({
       uColorLUT: { value: colorLUT.tex },
       uColorLUTSize: { value: colorLUT.size },
       uMaxDistance: { value: initialControls.maxDistance },
+      uDensityTexture: { value: null as THREE.Texture | null },
+      uDensityTexel: { value: new THREE.Vector2(1 / 192, 1 / 192) },
+      uDensityScale: { value: initialControls.densityScale ?? 2.5 },
+      uDenseGuardStrength: { value: 0.0 },
+      uCenterBiasStrength: { value: 0.35 },
       uDebugMode: { value: 0.0 },
       // Viewport in *device pixels* for screen-space stabilization / AA.
       uViewport: { value: new THREE.Vector2(1, 1) },
@@ -350,13 +432,46 @@ export function ParticleSystem({
       uISCORadius: { value: initialControls.eventHorizonRadius * initialControls.iscoRatio },
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [colorLUT, resolutionScale]
+    [colorLUT, desktopAdvancedMode, resolutionScale]
   );
 
   useFrame(() => {
     // Read from runtimeState instead of store for performance during tweens
     const state = runtimeState;
     const iscoRadius = state.eventHorizonRadius * state.iscoRatio;
+    const fps = useFPSStore.getState().fps;
+    const enterFps = state.denseGuardEnterFps ?? 50;
+    const exitFps = state.denseGuardExitFps ?? 56;
+    const enterFrames = state.denseGuardEnterFrames ?? 12;
+    const exitFrames = state.denseGuardExitFrames ?? 24;
+
+    if (!denseGuardActiveRef.current) {
+      if (fps < enterFps) {
+        denseGuardLowFramesRef.current += 1;
+      } else {
+        denseGuardLowFramesRef.current = 0;
+      }
+      if (denseGuardLowFramesRef.current >= enterFrames) {
+        denseGuardActiveRef.current = true;
+        denseGuardLowFramesRef.current = 0;
+      }
+    } else {
+      if (fps > exitFps) {
+        denseGuardHighFramesRef.current += 1;
+      } else {
+        denseGuardHighFramesRef.current = 0;
+      }
+      if (denseGuardHighFramesRef.current >= exitFrames) {
+        denseGuardActiveRef.current = false;
+        denseGuardHighFramesRef.current = 0;
+      }
+    }
+
+    const denseGuardTarget = denseGuardActiveRef.current ? 1 : 0;
+    denseGuardValueRef.current += (denseGuardTarget - denseGuardValueRef.current) * 0.08;
+    const denseGuardStrength = denseGuardValueRef.current * (state.denseGuardStrength ?? 1.0);
+    const densityScale = state.densityScale;
+    const centerBiasStrength = state.denseCenterBias;
 
     if (materialRef.current) {
       // Resolution scale is derived from Canvas DPR/resolution selection; update only if changed.
@@ -367,6 +482,11 @@ export function ParticleSystem({
       // Keep viewport uniform in device pixels (includes DPR) so screen-space math is stable.
       const dpr = gl.getPixelRatio();
       materialRef.current.uniforms.uViewport.value.set(size.width * dpr, size.height * dpr);
+      materialRef.current.uniforms.uDenseGuardStrength.value = THREE.MathUtils.clamp(
+        denseGuardStrength,
+        0,
+        1
+      );
 
       // Debug mode toggle (avoid redundant uniform writes)
       if (prevDebugModeRef.current !== debugMode) {
@@ -381,6 +501,28 @@ export function ParticleSystem({
       const velTexture = getVelocityTexture();
       if (posTexture) {
         materialRef.current.uniforms.texturePosition.value = posTexture;
+
+        const densityMaterial = densityMaterialRef.current;
+        const densityScene = densitySceneRef.current;
+        const densityRT = densityRTRef.current;
+        if (densityMaterial && densityScene && densityRT) {
+          densityMaterial.uniforms.texturePosition.value = posTexture;
+          const prevTarget = gl.getRenderTarget();
+          const prevClearAlpha = gl.getClearAlpha();
+          const prevClearColor = gl.getClearColor(new THREE.Color());
+          gl.setRenderTarget(densityRT);
+          gl.setClearColor(0x000000, 0);
+          gl.clear(true, false, false);
+          gl.render(densityScene, camera);
+          gl.setRenderTarget(prevTarget);
+          gl.setClearColor(prevClearColor, prevClearAlpha);
+
+          materialRef.current.uniforms.uDensityTexture.value = densityRT.texture;
+          materialRef.current.uniforms.uDensityTexel.value.set(
+            1 / densityRT.width,
+            1 / densityRT.height
+          );
+        }
       }
       if (prevPosTexture) {
         materialRef.current.uniforms.texturePrevPosition.value = prevPosTexture;
@@ -404,6 +546,8 @@ export function ParticleSystem({
           brightness: state.brightness,
           alpha: state.alpha,
           maxDistance: state.maxDistance,
+          densityScale,
+          centerBiasStrength,
           particleLensingStrength: state.particleLensingStrength,
           iscoRadius,
         };
@@ -413,6 +557,8 @@ export function ParticleSystem({
         materialRef.current.uniforms.uBrightness.value = state.brightness;
         materialRef.current.uniforms.uAlpha.value = state.alpha;
         materialRef.current.uniforms.uMaxDistance.value = state.maxDistance;
+        materialRef.current.uniforms.uDensityScale.value = densityScale;
+        materialRef.current.uniforms.uCenterBiasStrength.value = centerBiasStrength;
         materialRef.current.uniforms.uParticleLensingStrength.value = state.particleLensingStrength;
         materialRef.current.uniforms.uISCORadius.value = iscoRadius;
       } else {
@@ -440,6 +586,14 @@ export function ParticleSystem({
         if (prevR.maxDistance !== state.maxDistance) {
           prevR.maxDistance = state.maxDistance;
           materialRef.current.uniforms.uMaxDistance.value = state.maxDistance;
+        }
+        if (prevR.densityScale !== densityScale) {
+          prevR.densityScale = densityScale;
+          materialRef.current.uniforms.uDensityScale.value = densityScale;
+        }
+        if (prevR.centerBiasStrength !== centerBiasStrength) {
+          prevR.centerBiasStrength = centerBiasStrength;
+          materialRef.current.uniforms.uCenterBiasStrength.value = centerBiasStrength;
         }
         if (prevR.particleLensingStrength !== state.particleLensingStrength) {
           prevR.particleLensingStrength = state.particleLensingStrength;
@@ -717,8 +871,31 @@ export function ParticleSystem({
     }
   });
 
+  const handleBeforeRender = useCallback((renderer: THREE.WebGLRenderer) => {
+    const timer = particleTimerRef.current;
+    if (!timer) return;
+    timer.beginCpu();
+    timer.begin(renderer.getContext());
+  }, []);
+
+  const handleAfterRender = useCallback(
+    (renderer: THREE.WebGLRenderer) => {
+      const timer = particleTimerRef.current;
+      if (!timer) return;
+      timer.end(renderer.getContext());
+      timer.endCpu();
+      setParticleGpuMs(timer.poll(renderer.getContext()));
+    },
+    [setParticleGpuMs]
+  );
+
   return (
-    <mesh frustumCulled={false} geometry={quadGeometry}>
+    <mesh
+      frustumCulled={false}
+      geometry={quadGeometry}
+      onBeforeRender={handleBeforeRender}
+      onAfterRender={handleAfterRender}
+    >
       <shaderMaterial
         ref={materialRef}
         vertexShader={particleVertexShader}

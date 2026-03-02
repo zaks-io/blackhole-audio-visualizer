@@ -13,6 +13,9 @@ interface FPSState {
   historyIndex: number;
   historyVersion: number;
   lastDeltaMs: number;
+  particleGpuMs: number;
+  postGpuMs: number;
+  frameCpuMs: number;
   spikeCount: number; // rolling window spikes (last ~60s), deltaMs > SPIKE_THRESHOLD_MS
   maxDeltaMs: number; // rolling window max frame delta (last ~60s)
   windowSpikes: Uint16Array;
@@ -26,6 +29,9 @@ interface FPSState {
     spikesSinceLast: number,
     maxDeltaSinceLast: number
   ) => void;
+  setParticleGpuMs: (value: number) => void;
+  setPostGpuMs: (value: number) => void;
+  setFrameCpuMs: (value: number) => void;
   resetSpikes: () => void;
   getLow1Percent: () => number;
 }
@@ -40,6 +46,9 @@ export const useFPSStore = create<FPSState>((set, get) => ({
   historyIndex: 0,
   historyVersion: 0,
   lastDeltaMs: 16.7,
+  particleGpuMs: 0,
+  postGpuMs: 0,
+  frameCpuMs: 16.7,
   spikeCount: 0,
   maxDeltaMs: 0,
   windowSpikes: (() => new Uint16Array(WINDOW_SAMPLES))(),
@@ -87,6 +96,7 @@ export const useFPSStore = create<FPSState>((set, get) => ({
         historyIndex: nextIndex,
         historyVersion: state.historyVersion + 1,
         lastDeltaMs: deltaMs,
+        frameCpuMs: deltaMs,
         windowIndex: nextWindowIndex,
         windowFilled: filled,
         windowSpikeSum: spikeSum,
@@ -94,6 +104,9 @@ export const useFPSStore = create<FPSState>((set, get) => ({
         maxDeltaMs: rollingMax,
       };
     }),
+  setParticleGpuMs: (value: number) => set({ particleGpuMs: value }),
+  setPostGpuMs: (value: number) => set({ postGpuMs: value }),
+  setFrameCpuMs: (value: number) => set({ frameCpuMs: value }),
   resetSpikes: () =>
     set((state) => {
       state.windowSpikes.fill(0);
@@ -131,12 +144,14 @@ export const useFPSStore = create<FPSState>((set, get) => ({
 export function FPSTracker() {
   const lastUpdateRef = useRef(0);
   const updateSample = useFPSStore((s) => s.updateSample);
+  const setFrameCpuMs = useFPSStore((s) => s.setFrameCpuMs);
   const spikesSinceLastRef = useRef(0);
   const maxDeltaSinceLastRef = useRef(0);
 
   useFrame((_, delta) => {
     const now = performance.now();
     const deltaMs = delta * 1000;
+    setFrameCpuMs(deltaMs);
 
     // Track max frame delta in the current ~66ms bucket (always updates; not only spikes)
     if (deltaMs > maxDeltaSinceLastRef.current) {

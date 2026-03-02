@@ -133,6 +133,7 @@ interface BlackHoleSimulationProps {
   perfFlags?: {
     noStars?: boolean;
     noHistory?: boolean;
+    desktopAdvancedParticles?: boolean;
   };
   onGPUError?: () => void;
 }
@@ -528,6 +529,7 @@ export function BlackHoleSimulation({
         getBlackHoleData={getBlackHoleData}
         enableHistory={!perfFlags?.noHistory}
         resolutionScale={resolutionScale}
+        desktopAdvancedMode={!!perfFlags?.desktopAdvancedParticles}
         onGPUError={onGPUError}
       />
       {[0, 1, 2, 3].map((i) => (

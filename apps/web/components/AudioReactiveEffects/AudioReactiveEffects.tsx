@@ -5,7 +5,6 @@ import { useFrame } from "@react-three/fiber";
 import { Bloom, ChromaticAberration, Vignette, ToneMapping } from "@react-three/postprocessing";
 import { BlendFunction, ToneMappingMode } from "postprocessing";
 import { Vector2 } from "three";
-import { useShallow } from "zustand/shallow";
 import { useVisualizationControls } from "@/hooks/useVisualizationControls";
 import { runtimeState } from "@/lib/runtimeStateRegistry";
 import { useUIState } from "@/hooks/useUIState";
@@ -42,26 +41,22 @@ class EnvelopeFollower {
   }
 }
 
-// Store effect instances outside React state to avoid serialization issues
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-let bloomInstance: any = null;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let chromaticInstance: any = null;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let vignetteInstance: any = null;
-let invertInstance: InvertEffect | null = null;
+function resolveBloomEffect(instance: unknown): any | null {
+  if (!instance) return null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const maybe = instance as any;
+  if (typeof maybe.intensity === "number") return maybe;
+  if (maybe.effect && typeof maybe.effect.intensity === "number") return maybe.effect;
+  if (Array.isArray(maybe.effects)) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const effect = maybe.effects.find((e: any) => e && typeof e.intensity === "number");
+    if (effect) return effect;
+  }
+  return null;
+}
 
 export function AudioReactiveEffects({ getAnalysis, isAudioConnected }: AudioReactiveEffectsProps) {
-  // Only subscribe to toggle flags that affect the render output (conditionally rendering components)
-  // Continuous values are read directly from store in useFrame
-  const { bloomEnabled, chromaticEnabled, vignetteEnabled } = useVisualizationControls(
-    useShallow((s) => ({
-      bloomEnabled: s.bloomEnabled,
-      chromaticEnabled: s.chromaticEnabled,
-      vignetteEnabled: s.vignetteEnabled,
-    }))
-  );
-
   const bassStrobeEnabled = useUIState((s) => s.bassStrobeEnabled);
   const invertEffect = useMemo(() => new InvertEffect({ intensity: 0 }), []);
 
@@ -72,39 +67,66 @@ export function AudioReactiveEffects({ getAnalysis, isAudioConnected }: AudioRea
   // Reusable vector for chromatic offset
   const chromaticOffset = useRef(new Vector2(0, 0));
 
-  // Cache previous bloom threshold to avoid unnecessary updates
-  const prevBloomThreshold = useRef(0.3);
-  const prevBloomLevels = useRef(3);
+  // Cache bloom tuning state to avoid noisy frame-to-frame changes.
+  const prevBloomThreshold = useRef(0.42);
+  const prevBloomLevels = useRef(2);
+  const bloomDownCounter = useRef(0);
+  const bloomUpCounter = useRef(0);
 
   const chromaticPeak = 0.025;
+  const bloomInstanceRef = useRef<unknown>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const chromaticInstanceRef = useRef<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const vignetteInstanceRef = useRef<any>(null);
+  const invertInstanceRef = useRef<InvertEffect | null>(null);
 
   // Callback refs to capture effect instances without storing in React state
   const bloomRefCallback = useCallback((effect: unknown) => {
-    bloomInstance = effect;
+    bloomInstanceRef.current = effect;
   }, []);
 
   const chromaticRefCallback = useCallback((effect: unknown) => {
-    chromaticInstance = effect;
+    chromaticInstanceRef.current = effect;
   }, []);
 
   const vignetteRefCallback = useCallback((effect: unknown) => {
-    vignetteInstance = effect;
+    vignetteInstanceRef.current = effect;
   }, []);
 
   const invertRefCallback = useCallback((effect: unknown) => {
-    invertInstance = effect as InvertEffect | null;
+    invertInstanceRef.current = effect as InvertEffect | null;
   }, []);
 
-  // Compute bloom levels based on particle size and FPS for performance
-  const computeBloomLevels = (pointSize: number, fps: number): number => {
-    if (fps < 50) return 1;
-    if (fps < 55) return 2;
-    if (pointSize >= 3.5) return 1;
-    if (pointSize >= 2.0) return 2;
-    return 3;
+  // Two bloom quality tiers with hysteresis to prevent rapid quality flapping.
+  const computeBloomLevels = (fps: number, postGpuMs: number): number => {
+    const shouldDrop = fps < 54 || postGpuMs > 3.2;
+    const canRaise = fps > 58 && postGpuMs < 2.4;
+
+    if (shouldDrop) {
+      bloomDownCounter.current += 1;
+      bloomUpCounter.current = 0;
+      if (bloomDownCounter.current >= 8) return 1;
+      return prevBloomLevels.current;
+    }
+
+    if (canRaise) {
+      bloomUpCounter.current += 1;
+      bloomDownCounter.current = 0;
+      if (bloomUpCounter.current >= 24) return 2;
+      return prevBloomLevels.current;
+    }
+
+    bloomDownCounter.current = 0;
+    bloomUpCounter.current = 0;
+    return prevBloomLevels.current;
   };
 
   useFrame(() => {
+    const controls = useVisualizationControls.getState();
+    const chromaticEnabledNow = controls.chromaticEnabled;
+    const vignetteEnabledNow = controls.vignetteEnabled;
+
     // Read from runtimeState instead of store for performance during tweens
     const {
       vignetteOffset,
@@ -115,27 +137,31 @@ export function AudioReactiveEffects({ getAnalysis, isAudioConnected }: AudioRea
     } = runtimeState;
 
     // Vignette - always update from controls (before any early returns)
-    if (vignetteInstance) {
-      vignetteInstance.offset = vignetteOffset;
-      vignetteInstance.darkness = vignetteEnabled ? vignetteDarkness : 0;
+    if (vignetteInstanceRef.current) {
+      vignetteInstanceRef.current.offset = vignetteOffset;
+      vignetteInstanceRef.current.darkness = vignetteEnabledNow ? vignetteDarkness : 0;
     }
 
-    if (invertInstance) {
-      invertInstance.intensity = useVisualizationControls.getState().invertColors ? 1.0 : 0.0;
+    if (invertInstanceRef.current) {
+      invertInstanceRef.current.intensity = useVisualizationControls.getState().invertColors
+        ? 1.0
+        : 0.0;
     }
 
     const bloomBase = bloomBaseIntensity;
     const bloomReactivity = bloomAudioReactivity;
     const chromaticReactivity = chromaticAudioReactivity;
 
-    if (!isAudioConnected || !bloomEnabled) {
-      // Reset to defaults when not connected or disabled
-      if (bloomInstance) {
-        bloomInstance.intensity = bloomEnabled ? bloomBase : 0;
+    const bloomEffect = resolveBloomEffect(bloomInstanceRef.current);
+
+    if (!isAudioConnected) {
+      // Keep base bloom active even without audio input.
+      if (bloomEffect) {
+        bloomEffect.intensity = bloomBase;
       }
-      if (chromaticInstance) {
+      if (chromaticInstanceRef.current) {
         chromaticOffset.current.set(0, 0);
-        chromaticInstance.offset = chromaticOffset.current;
+        chromaticInstanceRef.current.offset = chromaticOffset.current;
       }
       return;
     }
@@ -151,44 +177,51 @@ export function AudioReactiveEffects({ getAnalysis, isAudioConnected }: AudioRea
       bloomIntensity = bloomBase + bassEnvValue * (bloomPeak - bloomBase);
     }
 
-    if (bloomInstance) {
-      bloomInstance.intensity = bloomIntensity;
+    if (bloomEffect) {
+      bloomEffect.intensity = bloomIntensity;
 
-      // Only update threshold when it changes significantly (and strobe is enabled)
-      if (bassStrobeEnabled) {
-        const centroidInfluence = analysis.raw.spectralCentroid * 0.15 * bloomReactivity;
-        const newThreshold = 0.3 - centroidInfluence;
-        if (Math.abs(newThreshold - prevBloomThreshold.current) > 0.001) {
-          prevBloomThreshold.current = newThreshold;
-          bloomInstance.luminanceMaterial.threshold = newThreshold;
+      // Keep threshold relatively high for dense additive clusters and modulate gently.
+      const baseThreshold = 0.42;
+      const targetThreshold = bassStrobeEnabled
+        ? Math.max(0.34, baseThreshold - analysis.raw.spectralCentroid * 0.08 * bloomReactivity)
+        : baseThreshold;
+      const smoothedThreshold =
+        prevBloomThreshold.current + (targetThreshold - prevBloomThreshold.current) * 0.2;
+
+      if (Math.abs(smoothedThreshold - prevBloomThreshold.current) > 0.001) {
+        prevBloomThreshold.current = smoothedThreshold;
+        if (bloomEffect.luminanceMaterial) {
+          bloomEffect.luminanceMaterial.threshold = smoothedThreshold;
         }
       }
 
-      // Reduce bloom levels for large particles to maintain performance
-      const fps = useFPSStore.getState().fps;
-      const targetLevels = computeBloomLevels(runtimeState.pointSize, fps);
+      // Adapt bloom mip levels from measured post-FX cost with hysteresis.
+      const { fps, postGpuMs } = useFPSStore.getState();
+      const targetLevels = computeBloomLevels(fps, postGpuMs);
       if (targetLevels !== prevBloomLevels.current) {
         prevBloomLevels.current = targetLevels;
-        bloomInstance.mipmapBlurPass.levels = targetLevels;
+        if (bloomEffect.mipmapBlurPass) {
+          bloomEffect.mipmapBlurPass.levels = targetLevels;
+        }
       }
     }
 
     // Chromatic aberration responds to HFC peaks with radial modulation
-    if (chromaticEnabled && chromaticInstance) {
+    if (chromaticEnabledNow && chromaticInstanceRef.current) {
       const hfcTarget = analysis.peaks.hfc ? 1 : 0;
       const hfcEnvValue = chromaticEnvelope.current.process(hfcTarget);
       const chromaticAmount = hfcEnvValue * chromaticPeak * chromaticReactivity;
       chromaticOffset.current.set(chromaticAmount, chromaticAmount * 0.5);
-      chromaticInstance.offset = chromaticOffset.current;
+      chromaticInstanceRef.current.offset = chromaticOffset.current;
 
       // Animate modulation offset - pulses outward on peaks
       const baseModulation = 0.15;
       const modulationPulse = hfcEnvValue * 0.4 * chromaticReactivity;
-      chromaticInstance.modulationOffset = baseModulation + modulationPulse;
-    } else if (chromaticInstance) {
+      chromaticInstanceRef.current.modulationOffset = baseModulation + modulationPulse;
+    } else if (chromaticInstanceRef.current) {
       chromaticOffset.current.set(0, 0);
-      chromaticInstance.offset = chromaticOffset.current;
-      chromaticInstance.modulationOffset = 0.15;
+      chromaticInstanceRef.current.offset = chromaticOffset.current;
+      chromaticInstanceRef.current.modulationOffset = 0.15;
     }
   });
 
@@ -200,11 +233,13 @@ export function AudioReactiveEffects({ getAnalysis, isAudioConnected }: AudioRea
       <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
       <Bloom
         ref={bloomRefCallback}
-        intensity={bloomEnabled ? initialBloomIntensity : 0}
-        luminanceThreshold={0.3}
+        blendFunction={BlendFunction.ADD}
+        opacity={1}
+        intensity={initialBloomIntensity}
+        luminanceThreshold={0.42}
         luminanceSmoothing={0.9}
         mipmapBlur
-        levels={3}
+        levels={2}
       />
       <ChromaticAberration
         ref={chromaticRefCallback}

@@ -5,6 +5,8 @@ varying float vDensityAlphaScale;
 
 uniform float uBrightness;
 uniform float uAlpha;
+uniform float uMotionBlurFade;
+uniform float uDenseGuardStrength;
 
 precision highp float;
 
@@ -32,7 +34,8 @@ void main() {
     float shapeAlpha = exp(-dist * dist * 14.0) * edge;
 
     // Extra fade toward tail
-    float tailFade = smoothstep(0.0, 0.3, t);
+    float fadeEdge = mix(0.3, 0.55, clamp(uMotionBlurFade * 0.5, 0.0, 1.0));
+    float tailFade = smoothstep(0.0, fadeEdge, t);
     shapeAlpha *= tailFade;
 
     float finalAlpha = shapeAlpha * uAlpha * vRedshiftFade * vDensityAlphaScale;
@@ -40,7 +43,8 @@ void main() {
     // Early-out for negligible fragments — avoids framebuffer read-modify-write.
     // In dense zones vDensityAlphaScale drops alpha so Gaussian tails hit this
     // threshold, cutting ~40-50% of fragments while additive blend still saturates.
-    if (finalAlpha < 0.01) discard;
+    float discardThreshold = mix(0.008, 0.012, clamp(uDenseGuardStrength, 0.0, 1.0));
+    if (finalAlpha < discardThreshold) discard;
 
     vec3 finalColor = min(vColor * uBrightness, vec3(1.5));
     gl_FragColor = vec4(finalColor, finalAlpha);

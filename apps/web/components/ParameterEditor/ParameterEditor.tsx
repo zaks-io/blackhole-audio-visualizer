@@ -56,6 +56,8 @@ const SPECIAL_CONTROLS: Record<string, React.ReactNode> = {
 function PostFXControls({ mode, duration }: { mode: "dev" | "preset"; duration: number }) {
   const groups = useMemo(() => getParameterGroups(true), []);
   const postFxGroup = groups.find((g) => g.name === "Post-FX");
+  const postFxDisabledByUrl =
+    typeof window !== "undefined" && new URLSearchParams(window.location.search).has("noPostFX");
   if (!postFxGroup) return null;
 
   const getSlider = (storeKey: string) => {
@@ -83,6 +85,12 @@ function PostFXControls({ mode, duration }: { mode: "dev" | "preset"; duration: 
       storageKey={`${mode}-param-groups-post-fx`}
       defaultCollapsed
     >
+      {postFxDisabledByUrl && (
+        <div className="text-[10px] text-yellow-300/90 pb-1">
+          Post-FX is disabled by URL flag (`noPostFX`), so bloom controls will have no visible
+          effect.
+        </div>
+      )}
       <SwitchControl controlKey="bloomEnabled" label="Bloom" />
       {getSlider("bloomBaseIntensity")}
       {getSlider("bloomAudioReactivity")}
