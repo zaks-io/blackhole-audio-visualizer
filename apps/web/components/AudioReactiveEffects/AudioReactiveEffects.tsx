@@ -7,8 +7,6 @@ import { BlendFunction, ToneMappingMode } from "postprocessing";
 import { Vector2 } from "three";
 import { useVisualizationControls } from "@/hooks/useVisualizationControls";
 import { runtimeState } from "@/lib/runtimeStateRegistry";
-import { useUIState } from "@/hooks/useUIState";
-import { useFPSStore } from "@/hooks/useFPSMonitor";
 import { InvertEffect } from "@/lib/effects/InvertEffect";
 import type { AnalyzedAudio } from "@/hooks/useAudioAnalyzer";
 
@@ -57,21 +55,13 @@ function resolveBloomEffect(instance: unknown): any | null {
 }
 
 export function AudioReactiveEffects({ getAnalysis, isAudioConnected }: AudioReactiveEffectsProps) {
-  const bassStrobeEnabled = useUIState((s) => s.bassStrobeEnabled);
   const invertEffect = useMemo(() => new InvertEffect({ intensity: 0 }), []);
 
-  // Envelope followers for smooth audio response
-  const bloomEnvelope = useRef(new EnvelopeFollower(5, 200));
+  // Envelope follower for smooth chromatic aberration response
   const chromaticEnvelope = useRef(new EnvelopeFollower(0, 80));
 
   // Reusable vector for chromatic offset
   const chromaticOffset = useRef(new Vector2(0, 0));
-
-  // Cache bloom tuning state to avoid noisy frame-to-frame changes.
-  const prevBloomThreshold = useRef(0.42);
-  const prevBloomLevels = useRef(2);
-  const bloomDownCounter = useRef(0);
-  const bloomUpCounter = useRef(0);
 
   const chromaticPeak = 0.025;
   const bloomInstanceRef = useRef<unknown>(null);
@@ -98,43 +88,14 @@ export function AudioReactiveEffects({ getAnalysis, isAudioConnected }: AudioRea
     invertInstanceRef.current = effect as InvertEffect | null;
   }, []);
 
-  // Two bloom quality tiers with hysteresis to prevent rapid quality flapping.
-  const computeBloomLevels = (fps: number, postGpuMs: number): number => {
-    const shouldDrop = fps < 54 || postGpuMs > 3.2;
-    const canRaise = fps > 58 && postGpuMs < 2.4;
-
-    if (shouldDrop) {
-      bloomDownCounter.current += 1;
-      bloomUpCounter.current = 0;
-      if (bloomDownCounter.current >= 8) return 1;
-      return prevBloomLevels.current;
-    }
-
-    if (canRaise) {
-      bloomUpCounter.current += 1;
-      bloomDownCounter.current = 0;
-      if (bloomUpCounter.current >= 24) return 2;
-      return prevBloomLevels.current;
-    }
-
-    bloomDownCounter.current = 0;
-    bloomUpCounter.current = 0;
-    return prevBloomLevels.current;
-  };
-
   useFrame(() => {
     const controls = useVisualizationControls.getState();
     const chromaticEnabledNow = controls.chromaticEnabled;
     const vignetteEnabledNow = controls.vignetteEnabled;
 
     // Read from runtimeState instead of store for performance during tweens
-    const {
-      vignetteOffset,
-      vignetteDarkness,
-      bloomBaseIntensity,
-      bloomAudioReactivity,
-      chromaticAudioReactivity,
-    } = runtimeState;
+    const { vignetteOffset, vignetteDarkness, bloomBaseIntensity, chromaticAudioReactivity } =
+      runtimeState;
 
     // Vignette - always update from controls (before any early returns)
     if (vignetteInstanceRef.current) {
@@ -149,7 +110,6 @@ export function AudioReactiveEffects({ getAnalysis, isAudioConnected }: AudioRea
     }
 
     const bloomBase = bloomBaseIntensity;
-    const bloomReactivity = bloomAudioReactivity;
     const chromaticReactivity = chromaticAudioReactivity;
 
     const bloomEffect = resolveBloomEffect(bloomInstanceRef.current);
@@ -168,42 +128,8 @@ export function AudioReactiveEffects({ getAnalysis, isAudioConnected }: AudioRea
 
     const analysis = getAnalysis();
 
-    // Bloom responds to bass peaks (when bass strobe is enabled)
-    let bloomIntensity = bloomBase;
-    if (bassStrobeEnabled) {
-      const bassTarget = analysis.peaks.bass ? 1 : 0;
-      const bassEnvValue = bloomEnvelope.current.process(bassTarget);
-      const bloomPeak = bloomBase + bloomReactivity;
-      bloomIntensity = bloomBase + bassEnvValue * (bloomPeak - bloomBase);
-    }
-
     if (bloomEffect) {
-      bloomEffect.intensity = bloomIntensity;
-
-      // Keep threshold relatively high for dense additive clusters and modulate gently.
-      const baseThreshold = 0.42;
-      const targetThreshold = bassStrobeEnabled
-        ? Math.max(0.34, baseThreshold - analysis.raw.spectralCentroid * 0.08 * bloomReactivity)
-        : baseThreshold;
-      const smoothedThreshold =
-        prevBloomThreshold.current + (targetThreshold - prevBloomThreshold.current) * 0.2;
-
-      if (Math.abs(smoothedThreshold - prevBloomThreshold.current) > 0.001) {
-        prevBloomThreshold.current = smoothedThreshold;
-        if (bloomEffect.luminanceMaterial) {
-          bloomEffect.luminanceMaterial.threshold = smoothedThreshold;
-        }
-      }
-
-      // Adapt bloom mip levels from measured post-FX cost with hysteresis.
-      const { fps, postGpuMs } = useFPSStore.getState();
-      const targetLevels = computeBloomLevels(fps, postGpuMs);
-      if (targetLevels !== prevBloomLevels.current) {
-        prevBloomLevels.current = targetLevels;
-        if (bloomEffect.mipmapBlurPass) {
-          bloomEffect.mipmapBlurPass.levels = targetLevels;
-        }
-      }
+      bloomEffect.intensity = bloomBase;
     }
 
     // Chromatic aberration responds to HFC peaks with radial modulation
