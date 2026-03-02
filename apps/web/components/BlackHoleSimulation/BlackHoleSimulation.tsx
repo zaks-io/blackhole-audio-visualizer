@@ -194,6 +194,10 @@ export function BlackHoleSimulation({
     radii: number[];
     baseRadii: number[]; // Un-pulsed radii for lensing (no audio reactivity)
     count: number;
+    // Position history for redshift alignment (matches particle trail history depth)
+    prevPositions: THREE.Vector3[]; // 1 frame ago
+    history1Positions: THREE.Vector3[]; // 2 frames ago
+    history2Positions: THREE.Vector3[]; // 3 frames ago (oldest, matches trail tail)
   } | null>(null);
 
   // Initialize immediately from current store so the compute pipeline never sees a 0-mass frame.
@@ -233,7 +237,21 @@ export function BlackHoleSimulation({
       for (let i = 0; i < initialCount; i++) positions[i].y += initial.blackHoleOffsetY;
     }
 
-    blackHoleDataRef.current = { positions, masses, radii, baseRadii, count: initialCount };
+    // Initialize all history to current positions (no stale-origin artifact on first frames)
+    const prevPositions = positions.map((p) => p.clone());
+    const history1Positions = positions.map((p) => p.clone());
+    const history2Positions = positions.map((p) => p.clone());
+
+    blackHoleDataRef.current = {
+      positions,
+      masses,
+      radii,
+      baseRadii,
+      count: initialCount,
+      prevPositions,
+      history1Positions,
+      history2Positions,
+    };
   }
 
   // Envelope followers for particle system audio signals
@@ -294,6 +312,14 @@ export function BlackHoleSimulation({
     const radii = bh.radii;
     const baseRadii = bh.baseRadii;
     const maxMass = gravity * blackHoleMassMax;
+
+    // Shift BH position history before computing new positions
+    // Mirrors particle history shift in useGPUCompute.useFrame
+    for (let i = 0; i < 4; i++) {
+      bh.history2Positions[i].copy(bh.history1Positions[i]);
+      bh.history1Positions[i].copy(bh.prevPositions[i]);
+      bh.prevPositions[i].copy(positions[i]);
+    }
 
     // Transition logic: use fractional bhCount for smooth split/merge
     const stableCount = Math.max(1, Math.min(Math.floor(bhCount), 4));
@@ -362,6 +388,15 @@ export function BlackHoleSimulation({
     // Apply Y offset to all active black hole positions
     if (blackHoleOffsetY !== 0) {
       for (let i = 0; i < bh.count; i++) positions[i].y += blackHoleOffsetY;
+    }
+
+    // Backfill history for newly-activated BH slots to avoid stale-origin redshift artifacts
+    for (let i = 0; i < bh.count; i++) {
+      if (bh.history2Positions[i].lengthSq() < 0.01 && positions[i].lengthSq() > 0.01) {
+        bh.prevPositions[i].copy(positions[i]);
+        bh.history1Positions[i].copy(positions[i]);
+        bh.history2Positions[i].copy(positions[i]);
+      }
     }
 
     if (isAudioConnected) {

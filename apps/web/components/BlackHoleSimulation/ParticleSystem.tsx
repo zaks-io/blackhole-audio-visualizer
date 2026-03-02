@@ -28,6 +28,9 @@ interface BlackHoleData {
   masses: number[];
   radii: number[];
   count: number;
+  prevPositions: THREE.Vector3[];
+  history1Positions: THREE.Vector3[];
+  history2Positions: THREE.Vector3[];
 }
 
 interface ParticleSystemProps {
@@ -310,6 +313,30 @@ export function ParticleSystem({
       // Viewport in *device pixels* for screen-space stabilization / AA.
       uViewport: { value: new THREE.Vector2(1, 1) },
       uBlackHolePos: {
+        value: [
+          new THREE.Vector3(0, 0, 0),
+          new THREE.Vector3(0, 0, 0),
+          new THREE.Vector3(0, 0, 0),
+          new THREE.Vector3(0, 0, 0),
+        ],
+      },
+      uBlackHolePrevPos: {
+        value: [
+          new THREE.Vector3(0, 0, 0),
+          new THREE.Vector3(0, 0, 0),
+          new THREE.Vector3(0, 0, 0),
+          new THREE.Vector3(0, 0, 0),
+        ],
+      },
+      uBlackHoleHist1Pos: {
+        value: [
+          new THREE.Vector3(0, 0, 0),
+          new THREE.Vector3(0, 0, 0),
+          new THREE.Vector3(0, 0, 0),
+          new THREE.Vector3(0, 0, 0),
+        ],
+      },
+      uBlackHoleHist2Pos: {
         value: [
           new THREE.Vector3(0, 0, 0),
           new THREE.Vector3(0, 0, 0),
@@ -607,18 +634,25 @@ export function ParticleSystem({
       blackHoleData.count
     );
 
-    // Update render shader uniforms for black hole positions and pulsed radii
+    // Update render shader uniforms for black hole positions, history, and pulsed radii
     if (materialRef.current) {
+      const u = materialRef.current.uniforms;
       for (let i = 0; i < 4; i++) {
         if (i < blackHoleData.count) {
-          materialRef.current.uniforms.uBlackHolePos.value[i].copy(blackHoleData.positions[i]);
-          materialRef.current.uniforms.uBlackHoleRadius.value[i] = blackHoleData.radii[i];
+          u.uBlackHolePos.value[i].copy(blackHoleData.positions[i]);
+          u.uBlackHolePrevPos.value[i].copy(blackHoleData.prevPositions[i]);
+          u.uBlackHoleHist1Pos.value[i].copy(blackHoleData.history1Positions[i]);
+          u.uBlackHoleHist2Pos.value[i].copy(blackHoleData.history2Positions[i]);
+          u.uBlackHoleRadius.value[i] = blackHoleData.radii[i];
         } else {
-          materialRef.current.uniforms.uBlackHolePos.value[i].set(0, 0, 0);
-          materialRef.current.uniforms.uBlackHoleRadius.value[i] = 0;
+          u.uBlackHolePos.value[i].set(0, 0, 0);
+          u.uBlackHolePrevPos.value[i].set(0, 0, 0);
+          u.uBlackHoleHist1Pos.value[i].set(0, 0, 0);
+          u.uBlackHoleHist2Pos.value[i].set(0, 0, 0);
+          u.uBlackHoleRadius.value[i] = 0;
         }
       }
-      materialRef.current.uniforms.uBlackHoleCount.value = blackHoleData.count;
+      u.uBlackHoleCount.value = blackHoleData.count;
     }
 
     const audioTransitioned = prevAudioEnabledRef.current !== audioEnabled;
