@@ -99,7 +99,7 @@ void main() {
 
         vec3 up = vec3(0.0, 1.0, 0.0);
         vec3 r_hat = normalize(toCenter);
-        vec3 tangent = normalize(cross(up, r_hat));
+        vec3 tangent = normalize(cross(r_hat, up));
 
         // Emitter index (matches position shader) so our time seeding is lane-aware
         float emitterIndex = floor(hash2(ip, 100.0) * uEmitterCount);
@@ -150,7 +150,7 @@ void main() {
         // Inherit local frame rotation at spawn point
         if (uFrameDragging > 0.0) {
             vec3 spinAxis = vec3(0.0, 1.0, 0.0);
-            vec3 r_perp = toCenter - spinAxis * dot(toCenter, spinAxis);
+            vec3 r_perp = -(toCenter - spinAxis * dot(toCenter, spinAxis));
             float r_perp_len = length(r_perp);
             if (r_perp_len > 0.1) {
                 float omega = uFrameDragging * nearestMass / (r_soft * r_soft * r_soft);
