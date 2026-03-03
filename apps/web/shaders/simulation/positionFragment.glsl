@@ -140,7 +140,7 @@ void main() {
                 }
 
                 pos = p;
-            } else {
+            } else if (uEmissionShape < 1.5) {
                 // LINE MODE - Vertical cylinder, tiltable via Rodrigues' rotation
                 float t = (emitterIndex + 0.5) / uEmitterCount;
 
@@ -172,6 +172,42 @@ void main() {
 
                 float audioY = audioEnergy * oscillation * uAudioAmplitude;
                 vec3 p = vec3(basePx + localOffset.x, uEmitterLineY + localOffset.y + audioY, basePz + localOffset.z);
+
+                pos = p;
+            } else {
+                // SPHERE MODE - Fibonacci spiral for even distribution
+                float phi = acos(1.0 - 2.0 * (emitterIndex + 0.5) / uEmitterCount);
+                float theta = 3.14159265 * (1.0 + sqrt(5.0)) * emitterIndex;
+
+                float rad = uEmissionRadius;
+                float spawnRad = rad + (hRad - 0.5) * (BASE_SPAWN_RADIAL_JITTER * rad);
+
+                float spawnX = spawnRad * sin(phi) * cos(theta);
+                float spawnY = spawnRad * cos(phi);
+                float spawnZ = spawnRad * sin(phi) * sin(theta);
+
+                // Tangential spread jitter
+                vec3 normal = normalize(vec3(spawnX, spawnY, spawnZ));
+                vec3 tangent = normalize(cross(normal, vec3(0.0, 1.0, 0.0) + vec3(0.001)));
+                vec3 bitangent = cross(normal, tangent);
+                float spreadAmount = (hSpread - 0.5) * uEmitterSpread * 0.5;
+                float jitterAngle = hJitter * 6.28318530718;
+                spawnX += spreadAmount * (cos(jitterAngle) * tangent.x + sin(jitterAngle) * bitangent.x);
+                spawnY += spreadAmount * (cos(jitterAngle) * tangent.y + sin(jitterAngle) * bitangent.y);
+                spawnZ += spreadAmount * (cos(jitterAngle) * tangent.z + sin(jitterAngle) * bitangent.z);
+
+                float audioY = audioEnergy * oscillation * uAudioAmplitude;
+                vec3 p = vec3(spawnX, spawnY + audioY, spawnZ);
+
+                // Rodrigues tilt (same as circle mode)
+                if (emitterTiltRad > 0.001) {
+                    vec3 tiltAxis = vec3(-sin(emitterAngleRad), 0.0, cos(emitterAngleRad));
+                    float ct = cos(emitterTiltRad);
+                    float st = sin(emitterTiltRad);
+                    float d = dot(tiltAxis, p);
+                    vec3 cr = cross(tiltAxis, p);
+                    p = p * ct + cr * st + tiltAxis * d * (1.0 - ct);
+                }
 
                 pos = p;
             }

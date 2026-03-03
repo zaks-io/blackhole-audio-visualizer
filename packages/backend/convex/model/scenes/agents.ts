@@ -308,7 +308,12 @@ When the user asks to adjust the visualization:
 
 // System prompt for the visualization tool (used by generateObject)
 // Parameter bounds are defined in the Zod schema - LLM sees them directly
-const VISUALIZATION_INSTRUCTIONS = `You are a visualization designer for the Blackhole Audio Visualizer - a particle physics simulation synced to music. Particles are emitted from a circle around three black holes and orbit until they fall in. The emitters emit at different heights based on their frequency bin and so we get trails of particles with bursts to the beat that start as waves and then collapse into streams as they fall into the center.
+const VISUALIZATION_INSTRUCTIONS = `You are a visualization designer for the Blackhole Audio Visualizer - a particle physics simulation synced to music. Particles are emitted from configurable shapes around three black holes and orbit until they fall in. The emitters emit at different heights based on their frequency bin and so we get trails of particles with bursts to the beat that start as waves and then collapse into streams as they fall into the center.
+
+## EMITTER SHAPES (emissionShape)
+- 0 = **Circle**: Particles emit from a ring at emitRadius. Default mode — classic disc/spoke look.
+- 1 = **Line**: Particles emit from a vertical line at emitRadius distance. Use emitterLineY and emitterLineWidth to position and size the line. Good for waterfall/curtain effects.
+- 2 = **Sphere**: Particles emit from a spherical shell at emitRadius. Evenly distributed via Fibonacci spiral. Creates volumetric, 3D emission — great for explosions, nebula, and immersive looks.
 
 Given a song's composition plan with sections, moods, and timing, create synchronized visualization presets for a song.
 

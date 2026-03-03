@@ -519,10 +519,10 @@ export const PARAMS: Record<string, ParameterDef> = {
   },
   "Emitters.emissionShape": {
     min: 0,
-    max: 1,
+    max: 2,
     default: 0,
     step: 1,
-    description: "emission shape: 0=circle, 1=line",
+    description: "emission shape: 0=circle, 1=line, 2=sphere",
     group: "Emitters",
     label: "Shape",
     system: false,
