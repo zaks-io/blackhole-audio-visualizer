@@ -57,6 +57,29 @@ export default function LandingPage() {
             Download for Windows
           </TrackedAnchor>
         </div>
+
+        <div className="mt-8 flex items-center gap-3 text-sm text-muted-foreground/50">
+          <TrackedLink
+            href="/about"
+            event="landing_about"
+            className="hover:text-muted-foreground transition-colors"
+          >
+            About
+          </TrackedLink>
+          <span>&middot;</span>
+          <span>
+            Created by{" "}
+            <TrackedAnchor
+              href="https://isaacsuttell.com"
+              event="landing_author"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-muted-foreground transition-colors"
+            >
+              Isaac Suttell
+            </TrackedAnchor>
+          </span>
+        </div>
       </div>
     </main>
   );
