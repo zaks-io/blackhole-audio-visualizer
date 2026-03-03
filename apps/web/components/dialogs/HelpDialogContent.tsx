@@ -1,4 +1,4 @@
-import { Monitor, Mic, Wrench, ExternalLink } from "lucide-react";
+import { Monitor, Mic, Wrench, ExternalLink, ChevronRight } from "lucide-react";
 
 export function HelpDialogContent() {
   return (
@@ -49,6 +49,16 @@ export function HelpDialogContent() {
             <ExternalLink className="h-3 w-3" />
           </a>
         </div>
+      </div>
+
+      <div className="pt-4 border-t border-white/5">
+        <a
+          href="/getting-started"
+          className="inline-flex items-center gap-1.5 text-sm text-cyan-400 hover:text-cyan-300 transition-colors"
+        >
+          Full setup guide
+          <ChevronRight className="h-3 w-3" />
+        </a>
       </div>
     </div>
   );

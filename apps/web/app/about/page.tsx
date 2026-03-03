@@ -80,6 +80,17 @@ export default function AboutPage() {
             physics. Hundreds of thousands of particles orbit, collapse, and explode in response to
             whatever you&rsquo;re listening to&mdash;rendered entirely on your GPU.
           </p>
+          <p className="mt-4 text-sm text-muted-foreground">
+            New here?{" "}
+            <TrackedLink
+              href="/getting-started"
+              event="about_getting_started"
+              className="text-cyan hover:underline"
+            >
+              Check out the setup guide
+            </TrackedLink>
+            .
+          </p>
         </section>
 
         <hr className="my-14 sm:my-20 border-white/5" />

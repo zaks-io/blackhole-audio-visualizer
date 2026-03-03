@@ -60,6 +60,14 @@ export default function LandingPage() {
 
         <div className="mt-8 flex items-center gap-3 text-sm text-muted-foreground/50">
           <TrackedLink
+            href="/getting-started"
+            event="landing_getting_started"
+            className="hover:text-muted-foreground transition-colors"
+          >
+            Getting Started
+          </TrackedLink>
+          <span>&middot;</span>
+          <TrackedLink
             href="/about"
             event="landing_about"
             className="hover:text-muted-foreground transition-colors"
