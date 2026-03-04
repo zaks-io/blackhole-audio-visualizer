@@ -29,7 +29,7 @@ bun install
 ENV_DIRS=("." "apps/web" "apps/desktop" "packages/backend")
 
 for dir in "${ENV_DIRS[@]}"; do
-  for pattern in .env .env.local; do
+  for pattern in .env .env.local .env.development.local .env.production; do
     src="$MAIN_WORKTREE/$dir/$pattern"
     if [ -f "$src" ]; then
       mkdir -p "$dir"
