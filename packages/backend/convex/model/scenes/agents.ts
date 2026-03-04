@@ -843,7 +843,7 @@ const updateScene = createTool({
 // Scene Agent (Kimi K2 Thinking)
 export const sceneAgent = new Agent<TraceCtx>(components.agent, {
   name: "Scene Agent",
-  languageModel: openrouter.chat("moonshotai/kimi-k2.5"),
+  languageModel: openrouter.chat("anthropic/claude-sonnet-4.6"),
   instructions: SCENE_AGENT_INSTRUCTIONS,
   tools: {
     updateCompositionPlan,
