@@ -66,6 +66,14 @@ export interface VisualizationControlsState {
   skybox: string;
   starDensity: number;
   starBrightness: number;
+  // Spectrum
+  spectrumEnabled: boolean;
+  spectrumRadius: number;
+  spectrumHeight: number;
+  spectrumRepeats: number;
+  spectrumAlpha: number;
+  spectrumSmoothing: number;
+  spectrumBarGap: number;
   // Audio
   amplitude: number;
   onsetDecay: number;
@@ -156,6 +164,13 @@ export const pathToKey: Record<string, keyof VisualizationControlsState> = {
   "Skybox.skybox": "skybox",
   "Skybox.starDensity": "starDensity",
   "Skybox.starBrightness": "starBrightness",
+  "Spectrum.spectrumEnabled": "spectrumEnabled",
+  "Spectrum.spectrumRadius": "spectrumRadius",
+  "Spectrum.spectrumHeight": "spectrumHeight",
+  "Spectrum.spectrumRepeats": "spectrumRepeats",
+  "Spectrum.spectrumAlpha": "spectrumAlpha",
+  "Spectrum.spectrumSmoothing": "spectrumSmoothing",
+  "Spectrum.spectrumBarGap": "spectrumBarGap",
   "Audio.amplitude": "amplitude",
   "Audio.onsetDecay": "onsetDecay",
   "Audio.audioGain": "audioGain",
@@ -224,6 +239,12 @@ const DEFAULT_STATE: VisualizationControlsState = {
   emitterLineWidth: PARAM_DEFAULTS.emitterLineWidth,
   starDensity: PARAM_DEFAULTS.starDensity,
   starBrightness: PARAM_DEFAULTS.starBrightness,
+  spectrumRadius: PARAM_DEFAULTS.spectrumRadius,
+  spectrumHeight: PARAM_DEFAULTS.spectrumHeight,
+  spectrumRepeats: PARAM_DEFAULTS.spectrumRepeats,
+  spectrumAlpha: PARAM_DEFAULTS.spectrumAlpha,
+  spectrumSmoothing: PARAM_DEFAULTS.spectrumSmoothing,
+  spectrumBarGap: PARAM_DEFAULTS.spectrumBarGap,
   amplitude: PARAM_DEFAULTS.amplitude,
   onsetDecay: PARAM_DEFAULTS.onsetDecay,
   audioGain: PARAM_DEFAULTS.audioGain,
@@ -238,6 +259,7 @@ const DEFAULT_STATE: VisualizationControlsState = {
   spawnBurstMultiplier: PARAM_DEFAULTS.spawnBurstMultiplier,
 
   // Non-numeric defaults (not in PARAMS)
+  spectrumEnabled: false,
   coronaEnabled: false,
   colorPalette: "grayscale" as ColorPaletteId,
   motionBlurScale: 0.5,

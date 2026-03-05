@@ -572,6 +572,69 @@ export const PARAMS: Record<string, ParameterDef> = {
     system: true,
   },
   // ===========================================================================
+  // SPECTRUM
+  // ===========================================================================
+  "Spectrum.spectrumRadius": {
+    min: 20,
+    max: 500,
+    default: 500,
+    step: 5,
+    description: "radius of circular spectrum from center",
+    group: "Spectrum",
+    label: "Radius",
+    system: true,
+  },
+  "Spectrum.spectrumHeight": {
+    min: 5,
+    max: 100,
+    default: 100,
+    step: 5,
+    description: "max height of spectrum bars",
+    group: "Spectrum",
+    label: "Height",
+    system: true,
+  },
+  "Spectrum.spectrumRepeats": {
+    min: 1,
+    max: 8,
+    default: 4,
+    step: 1,
+    description: "number of times spectrum is duplicated around circle",
+    group: "Spectrum",
+    label: "Repeats",
+    system: true,
+  },
+  "Spectrum.spectrumAlpha": {
+    min: 0.01,
+    max: 1,
+    default: 0.02,
+    step: 0.01,
+    description: "opacity of spectrum bars",
+    group: "Spectrum",
+    label: "Alpha",
+    system: true,
+  },
+  "Spectrum.spectrumSmoothing": {
+    min: 0,
+    max: 0.99,
+    default: 0.9,
+    step: 0.01,
+    description: "temporal smoothing of spectrum animation",
+    group: "Spectrum",
+    label: "Smoothing",
+    system: true,
+  },
+  "Spectrum.spectrumBarGap": {
+    min: 0.5,
+    max: 5,
+    default: 5,
+    step: 0.1,
+    description: "degrees between each bar",
+    group: "Spectrum",
+    label: "Bar Gap",
+    system: true,
+  },
+  // ===========================================================================
   // AUDIO
   // ===========================================================================
   "Audio.amplitude": {

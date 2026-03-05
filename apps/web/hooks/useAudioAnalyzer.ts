@@ -79,7 +79,7 @@ const DEFAULT_ANALYSIS: AnalyzedAudio = {
     bass: { mean: 0, threshold: 0 },
     high: { mean: 0, threshold: 0 },
   },
-  spectrum: new Float32Array(128),
+  spectrum: new Float32Array(256),
   bandOnsets: new Float32Array(MAX_BANDS),
   bandEnergies: new Float32Array(MAX_BANDS),
   bandCount: MAX_BANDS,
@@ -104,7 +104,7 @@ let workerInitialized = false;
 
 // Pre-allocated buffers for worker output - copied in place to avoid GC pressure
 const analysisBuffers = {
-  spectrum: new Float32Array(128),
+  spectrum: new Float32Array(256),
   bandOnsets: new Float32Array(MAX_BANDS),
   bandEnergies: new Float32Array(MAX_BANDS),
 };
