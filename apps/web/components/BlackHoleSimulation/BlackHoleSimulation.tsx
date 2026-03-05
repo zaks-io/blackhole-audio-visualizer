@@ -248,6 +248,9 @@ export function BlackHoleSimulation({
   const spawnDecayCoef = useRef(Math.exp(-1 / (0.1 * 60))); // 100ms decay at 60fps
   const beatTimeDecayCoef = useRef(Math.exp(-1 / (0.15 * 60))); // 150ms decay at 60fps
   const beatHistoryRef = useRef<number[]>([0, 0, 0, 0]); // 4-frame rolling average for beat smoothing
+  const beatPhaseRef = useRef(0); // PLL phase accumulator for BPM-synced bounce
+  const lastBeatTimeRef = useRef(0); // Last bass peak timestamp for PLL correction
+  const bpmOrbitMultiplierRef = useRef(1); // Smoothed orbit speed multiplier from BPM
 
   // Cached audio data object - updated in-place to avoid per-frame allocations
   const scaledOnsetsRef = useRef(new Float32Array(36));
@@ -271,7 +274,7 @@ export function BlackHoleSimulation({
     beatTimePulse: 0,
   });
 
-  useFrame((state) => {
+  useFrame((state, delta) => {
     // Read from runtimeState instead of store for performance during tweens
     // Calculate black hole positions based on orbit parameters
     const {
@@ -286,6 +289,8 @@ export function BlackHoleSimulation({
       hfcVelocityBoost,
       beatPulse,
       blackHoleOffsetY,
+      beatBounceAmplitude,
+      beatBouncePhaseCorrection,
     } = runtimeState;
     // Compute pulsed radius once - this is the single source of truth
     const pulse = 1 + (beatIntensityRef.current ?? 0) * beatPulse;
@@ -305,9 +310,15 @@ export function BlackHoleSimulation({
     const targetCount = Math.max(1, Math.min(Math.ceil(bhCount), 4));
     const progress = bhCount - Math.floor(bhCount);
 
+    // Scale orbit speed by BPM — normalize around 120 BPM as baseline
+    // Lerp the multiplier to avoid discontinuities when BPM fades to 0
+    const targetMultiplier = isAudioConnected ? getAnalysis().bpm / 120 : 1;
+    bpmOrbitMultiplierRef.current += (targetMultiplier - bpmOrbitMultiplierRef.current) * 0.05;
+    const bpmOrbitSpeed = orbitSpeed * bpmOrbitMultiplierRef.current;
+
     const layoutArgs = [
       elapsed,
-      orbitSpeed,
+      bpmOrbitSpeed,
       orbitRadius,
       gravity,
       blackHoleMassMin,
@@ -364,9 +375,17 @@ export function BlackHoleSimulation({
       bh.count = targetCount;
     }
 
-    // Apply Y offset to all active black hole positions
-    if (blackHoleOffsetY !== 0) {
-      for (let i = 0; i < bh.count; i++) positions[i].y += blackHoleOffsetY;
+    // Apply Y offset and BPM-synced bounce to all active black hole positions
+    // Each black hole gets a phase offset so they bounce out of sync
+    {
+      const PHASE_OFFSETS = [0, Math.PI * 0.5, Math.PI, Math.PI * 1.5];
+      for (let i = 0; i < bh.count; i++) {
+        const bounceY =
+          beatBounceAmplitude > 0
+            ? beatBounceAmplitude * Math.sin(beatPhaseRef.current + PHASE_OFFSETS[i])
+            : 0;
+        positions[i].y += blackHoleOffsetY + bounceY;
+      }
     }
 
     if (isAudioConnected) {
@@ -376,6 +395,15 @@ export function BlackHoleSimulation({
 
       // Protect against stale data during GC pauses - decay instead of using stale high values
       const isStale = analysis.timestamp > 0 && now - analysis.timestamp > MAX_STALE_MS;
+
+      // Keep PLL phase advancing even during stale frames so bounce doesn't freeze
+      if (beatBounceAmplitude > 0) {
+        const TWO_PI = 2 * Math.PI;
+        if (isStale) {
+          beatPhaseRef.current =
+            (beatPhaseRef.current + TWO_PI * (analysis.bpm / 60) * delta) % TWO_PI;
+        }
+      }
 
       if (isStale) {
         beatIntensityRef.current *= 0.85;
@@ -397,6 +425,31 @@ export function BlackHoleSimulation({
         history.push(clampedBeat);
         history.shift();
         beatIntensityRef.current = history.reduce((a, b) => a + b, 0) / history.length;
+
+        // BPM-synced phase accumulator (PLL)
+        // Phase convention: sin(phase)=1 at phase=π/2, so we correct toward π/2
+        // on each detected beat so the bounce peak aligns with the beat.
+        if (beatBounceAmplitude > 0) {
+          const TWO_PI = 2 * Math.PI;
+          const HALF_PI = Math.PI * 0.5;
+          beatPhaseRef.current += TWO_PI * (analysis.bpm / 60) * delta;
+          beatPhaseRef.current %= TWO_PI;
+
+          // Soft-correct phase toward π/2 on bass peak
+          const beatPeriodMs = 60000 / analysis.bpm;
+          const minCooldown = beatPeriodMs * 0.4; // Don't correct more than ~2x per beat
+          if (analysis.peaks.bass && now - lastBeatTimeRef.current > minCooldown) {
+            lastBeatTimeRef.current = now;
+            // Signed angular error from current phase to target (π/2)
+            let error = HALF_PI - beatPhaseRef.current;
+            // Wrap to [-π, π]
+            if (error > Math.PI) error -= TWO_PI;
+            if (error < -Math.PI) error += TWO_PI;
+            beatPhaseRef.current =
+              (((beatPhaseRef.current + error * beatBouncePhaseCorrection) % TWO_PI) + TWO_PI) %
+              TWO_PI;
+          }
+        }
 
         // HFC boost - envelope follow the raw HFC with attack/decay
         const hfcTarget = analysis.raw.hfc;

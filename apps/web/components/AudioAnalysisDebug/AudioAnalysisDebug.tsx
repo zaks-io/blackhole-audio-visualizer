@@ -39,6 +39,8 @@ export function AudioAnalysisDebug({ analysisRef }: AudioAnalysisDebugProps) {
           bandEnergies: new Float32Array(current.bandEnergies),
           bandCount: current.bandCount,
           peakHistory: [...current.peakHistory],
+          bpm: current.bpm,
+          bpmConfidence: current.bpmConfidence,
         });
       }
     }, 100);
@@ -132,6 +134,17 @@ export function AudioAnalysisDebug({ analysisRef }: AudioAnalysisDebugProps) {
           <EnergyBar label="RMS" value={raw?.rms ?? 0} color="blue" />
           <EnergyBar label="Centroid" value={raw?.spectralCentroid ?? 0} color="yellow" />
           <EnergyBar label="Flatness" value={raw?.spectralFlatness ?? 0} color="purple" />
+        </div>
+
+        {/* BPM */}
+        <div>
+          <div className="mb-2 text-xs font-medium text-gray-300">Tempo</div>
+          <div className="flex items-baseline gap-2 font-mono text-sm">
+            <span className="text-white">{analysis?.bpm ? analysis.bpm.toFixed(1) : "—"} BPM</span>
+            <span className="text-xs text-gray-400">
+              conf: {((analysis?.bpmConfidence ?? 0) * 100).toFixed(0)}%
+            </span>
+          </div>
         </div>
 
         {/* Peak Timeline */}

@@ -104,6 +104,6 @@ export function useUnifiedAudio(config: UnifiedAudioConfig): UnifiedAudioReturn 
     closeMicPermissionDialog: liveAudio.closeMicPermissionDialog,
 
     // Analysis ref
-    analysisRef: liveAudio.analysisRef,
+    analysisRef: mode === "scene" ? sceneAudio.analysisRef : liveAudio.analysisRef,
   };
 }

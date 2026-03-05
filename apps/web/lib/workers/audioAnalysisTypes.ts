@@ -70,6 +70,8 @@ export interface WorkerResultMessage {
   bandEnergies: Float32Array;
   bandCount: number;
   peakHistory: Array<{ time: number; type: "flux" | "hfc" | "bass" | "high" }>;
+  bpm: number;
+  bpmConfidence: number;
 }
 
 export type WorkerOutput = WorkerResultMessage;

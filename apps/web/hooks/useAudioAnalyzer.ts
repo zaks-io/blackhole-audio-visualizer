@@ -42,6 +42,8 @@ export interface AnalyzedAudio {
   bandEnergies: Float32Array;
   bandCount: number;
   peakHistory: Array<{ time: number; type: "flux" | "hfc" | "bass" | "high" }>;
+  bpm: number;
+  bpmConfidence: number;
 }
 
 const MAX_BANDS = 36;
@@ -84,6 +86,8 @@ const DEFAULT_ANALYSIS: AnalyzedAudio = {
   bandEnergies: new Float32Array(MAX_BANDS),
   bandCount: MAX_BANDS,
   peakHistory: [],
+  bpm: 80,
+  bpmConfidence: 0,
 };
 
 export interface UseAudioAnalyzerOptions {
@@ -124,6 +128,10 @@ function initWorker() {
   if (workerInitialized || typeof window === "undefined") return;
 
   worker = new Worker(new URL("../lib/workers/audioAnalysis.worker.ts", import.meta.url));
+
+  worker.onerror = (e) => {
+    console.error("[AudioWorker] Worker error:", e.message, e);
+  };
 
   worker.onmessage = (e: MessageEvent<WorkerOutput>) => {
     if (e.data.type === "result") {
@@ -181,6 +189,8 @@ function initWorker() {
 
       current.bandCount = result.bandCount;
       current.peakHistory = result.peakHistory;
+      current.bpm = result.bpm;
+      current.bpmConfidence = result.bpmConfidence;
     }
   };
 

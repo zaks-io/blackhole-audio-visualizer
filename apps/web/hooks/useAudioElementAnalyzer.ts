@@ -74,6 +74,8 @@ const DEFAULT_ANALYSIS: AnalyzedAudio = {
   bandEnergies: new Float32Array(MAX_BANDS),
   bandCount: MAX_BANDS,
   peakHistory: [],
+  bpm: 80,
+  bpmConfidence: 0,
 };
 
 export interface UseAudioElementAnalyzerOptions {
@@ -168,6 +170,8 @@ function initSceneWorker() {
 
       current.bandCount = result.bandCount;
       current.peakHistory = result.peakHistory;
+      current.bpm = result.bpm;
+      current.bpmConfidence = result.bpmConfidence;
     }
   };
 
@@ -341,5 +345,6 @@ export function useAudioElementAnalyzer(
     getAnalysis,
     isConnected,
     getRecordingStream,
+    analysisRef: sceneAnalysisRef,
   };
 }

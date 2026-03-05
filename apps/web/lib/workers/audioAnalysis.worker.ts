@@ -23,10 +23,141 @@ import {
   extractBandEnergies,
   extractLogBandEnergies,
 } from "../audio";
-
 // ============================================================================
 // Worker Implementation
 // ============================================================================
+
+// Gravity-well BPM: always outputs a usable BPM (never zero).
+// Detection pulls toward real tempo; absence lets it drift back to 120 BPM baseline.
+class GravityWellBPM {
+  private effectiveBpm = 120;
+  private detectedBpm = 0;
+  private confidence = 0;
+  private beatTimestamps: number[] = [];
+  private lastBeatTimeMs = 0;
+
+  private readonly BASELINE_BPM = 120;
+  private readonly PULL_ALPHA = 0.08;
+  private readonly DECAY_RATE = 0.002; // per-ms confidence decay
+  private readonly windowMs = 8000;
+  private readonly minBpm = 60;
+  private readonly maxBpm = 200;
+  private readonly binSizeMs = 10;
+
+  addBeat(timestampMs: number): void {
+    // Reject false positives when we have a decent read
+    if (this.confidence > 0.3 && this.beatTimestamps.length > 0) {
+      const expectedPeriod = 60000 / this.effectiveBpm;
+      const sinceLastBeat = timestampMs - this.beatTimestamps[this.beatTimestamps.length - 1];
+      if (sinceLastBeat < expectedPeriod * 0.4) return;
+    }
+
+    this.lastBeatTimeMs = timestampMs;
+    this.beatTimestamps.push(timestampMs);
+    const cutoff = timestampMs - this.windowMs;
+    while (this.beatTimestamps.length > 0 && this.beatTimestamps[0] < cutoff) {
+      this.beatTimestamps.shift();
+    }
+    if (this.beatTimestamps.length < 4) return;
+
+    // IOI histogram with skip 1-3
+    const minIOI = 60000 / this.maxBpm;
+    const maxIOI = 60000 / this.minBpm;
+    const iois: number[] = [];
+    for (let skip = 1; skip <= 3; skip++) {
+      for (let i = skip; i < this.beatTimestamps.length; i++) {
+        const ioi = (this.beatTimestamps[i] - this.beatTimestamps[i - skip]) / skip;
+        if (ioi >= minIOI && ioi <= maxIOI) iois.push(ioi);
+      }
+    }
+    if (iois.length < 3) return;
+
+    const numBins = Math.ceil((maxIOI - minIOI) / this.binSizeMs) + 1;
+    const bins = new Uint8Array(numBins);
+    for (const ioi of iois) {
+      const bin = Math.floor((ioi - minIOI) / this.binSizeMs);
+      if (bin >= 0 && bin < numBins) bins[bin]++;
+    }
+
+    let maxCount = 0;
+    let dominantBin = 0;
+    for (let i = 0; i < numBins; i++) {
+      if (bins[i] > maxCount) {
+        maxCount = bins[i];
+        dominantBin = i;
+      }
+    }
+
+    const dominantCenter = minIOI + dominantBin * this.binSizeMs;
+    const tolerance = this.binSizeMs * 2;
+    let weightedSum = 0;
+    let clusterCount = 0;
+    for (const ioi of iois) {
+      if (Math.abs(ioi - dominantCenter) <= tolerance) {
+        weightedSum += ioi;
+        clusterCount++;
+      }
+    }
+    if (clusterCount === 0) return;
+
+    let rawBpm = 60000 / (weightedSum / clusterCount);
+
+    // Octave correction against effectiveBpm
+    const half = rawBpm * 0.5;
+    const double = rawBpm * 2;
+    const current = this.effectiveBpm;
+    if (Math.abs(half - current) < Math.abs(rawBpm - current) && half >= this.minBpm) {
+      rawBpm = half;
+    } else if (Math.abs(double - current) < Math.abs(rawBpm - current) && double <= this.maxBpm) {
+      rawBpm = double;
+    }
+
+    this.detectedBpm = rawBpm;
+    this.confidence = clusterCount / iois.length;
+  }
+
+  update(timestampMs: number): void {
+    // Decay confidence when no beats arrive
+    if (this.lastBeatTimeMs > 0) {
+      const expectedPeriod = 60000 / this.effectiveBpm;
+      const elapsed = timestampMs - this.lastBeatTimeMs;
+      if (elapsed > expectedPeriod * 2) {
+        this.confidence = Math.max(
+          0,
+          this.confidence - this.DECAY_RATE * (elapsed - expectedPeriod * 2)
+        );
+      }
+    }
+
+    // Blend effectiveBpm toward target
+    let target: number;
+    let alpha: number;
+    if (this.confidence > 0.1) {
+      target = this.detectedBpm;
+      alpha = this.PULL_ALPHA * this.confidence;
+    } else {
+      target = this.BASELINE_BPM;
+      alpha = this.PULL_ALPHA * 0.3;
+    }
+    this.effectiveBpm += (target - this.effectiveBpm) * alpha;
+  }
+
+  getBpm(): number {
+    return this.effectiveBpm;
+  }
+
+  getConfidence(): number {
+    return this.confidence;
+  }
+
+  reset(): void {
+    this.effectiveBpm = this.BASELINE_BPM;
+    this.detectedBpm = 0;
+    this.confidence = 0;
+    this.beatTimestamps = [];
+    this.lastBeatTimeMs = 0;
+  }
+}
 
 const MAX_BANDS = 36;
 const PEAK_HISTORY_DURATION_MS = 2000;
@@ -101,6 +232,7 @@ for (let i = 0; i < MAX_BANDS; i++) {
 }
 
 const bandSmoother = new MultiSmoother(MAX_BANDS);
+const gravityWellBpm = new GravityWellBPM();
 
 function computeRMS(frequencyData: Uint8Array): number {
   let sum = 0;
@@ -121,6 +253,7 @@ function reset(): void {
     peakRingBuffer[i].time = 0;
   }
 
+  gravityWellBpm.reset();
   Object.values(thresholds).forEach((t) => t.reset());
   Object.values(smoothers.energy).forEach((s) => s.reset());
   smoothers.spectralFlux.reset();
@@ -202,6 +335,10 @@ function analyze(
   thresholds.high.update(highEnergy);
   const bassPeak = thresholds.bass.isPeak(bassEnergy, timestamp);
   const highPeak = thresholds.high.isPeak(highEnergy, timestamp);
+
+  // Feed bass peaks to gravity-well BPM and update
+  if (bassPeak) gravityWellBpm.addBeat(timestamp);
+  gravityWellBpm.update(timestamp);
 
   // Update peaks
   const peaks: AudioPeaks = {
@@ -320,6 +457,8 @@ function analyze(
     bandEnergies: bandEnergiesOutput,
     bandCount: clampedBandCount,
     peakHistory: peakHistoryOutput,
+    bpm: gravityWellBpm.getBpm(),
+    bpmConfidence: gravityWellBpm.getConfidence(),
   };
 }
 
