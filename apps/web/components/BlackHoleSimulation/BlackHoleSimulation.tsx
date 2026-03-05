@@ -7,6 +7,7 @@ import { useShallow } from "zustand/shallow";
 import * as THREE from "three";
 import { ParticleSystem } from "./ParticleSystem";
 import { BlackHole } from "./BlackHole";
+import { CircularSpectrum } from "./CircularSpectrum";
 import { CameraSystem } from "@/components/CameraSystem";
 import { StarField } from "@/components/StarField";
 import { useVisualizationControls } from "@/hooks/useVisualizationControls";
@@ -267,7 +268,7 @@ export function BlackHoleSimulation({
     bandEnergies: new Float32Array(36),
     bandOnsets: scaledOnsetsRef.current,
     bandCount: 0,
-    spectrum: new Float32Array(128),
+    spectrum: new Float32Array(256),
     hfcBoost: 0,
     spawnBurst: 1,
     beatIntensity: 0,
@@ -538,6 +539,8 @@ export function BlackHoleSimulation({
           </Suspense>
         )
       )}
+
+      <CircularSpectrum getAudioData={getAudioData} audioEnabled={isAudioConnected} />
 
       <ParticleSystem
         key={textureSize}
