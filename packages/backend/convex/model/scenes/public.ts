@@ -125,11 +125,8 @@ export const sendSceneMessage = action({
             });
             if (scene) {
               context.push({
-                role: "assistant",
-                content: [
-                  {
-                    type: "text",
-                    text: `# Current Scene Context
+                role: "user",
+                content: `# Current Scene Context
 
 The user is on the following scene's page:
 
@@ -141,8 +138,6 @@ Playlist Id: ${scene.playlistId}
 Is Public: ${scene.isPublic}
 Is Owner: ${scene.userId === user?._id}
 `,
-                  },
-                ],
               });
             }
           }

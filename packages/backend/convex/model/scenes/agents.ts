@@ -74,13 +74,16 @@ const compositionPlanSchema = z.object({
 const updateCompositionPlan = createTool({
   description:
     "Update the working composition plan with new sections, styles, or lyrics. Call this incrementally as you build the song structure with the user. The UI will display the current plan state.",
-  args: compositionPlanSchema,
-  handler: async (_ctx, args) => {
+  inputSchema: compositionPlanSchema,
+  execute: async (_ctx, input) => {
     // The tool result will be stored in the message and picked up by the UI
     return {
       action: "updateCompositionPlan",
-      compositionPlan: args,
-      totalDurationMs: args.sections.reduce((sum, s) => sum + s.duration_ms, 0),
+      compositionPlan: input,
+      totalDurationMs: input.sections.reduce(
+        (sum: number, s: { duration_ms: number }) => sum + s.duration_ms,
+        0
+      ),
     };
   },
 });
@@ -89,11 +92,11 @@ const updateCompositionPlan = createTool({
 const showGenerateSongButton = createTool({
   description:
     "Display a 'Generate Song' button in the chat UI. Call this ONLY when the composition plan is complete and the user has approved it. This signals to the UI that the song is ready to be generated. The user must click the button to start generation - you cannot generate songs directly.",
-  args: z.object({
+  inputSchema: z.object({
     compositionPlan: compositionPlanSchema,
     songTitle: z.string(),
   }),
-  handler: async (ctx, args) => {
+  execute: async (ctx, input) => {
     if (!ctx.threadId) {
       throw new Error("Thread ID is required");
     }
@@ -121,7 +124,7 @@ const showGenerateSongButton = createTool({
     // Save composition to compositions table first
     const compositionId: Id<"compositions"> = await ctx.runMutation(
       internal.model.generatedSongs.server.saveComposition,
-      { compositionPlan: args.compositionPlan }
+      { compositionPlan: input.compositionPlan }
     );
 
     // Create song record with status "ready" and compositionId reference
@@ -129,21 +132,21 @@ const showGenerateSongButton = createTool({
       internal.model.generatedSongs.server.createReadySong,
       {
         userId: user._id,
-        name: args.songTitle,
+        name: input.songTitle,
         threadId: ctx.threadId,
         compositionId,
       }
     );
 
-    const totalDurationMs = args.compositionPlan.sections.reduce(
-      (sum, s) => sum + s.duration_ms,
+    const totalDurationMs = input.compositionPlan.sections.reduce(
+      (sum: number, s: { duration_ms: number }) => sum + s.duration_ms,
       0
     );
 
     return {
       action: "showGenerateButton",
       songId: songId as string,
-      songTitle: args.songTitle,
+      songTitle: input.songTitle,
       totalDurationMs,
     };
   },
@@ -153,12 +156,12 @@ const showGenerateSongButton = createTool({
 const readCompositionPlan = createTool({
   description:
     "Read the composition plan from a song. Use the songId from the current scene context or provide one explicitly.",
-  args: z.object({
+  inputSchema: z.object({
     songId: z.string().describe("The ID of the song to read the composition from"),
   }),
-  handler: async (
+  execute: async (
     ctx,
-    args
+    input
   ): Promise<{
     action: string;
     error?: string;
@@ -177,7 +180,7 @@ const readCompositionPlan = createTool({
     totalDurationMs?: number;
   }> => {
     const song = await ctx.runQuery(internal.model.generatedSongs.server.getById, {
-      songId: args.songId as Id<"generatedSongs">,
+      songId: input.songId as Id<"generatedSongs">,
     });
     if (!song) return { action: "error", error: "Song not found" };
     if (!song.compositionId) return { action: "error", error: "Song has no composition" };
@@ -206,31 +209,34 @@ const readCompositionPlan = createTool({
 const updateSavedCompositionPlan = createTool({
   description:
     "Update a saved composition plan for a song in 'ready' status. Cannot modify compositions for songs already generated.",
-  args: z.object({
+  inputSchema: z.object({
     songId: z.string().describe("The ID of the song whose composition to update"),
     compositionPlan: compositionPlanSchema,
   }),
-  handler: async (ctx, args) => {
+  execute: async (ctx, input) => {
     const song = await ctx.runQuery(internal.model.generatedSongs.server.getById, {
-      songId: args.songId as Id<"generatedSongs">,
+      songId: input.songId as Id<"generatedSongs">,
     });
     if (!song) return { action: "error", error: "Song not found" };
     if (song.status !== "ready") return { action: "error", error: "Song is not in ready status" };
 
     const compositionId: Id<"compositions"> = await ctx.runMutation(
       internal.model.generatedSongs.server.saveComposition,
-      { compositionPlan: args.compositionPlan }
+      { compositionPlan: input.compositionPlan }
     );
 
     await ctx.runMutation(internal.model.generatedSongs.server.updateSongComposition, {
-      songId: args.songId as Id<"generatedSongs">,
+      songId: input.songId as Id<"generatedSongs">,
       compositionId,
     });
 
     return {
       action: "updateSavedCompositionPlan",
-      compositionPlan: args.compositionPlan,
-      totalDurationMs: args.compositionPlan.sections.reduce((sum, s) => sum + s.duration_ms, 0),
+      compositionPlan: input.compositionPlan,
+      totalDurationMs: input.compositionPlan.sections.reduce(
+        (sum: number, s: { duration_ms: number }) => sum + s.duration_ms,
+        0
+      ),
     };
   },
 });
@@ -253,8 +259,8 @@ The visualizer renders three orbitting black holes with particles emitting from 
 3. **Write**: Collaborate on lyrics or instrumental descriptions
 4. **Style**: Define musical styles, instruments, production elements
 5. **Refine**: Iterate until approved
-6. **Generate**: Call showGenerateSongButton to generate the song - user must click to start. You will see a tool call with songId when the song is generated.
-7. **Visualize**: After song completes, call generateVisualizationPlaylist
+6. **Generate**: Call showGenerateSongButton when the composition is approved. The user clicks it to start generation.
+7. **Visualize**: After song completes, wait for the user's next prompt, then call generateVisualizationPlaylist
 8. **Save**: Call createScene or updateScene with songId and playlistId
 9. **Adjust Visualization**: Make any adjustments to the visualization presets or scene properties as needed.
 
@@ -414,17 +420,17 @@ type SectionWithTiming = Doc<"compositions">["sections"][number] & {
 const generateVisualizationPlaylist = createTool({
   description:
     "Generate and save a visualization playlist synced to the song composition. Call this after the composition plan is finalized to create the visual experience. This will automatically create presets and a playlist in the database.",
-  args: z.object({
+  inputSchema: z.object({
     customInstructions: z
       .string()
       .optional()
       .describe("Custom instructions for the visualization playlist"),
     songId: z.string().describe("The ID of the song to generate a visualization playlist for"),
   }),
-  handler: async (ctx, args) => {
+  execute: async (ctx, input) => {
     const song: Doc<"generatedSongs"> | null = await ctx.runQuery(
       internal.model.generatedSongs.server.getById,
-      { songId: args.songId as Id<"generatedSongs"> }
+      { songId: input.songId as Id<"generatedSongs"> }
     );
     if (!song) return { action: "error", error: "Song not found" };
     if (!song.compositionId) return { action: "error", error: "Song has no composition" };
@@ -463,7 +469,7 @@ Negative (avoid): ${composition.negative_global_styles.join(", ")}
   - Make choruses visually impactful with high energy settings
   - Add a variety of settings to the presets to make the visualization more interesting.
 
-${args.customInstructions ? `## Custom Instructions\n${args.customInstructions}` : ""}`.trim();
+${input.customInstructions ? `## Custom Instructions\n${input.customInstructions}` : ""}`.trim();
 
     // Vote analysis is collected but not injected until data quality improves
     // TODO: Re-enable when presetsAnalyzed >= 20 with meaningful clusters
@@ -565,14 +571,14 @@ ${args.customInstructions ? `## Custom Instructions\n${args.customInstructions}`
 const createScene = createTool({
   description:
     "Create a scene that combines a generated song with a visualization playlist. Call this after both the song has been generated and the visualization playlist has been created. This will save the scene and allow users to view and play it.",
-  args: z.object({
+  inputSchema: z.object({
     name: z.string().describe("The name of the scene (usually the song title)"),
     description: z.string().optional().describe("Optional description of the scene"),
     songId: z.string().describe("The ID of the generated song"),
     playlistId: z.string().describe("The ID of the visualization playlist"),
     isPublic: z.boolean().describe("Whether the scene is publicly visible"),
   }),
-  handler: async (ctx, args) => {
+  execute: async (ctx, input) => {
     if (!ctx.threadId) {
       throw new Error("Thread ID is required");
     }
@@ -601,19 +607,19 @@ const createScene = createTool({
       internal.model.scenes.server.saveSceneForAgent,
       {
         userId: user._id,
-        name: args.name,
-        description: args.description,
-        songId: args.songId as Id<"generatedSongs">,
-        playlistId: args.playlistId as Id<"playlists">,
+        name: input.name,
+        description: input.description,
+        songId: input.songId as Id<"generatedSongs">,
+        playlistId: input.playlistId as Id<"playlists">,
         threadId: ctx.threadId,
-        isPublic: args.isPublic,
+        isPublic: input.isPublic,
       }
     );
 
     return {
       action: "sceneCreated",
       sceneId: sceneId as string,
-      name: args.name,
+      name: input.name,
     };
   },
 });
@@ -622,12 +628,12 @@ const createScene = createTool({
 const readPreset = createTool({
   description:
     "Read a preset's details by ID. Use this to see the current values of a specific preset before making changes.",
-  args: z.object({
+  inputSchema: z.object({
     presetId: z.string().describe("The ID of the preset to read"),
   }),
-  handler: async (
+  execute: async (
     ctx,
-    args
+    input
   ): Promise<
     | { action: "error"; error: string }
     | {
@@ -652,7 +658,7 @@ const readPreset = createTool({
       return { action: "error", error: "User not found" };
     }
     const preset = await ctx.runQuery(internal.model.scenes.server.getPresetById, {
-      presetId: args.presetId as Id<"presets">,
+      presetId: input.presetId as Id<"presets">,
       userId: user._id,
     });
     if (!preset) {
@@ -675,12 +681,12 @@ const readPreset = createTool({
 const readPlaylistPresets = createTool({
   description:
     "Read all presets in a playlist with their timing information. Use this to see the full visualization sequence and identify which presets to modify.",
-  args: z.object({
+  inputSchema: z.object({
     playlistId: z.string().describe("The ID of the playlist to read presets from"),
   }),
-  handler: async (
+  execute: async (
     ctx,
-    args
+    input
   ): Promise<
     | { action: "error"; error: string }
     | {
@@ -708,7 +714,7 @@ const readPlaylistPresets = createTool({
       return { action: "error", error: "User not found" };
     }
     const result = await ctx.runQuery(internal.model.scenes.server.getPlaylistWithPresets, {
-      playlistId: args.playlistId as Id<"playlists">,
+      playlistId: input.playlistId as Id<"playlists">,
       userId: user._id,
     });
     if (!result) {
@@ -736,7 +742,7 @@ const readPlaylistPresets = createTool({
 const updatePresetTool = createTool({
   description:
     "Update a preset's visual parameters (colorPalette, parameters, cameraMode) and optionally its timing in a playlist. Use this to make adjustments to the visualization after generation.",
-  args: z.object({
+  inputSchema: z.object({
     presetId: z.string().describe("The ID of the preset to update"),
     name: z.string().optional().describe("New name for the preset"),
     colorPalette: z.string().optional().describe("New color palette"),
@@ -751,7 +757,7 @@ const updatePresetTool = createTool({
       .optional()
       .describe("New duration in seconds for how long this preset plays in the playlist"),
   }),
-  handler: async (ctx, args) => {
+  execute: async (ctx, input) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
       return { action: "error", error: "Not authenticated" };
@@ -765,38 +771,38 @@ const updatePresetTool = createTool({
 
     // Update preset visual properties if any provided
     const hasPresetUpdates =
-      args.name !== undefined ||
-      args.colorPalette !== undefined ||
-      args.parameters !== undefined ||
-      args.cameraMode !== undefined;
+      input.name !== undefined ||
+      input.colorPalette !== undefined ||
+      input.parameters !== undefined ||
+      input.cameraMode !== undefined;
 
     if (hasPresetUpdates) {
       await ctx.runMutation(internal.model.scenes.server.updatePreset, {
-        presetId: args.presetId as Id<"presets">,
+        presetId: input.presetId as Id<"presets">,
         userId: user._id,
-        name: args.name,
-        colorPalette: args.colorPalette,
-        parameters: args.parameters,
-        cameraMode: args.cameraMode,
+        name: input.name,
+        colorPalette: input.colorPalette,
+        parameters: input.parameters,
+        cameraMode: input.cameraMode,
       });
     }
 
     // Update timing in playlist if provided
-    if (args.waitDuration !== undefined) {
-      if (!args.playlistId) {
+    if (input.waitDuration !== undefined) {
+      if (!input.playlistId) {
         return { action: "error", error: "playlistId is required when updating waitDuration" };
       }
       await ctx.runMutation(internal.model.scenes.server.updatePlaylistItemTiming, {
-        playlistId: args.playlistId as Id<"playlists">,
-        presetId: args.presetId as Id<"presets">,
+        playlistId: input.playlistId as Id<"playlists">,
+        presetId: input.presetId as Id<"presets">,
         userId: user._id,
-        waitDuration: args.waitDuration,
+        waitDuration: input.waitDuration,
       });
     }
 
     return {
       action: "updatePreset",
-      presetId: args.presetId,
+      presetId: input.presetId,
       success: true,
     };
   },
@@ -806,7 +812,7 @@ const updatePresetTool = createTool({
 const updateScene = createTool({
   description:
     "Update an existing scene's properties. Use this to modify the scene's name, description, visibility, or to swap the associated song or playlist.",
-  args: z.object({
+  inputSchema: z.object({
     sceneId: z.string().describe("The ID of the scene to update"),
     name: z.string().optional().describe("New name for the scene"),
     description: z.string().optional().describe("New description for the scene"),
@@ -814,7 +820,7 @@ const updateScene = createTool({
     playlistId: z.string().optional().describe("New playlist ID to associate with the scene"),
     isPublic: z.boolean().optional().describe("New visibility setting"),
   }),
-  handler: async (ctx, args) => {
+  execute: async (ctx, input) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
       return {
@@ -824,17 +830,17 @@ const updateScene = createTool({
     }
 
     await ctx.runMutation(internal.model.scenes.server.updateSceneForAgent, {
-      sceneId: args.sceneId as Id<"scenes">,
-      name: args.name,
-      description: args.description,
-      songId: args.songId as Id<"generatedSongs"> | undefined,
-      playlistId: args.playlistId as Id<"playlists"> | undefined,
-      isPublic: args.isPublic,
+      sceneId: input.sceneId as Id<"scenes">,
+      name: input.name,
+      description: input.description,
+      songId: input.songId as Id<"generatedSongs"> | undefined,
+      playlistId: input.playlistId as Id<"playlists"> | undefined,
+      isPublic: input.isPublic,
     });
 
     return {
       action: "sceneUpdated",
-      sceneId: args.sceneId,
+      sceneId: input.sceneId,
       success: true,
     };
   },

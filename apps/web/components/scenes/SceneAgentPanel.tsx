@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { useSceneControls } from "./useSceneControls";
 import { useConvexScenes, useAllConversations } from "@/hooks/useConvexScenes";
 import { useUIMessages } from "@convex-dev/agent/react";
+import type { UIMessage } from "@convex-dev/agent";
 import { api } from "@blackhole/backend/convex/_generated/api";
 import type { Id } from "@blackhole/backend/convex/_generated/dataModel";
 import { AssistantMessage } from "./messages/AssistantMessage";
@@ -34,11 +35,14 @@ export function SceneAgentPanel({ sceneId }: { sceneId?: string }) {
 
   const { conversations } = useAllConversations();
 
-  const { results: messages } = useUIMessages(
+  // Type assertion needed: @convex-dev/agent v0.6 UIMessagesQuery type doesn't
+  // match Convex-generated function references due to streamArgs optionality.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { results: messages } = (useUIMessages as any)(
     api.model.scenes.public.listThreadMessages,
     chatThreadId ? { threadId: chatThreadId } : "skip",
     { initialNumItems: 50, stream: true }
-  );
+  ) as { results: UIMessage[] | undefined } & Record<string, unknown>;
 
   const [inputValue, setInputValue] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
