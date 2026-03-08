@@ -252,6 +252,7 @@ export function BlackHoleSimulation({
   const beatPhaseRef = useRef(0); // PLL phase accumulator for BPM-synced bounce
   const lastBeatTimeRef = useRef(0); // Last bass peak timestamp for PLL correction
   const bpmOrbitMultiplierRef = useRef(1); // Smoothed orbit speed multiplier from BPM
+  const orbitAngleRef = useRef(0); // Accumulated orbital angle (avoids jumps from speed changes)
 
   // Cached audio data object - updated in-place to avoid per-frame allocations
   const scaledOnsetsRef = useRef(new Float32Array(36));
@@ -298,8 +299,6 @@ export function BlackHoleSimulation({
     // autoColorChange is a boolean from the store, not runtime state
     const { autoColorChange } = useVisualizationControls.getState();
     const { isLuckyPlaying } = usePresetSelector.getState();
-    const elapsed = state.clock.elapsedTime;
-
     const bh = blackHoleDataRef.current!;
     const positions = bh.positions;
     const masses = bh.masses;
@@ -317,9 +316,13 @@ export function BlackHoleSimulation({
     bpmOrbitMultiplierRef.current += (targetMultiplier - bpmOrbitMultiplierRef.current) * 0.05;
     const bpmOrbitSpeed = orbitSpeed * bpmOrbitMultiplierRef.current;
 
+    // Accumulate angle incrementally so speed changes don't cause jumps
+    // (Using elapsed * speed would retroactively apply new speed to all past time)
+    orbitAngleRef.current += bpmOrbitSpeed * delta;
+
     const layoutArgs = [
-      elapsed,
-      bpmOrbitSpeed,
+      orbitAngleRef.current,
+      1, // speed already baked into accumulated angle
       orbitRadius,
       gravity,
       blackHoleMassMin,
