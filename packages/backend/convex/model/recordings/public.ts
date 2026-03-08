@@ -314,7 +314,15 @@ export const getRecordingById = query({
     }
 
     return {
-      ...recording,
+      _id: recording._id,
+      _creationTime: recording._creationTime,
+      name: recording.name,
+      description: recording.description,
+      duration: recording.duration,
+      transcodingStatus: recording.transcodingStatus,
+      downloadCount: recording.downloadCount,
+      transcodingError:
+        recording.transcodingStatus === "failed" ? "Video processing failed" : undefined,
       hlsUrl:
         recording.transcodingStatus === "completed" && recording.r2HlsPath
           ? `${process.env.R2_PUBLIC_URL}/${recording.r2HlsPath}/master.m3u8`

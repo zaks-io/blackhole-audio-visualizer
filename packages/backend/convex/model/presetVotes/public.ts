@@ -16,6 +16,9 @@ export const vote = mutation({
       .first();
     if (!user) throw new Error("User not found");
 
+    const preset = await ctx.db.get(args.presetId);
+    if (!preset) throw new Error("Preset not found");
+
     const existing = await ctx.db
       .query("presetVotes")
       .withIndex("by_user_preset", (q) => q.eq("userId", user._id).eq("presetId", args.presetId))

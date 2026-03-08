@@ -277,10 +277,9 @@ export const reorderPlaylistPresets = mutation({
     }
 
     const itemsByPresetId = new Map(playlist.items.map((item) => [item.presetId, item]));
-    const reorderedItems = args.presetIds.map((presetId) => {
-      const existingItem = itemsByPresetId.get(presetId);
-      return existingItem ?? { presetId };
-    });
+    const reorderedItems = args.presetIds
+      .filter((presetId) => itemsByPresetId.has(presetId))
+      .map((presetId) => itemsByPresetId.get(presetId)!);
 
     await ctx.db.patch(args.playlistId, {
       items: reorderedItems,

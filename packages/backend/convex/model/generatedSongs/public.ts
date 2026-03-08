@@ -5,6 +5,12 @@ import { requireAdmin, ROLES_CLAIM } from "../../lib/auth";
 export const getSongById = query({
   args: { songId: v.id("generatedSongs") },
   handler: async (ctx, { songId }) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+    const roles =
+      ((identity as Record<string, unknown>)[ROLES_CLAIM] as string[] | undefined) ?? [];
+    if (!roles.includes("admin")) return null;
+
     const song = await ctx.db.get(songId);
     if (!song) return null;
 
@@ -75,6 +81,12 @@ export const getMySongs = query({
 export const getSongWithDetails = query({
   args: { songId: v.id("generatedSongs") },
   handler: async (ctx, { songId }) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+    const roles =
+      ((identity as Record<string, unknown>)[ROLES_CLAIM] as string[] | undefined) ?? [];
+    if (!roles.includes("admin")) return null;
+
     const song = await ctx.db.get(songId);
     if (!song) return null;
 

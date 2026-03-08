@@ -5,6 +5,12 @@ import { requireAdmin, ROLES_CLAIM } from "../../lib/auth";
 export const getSceneConversations = query({
   args: { sceneId: v.id("scenes") },
   handler: async (ctx, { sceneId }) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
+    const roles =
+      ((identity as Record<string, unknown>)[ROLES_CLAIM] as string[] | undefined) ?? [];
+    if (!roles.includes("admin")) return [];
+
     return ctx.db
       .query("sceneConversations")
       .withIndex("by_scene", (q) => q.eq("sceneId", sceneId))

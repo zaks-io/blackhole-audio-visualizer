@@ -305,6 +305,12 @@ export const getPublicScenes = query({
 export const getSceneWithDetails = query({
   args: { sceneId: v.id("scenes") },
   handler: async (ctx, { sceneId }) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+    const roles =
+      ((identity as Record<string, unknown>)[ROLES_CLAIM] as string[] | undefined) ?? [];
+    if (!roles.includes("admin")) return null;
+
     const scene = await ctx.db.get(sceneId);
     if (!scene) return null;
 

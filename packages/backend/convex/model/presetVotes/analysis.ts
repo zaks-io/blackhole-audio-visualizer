@@ -10,7 +10,7 @@ import { internal } from "../../_generated/api";
 import type { Id } from "../../_generated/dataModel";
 import { PARAMS } from "../../lib/visualizationParameters";
 import { kmeans } from "ml-kmeans";
-import { requireAdmin } from "../../lib/auth";
+import { requireAdmin, ROLES_CLAIM } from "../../lib/auth";
 
 // User-facing params only (system: false)
 const USER_PARAMS = Object.entries(PARAMS).filter(([, p]) => !p.system);
@@ -515,6 +515,12 @@ export const triggerAnalysis = action({
 
 export const getAnalysis = query({
   handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+    const roles =
+      ((identity as Record<string, unknown>)[ROLES_CLAIM] as string[] | undefined) ?? [];
+    if (!roles.includes("admin")) return null;
+
     return await ctx.db.query("presetAnalysis").first();
   },
 });
