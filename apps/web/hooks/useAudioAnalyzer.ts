@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef } from "react";
 import { useVisualizationControls } from "@/hooks/useVisualizationControls";
-import type { WorkerInput, WorkerOutput } from "@/lib/workers/audioAnalysisTypes";
+import type { AudioTiming, WorkerInput, WorkerOutput } from "@/lib/workers/audioAnalysisTypes";
 
 export interface AnalyzedAudio {
   timestamp: number;
@@ -44,6 +44,10 @@ export interface AnalyzedAudio {
   peakHistory: Array<{ time: number; type: "flux" | "hfc" | "bass" | "high" }>;
   bpm: number;
   bpmConfidence: number;
+  beatPhase: number;
+  nextBeatMs: number;
+  pipelineLatencyMs: number;
+  timing: AudioTiming;
 }
 
 const MAX_BANDS = 36;
@@ -88,6 +92,10 @@ const DEFAULT_ANALYSIS: AnalyzedAudio = {
   peakHistory: [],
   bpm: 80,
   bpmConfidence: 0,
+  beatPhase: 0,
+  nextBeatMs: 0,
+  pipelineLatencyMs: 0,
+  timing: { workerProcessMs: 0, roundTripMs: 0, totalLatencyMs: 0, pipelineLatencyMs: 0 },
 };
 
 export interface UseAudioAnalyzerOptions {
@@ -105,6 +113,7 @@ let frequencyData: Uint8Array<ArrayBuffer> | null = null;
 let rafId: number | null = null;
 let onsetDecay = 0.92;
 let workerInitialized = false;
+let pipelineLatencyMs = 0;
 
 // Pre-allocated buffers for worker output - copied in place to avoid GC pressure
 const analysisBuffers = {
@@ -191,6 +200,15 @@ function initWorker() {
       current.peakHistory = result.peakHistory;
       current.bpm = result.bpm;
       current.bpmConfidence = result.bpmConfidence;
+      current.beatPhase = result.beatPhase;
+      current.nextBeatMs = result.nextBeatMs;
+      current.pipelineLatencyMs = pipelineLatencyMs;
+
+      // Timing instrumentation
+      const resultReceivedAt = performance.now();
+      current.timing.workerProcessMs = result.workerProcessMs;
+      current.timing.roundTripMs = resultReceivedAt - result.timestamp;
+      current.timing.pipelineLatencyMs = pipelineLatencyMs;
     }
   };
 
@@ -279,9 +297,19 @@ export function useAudioAnalyzer(options: UseAudioAnalyzerOptions = {}) {
       const analyser = audioContext.createAnalyser();
 
       analyser.fftSize = fftSizeRef.current;
-      analyser.smoothingTimeConstant = 0.8;
+      analyser.smoothingTimeConstant = 0.3;
 
       source.connect(analyser);
+
+      // Measure pipeline latency for beat sync compensation
+      // Hardware: audio device buffer + FFT window
+      // Software: ~1 frame for RAF scheduling + worker round-trip
+      // Mic capture: outputLatency is irrelevant (no playback), only baseLatency + FFT window matter
+      const hardwareLatencyMs =
+        (audioContext.baseLatency ?? 0) * 1000 +
+        (analyser.fftSize / audioContext.sampleRate) * 1000;
+      const softwareLatencyMs = 16; // ~1 frame at 60fps for RAF + worker round-trip
+      pipelineLatencyMs = hardwareLatencyMs + softwareLatencyMs;
 
       analyserNode = analyser;
       frequencyData = new Uint8Array(analyser.frequencyBinCount);

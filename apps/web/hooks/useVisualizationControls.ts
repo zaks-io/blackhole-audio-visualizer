@@ -80,8 +80,8 @@ export interface VisualizationControlsState {
   audioGain: number;
   beatRepulsion: number;
   beatTimeScale: number;
-  beatBounceAmplitude: number;
-  beatBouncePhaseCorrection: number;
+  beatMassPulse: number;
+  beatPhaseCorrection: number;
   autoColorChange: boolean;
 
   // Post-Processing (dev controls)
@@ -178,8 +178,8 @@ export const pathToKey: Record<string, keyof VisualizationControlsState> = {
   "Audio.audioGain": "audioGain",
   "Audio.beatRepulsion": "beatRepulsion",
   "Audio.beatTimeScale": "beatTimeScale",
-  "Audio.beatBounceAmplitude": "beatBounceAmplitude",
-  "Audio.beatBouncePhaseCorrection": "beatBouncePhaseCorrection",
+  "Audio.beatMassPulse": "beatMassPulse",
+  "Audio.beatPhaseCorrection": "beatPhaseCorrection",
   "Audio.autoColorChange": "autoColorChange",
   "Post-FX.bloomEnabled": "bloomEnabled",
   "Post-FX.bloomBaseIntensity": "bloomBaseIntensity",
@@ -254,8 +254,8 @@ const DEFAULT_STATE: VisualizationControlsState = {
   audioGain: PARAM_DEFAULTS.audioGain,
   beatRepulsion: PARAM_DEFAULTS.beatRepulsion,
   beatTimeScale: PARAM_DEFAULTS.beatTimeScale,
-  beatBounceAmplitude: PARAM_DEFAULTS.beatBounceAmplitude,
-  beatBouncePhaseCorrection: PARAM_DEFAULTS.beatBouncePhaseCorrection,
+  beatMassPulse: PARAM_DEFAULTS.beatMassPulse,
+  beatPhaseCorrection: PARAM_DEFAULTS.beatPhaseCorrection,
   bloomBaseIntensity: PARAM_DEFAULTS.bloomBaseIntensity,
   bloomAudioReactivity: PARAM_DEFAULTS.bloomAudioReactivity,
   chromaticAudioReactivity: PARAM_DEFAULTS.chromaticAudioReactivity,

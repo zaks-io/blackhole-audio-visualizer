@@ -150,6 +150,21 @@ class GravityWellBPM {
     return this.confidence;
   }
 
+  getNextBeatMs(currentTimestamp: number): number {
+    if (this.confidence < 0.2 || this.lastBeatTimeMs === 0) return 0;
+    const period = 60000 / this.effectiveBpm;
+    const elapsed = currentTimestamp - this.lastBeatTimeMs;
+    const beatsElapsed = Math.floor(elapsed / period);
+    return this.lastBeatTimeMs + (beatsElapsed + 1) * period;
+  }
+
+  getBeatPhase(currentTimestamp: number): number {
+    if (this.lastBeatTimeMs === 0) return 0;
+    const period = 60000 / this.effectiveBpm;
+    const elapsed = currentTimestamp - this.lastBeatTimeMs;
+    return (((elapsed % period) + period) % period) / period; // 0-1, 0 = on beat
+  }
+
   reset(): void {
     this.effectiveBpm = this.BASELINE_BPM;
     this.detectedBpm = 0;
@@ -195,7 +210,7 @@ const thresholds = {
     minPeakDistanceMs: 50,
   }),
   hfc: new AdaptiveThreshold({ alpha: 0.1, peakMultiplier: 1.5, minPeakDistanceMs: 30 }),
-  bass: new AdaptiveThreshold({ alpha: 0.08, peakMultiplier: 1.8, minPeakDistanceMs: 100 }),
+  bass: new AdaptiveThreshold({ alpha: 0.08, peakMultiplier: 1.8, minPeakDistanceMs: 70 }),
   high: new AdaptiveThreshold({ alpha: 0.12, peakMultiplier: 1.4, minPeakDistanceMs: 30 }),
 };
 
@@ -459,6 +474,9 @@ function analyze(
     peakHistory: peakHistoryOutput,
     bpm: gravityWellBpm.getBpm(),
     bpmConfidence: gravityWellBpm.getConfidence(),
+    beatPhase: gravityWellBpm.getBeatPhase(timestamp),
+    nextBeatMs: gravityWellBpm.getNextBeatMs(timestamp),
+    workerProcessMs: 0, // overwritten after analyze() returns
   };
 }
 
@@ -468,6 +486,7 @@ onmessage = (e: MessageEvent<WorkerInput>) => {
 
   switch (message.type) {
     case "analyze": {
+      const workerStart = performance.now();
       const result = analyze(
         message.frequencyData,
         message.sampleRate,
@@ -475,6 +494,7 @@ onmessage = (e: MessageEvent<WorkerInput>) => {
         message.bandCount,
         message.timestamp
       );
+      result.workerProcessMs = performance.now() - workerStart;
       // Structured clone - we reuse buffers so can't transfer ownership
       postMessage(result);
       break;

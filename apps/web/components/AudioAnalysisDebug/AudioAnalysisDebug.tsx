@@ -41,6 +41,10 @@ export function AudioAnalysisDebug({ analysisRef }: AudioAnalysisDebugProps) {
           peakHistory: [...current.peakHistory],
           bpm: current.bpm,
           bpmConfidence: current.bpmConfidence,
+          beatPhase: current.beatPhase,
+          nextBeatMs: current.nextBeatMs,
+          pipelineLatencyMs: current.pipelineLatencyMs,
+          timing: { ...current.timing },
         });
       }
     }, 100);
@@ -152,6 +156,33 @@ export function AudioAnalysisDebug({ analysisRef }: AudioAnalysisDebugProps) {
           <div className="mb-2 text-xs font-medium text-gray-300">Peaks (2s)</div>
           <PeakTimeline peaks={peakHistory} windowSeconds={2} height={24} />
         </div>
+
+        {/* Pipeline Timing */}
+        {analysis?.timing && (
+          <div>
+            <div className="mb-2 text-xs font-medium text-gray-300">Pipeline Timing</div>
+            <div className="space-y-1 font-mono text-xs">
+              <div className="flex justify-between gap-4">
+                <span className="text-gray-400">Worker</span>
+                <span>{analysis.timing.workerProcessMs.toFixed(1)}ms</span>
+              </div>
+              <div className="flex justify-between gap-4">
+                <span className="text-gray-400">Round-trip</span>
+                <span>{analysis.timing.roundTripMs.toFixed(1)}ms</span>
+              </div>
+              <div className="flex justify-between gap-4">
+                <span className="text-gray-400">Capture → render</span>
+                <span className={analysis.timing.totalLatencyMs > 33 ? "text-red-400" : ""}>
+                  {analysis.timing.totalLatencyMs.toFixed(1)}ms
+                </span>
+              </div>
+              <div className="flex justify-between gap-4">
+                <span className="text-gray-400">HW latency</span>
+                <span>{analysis.timing.pipelineLatencyMs.toFixed(1)}ms</span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

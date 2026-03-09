@@ -40,6 +40,10 @@ export function AudioDebugTab({ analysisRef, isVisible = true }: AudioDebugTabPr
           peakHistory: [...current.peakHistory],
           bpm: current.bpm,
           bpmConfidence: current.bpmConfidence,
+          beatPhase: current.beatPhase,
+          nextBeatMs: current.nextBeatMs,
+          pipelineLatencyMs: current.pipelineLatencyMs,
+          timing: { ...current.timing },
         });
       }
     }, 100);
@@ -113,6 +117,35 @@ export function AudioDebugTab({ analysisRef, isVisible = true }: AudioDebugTabPr
         <div className="mb-2 text-xs font-medium text-muted-foreground">Peaks (2s)</div>
         <PeakTimeline peaks={peakHistory} windowSeconds={2} height={24} />
       </div>
+
+      {/* Pipeline Timing */}
+      {analysis?.timing && (
+        <div>
+          <div className="mb-2 text-xs font-medium text-muted-foreground">Pipeline Timing</div>
+          <div className="space-y-1 font-mono text-xs">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Worker process</span>
+              <span className="text-white">{analysis.timing.workerProcessMs.toFixed(1)}ms</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Round-trip</span>
+              <span className="text-white">{analysis.timing.roundTripMs.toFixed(1)}ms</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Capture → render</span>
+              <span
+                className={`${analysis.timing.totalLatencyMs > 33 ? "text-red-400" : "text-white"}`}
+              >
+                {analysis.timing.totalLatencyMs.toFixed(1)}ms
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Hardware latency</span>
+              <span className="text-white">{analysis.timing.pipelineLatencyMs.toFixed(1)}ms</span>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

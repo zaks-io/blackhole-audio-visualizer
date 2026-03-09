@@ -76,6 +76,10 @@ const DEFAULT_ANALYSIS: AnalyzedAudio = {
   peakHistory: [],
   bpm: 80,
   bpmConfidence: 0,
+  beatPhase: 0,
+  nextBeatMs: 0,
+  pipelineLatencyMs: 0,
+  timing: { workerProcessMs: 0, roundTripMs: 0, totalLatencyMs: 0, pipelineLatencyMs: 0 },
 };
 
 export interface UseAudioElementAnalyzerOptions {
@@ -91,6 +95,7 @@ let sceneFrequencyData: Uint8Array<ArrayBuffer> | null = null;
 let sceneRafId: number | null = null;
 let sceneConnectedElement: HTMLAudioElement | null = null;
 let sceneWorkerInitialized = false;
+let scenePipelineLatencyMs = 0;
 
 // Pre-allocated buffers for worker output - copied in place to avoid GC pressure
 const sceneAnalysisBuffers = {
@@ -172,6 +177,14 @@ function initSceneWorker() {
       current.peakHistory = result.peakHistory;
       current.bpm = result.bpm;
       current.bpmConfidence = result.bpmConfidence;
+      current.beatPhase = result.beatPhase;
+      current.nextBeatMs = result.nextBeatMs;
+      current.pipelineLatencyMs = scenePipelineLatencyMs;
+
+      const resultReceivedAt = performance.now();
+      current.timing.workerProcessMs = result.workerProcessMs;
+      current.timing.roundTripMs = resultReceivedAt - result.timestamp;
+      current.timing.pipelineLatencyMs = scenePipelineLatencyMs;
     }
   };
 
@@ -279,9 +292,16 @@ export function useAudioElementAnalyzer(
           const source = audioContext.createMediaElementSource(element);
           analyser = audioContext.createAnalyser();
           analyser.fftSize = fftSizeRef.current;
-          analyser.smoothingTimeConstant = 0.8;
+          analyser.smoothingTimeConstant = 0.3;
           source.connect(analyser);
           analyser.connect(audioContext.destination);
+          // Measure pipeline latency for beat sync compensation
+          const hardwareLatencyMs =
+            ((audioContext.baseLatency ?? 0) +
+              ((audioContext as unknown as { outputLatency?: number }).outputLatency ?? 0)) *
+              1000 +
+            (analyser.fftSize / audioContext.sampleRate) * 1000;
+          scenePipelineLatencyMs = hardwareLatencyMs + 16;
           // Create MediaStreamDestination for recording
           const mediaStreamDestination = audioContext.createMediaStreamDestination();
           source.connect(mediaStreamDestination);

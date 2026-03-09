@@ -58,6 +58,13 @@ export interface WorkerSetDecayMessage {
 
 export type WorkerInput = WorkerAnalyzeMessage | WorkerResetMessage | WorkerSetDecayMessage;
 
+export interface AudioTiming {
+  workerProcessMs: number;
+  roundTripMs: number;
+  totalLatencyMs: number;
+  pipelineLatencyMs: number;
+}
+
 export interface WorkerResultMessage {
   type: "result";
   timestamp: number;
@@ -72,6 +79,9 @@ export interface WorkerResultMessage {
   peakHistory: Array<{ time: number; type: "flux" | "hfc" | "bass" | "high" }>;
   bpm: number;
   bpmConfidence: number;
+  beatPhase: number;
+  nextBeatMs: number;
+  workerProcessMs: number;
 }
 
 export type WorkerOutput = WorkerResultMessage;
