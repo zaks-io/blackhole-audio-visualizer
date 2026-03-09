@@ -183,6 +183,7 @@ export function useGPUCompute(
     positionVariable.material.uniforms.uAudioAmplitude = { value: 1.0 };
     positionVariable.material.uniforms.uSpawnBurst = { value: 1.0 };
     positionVariable.material.uniforms.uEmitterSpread = { value: 0.0 };
+    positionVariable.material.uniforms.uEmitterWidth = { value: 0.0 };
     positionVariable.material.uniforms.uEmissionShape = { value: 0.0 };
     positionVariable.material.uniforms.uEmitterLineY = { value: 0.0 };
     positionVariable.material.uniforms.uEmitterLineWidth = { value: 200.0 };
@@ -278,6 +279,7 @@ export function useGPUCompute(
     velocityVariable.material.uniforms.uISCOStrength.value = initial.iscoStrength;
     velocityVariable.material.uniforms.uEmitterSpread.value = initial.emitterSpread;
     positionVariable.material.uniforms.uEmitterSpread.value = initial.emitterSpread;
+    positionVariable.material.uniforms.uEmitterWidth.value = initial.emitterWidth;
     positionVariable.material.uniforms.uEmissionShape.value = initial.emissionShape;
     positionVariable.material.uniforms.uEmitterLineY.value = initial.emitterLineY;
     positionVariable.material.uniforms.uEmitterLineWidth.value = initial.emitterLineWidth;
@@ -639,6 +641,12 @@ export function useGPUCompute(
     }
   }, []);
 
+  const setEmitterWidth = useCallback((value: number) => {
+    if (positionVariableRef.current) {
+      positionVariableRef.current.material.uniforms.uEmitterWidth.value = value;
+    }
+  }, []);
+
   const setEmissionShape = useCallback((value: number) => {
     if (positionVariableRef.current) {
       positionVariableRef.current.material.uniforms.uEmissionShape.value = value;
@@ -882,6 +890,7 @@ export function useGPUCompute(
     registerGPUSetter("Emitters.inwardAngle", setInwardAngle);
     registerGPUSetter("Emitters.spawnRate", setSpawnRate);
     registerGPUSetter("Emitters.emitterSpread", setEmitterSpread);
+    registerGPUSetter("Emitters.emitterWidth", setEmitterWidth);
     registerGPUSetter("Emitters.emissionShape", setEmissionShape);
     registerGPUSetter("Emitters.emitterLineY", setEmitterLineY);
     registerGPUSetter("Emitters.emitterLineWidth", setEmitterLineWidth);
@@ -907,6 +916,7 @@ export function useGPUCompute(
     setInwardAngle,
     setSpawnRate,
     setEmitterSpread,
+    setEmitterWidth,
     setEmissionShape,
     setEmitterLineY,
     setEmitterLineWidth,
@@ -935,6 +945,7 @@ export function useGPUCompute(
     setISCORadius,
     setISCOStrength,
     setEmitterSpread,
+    setEmitterWidth,
     setEmissionShape,
     setEmitterLineY,
     setEmitterLineWidth,

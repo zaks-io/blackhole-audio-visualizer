@@ -17,6 +17,7 @@ uniform float uParticlesPerSecond;
 uniform float uTotalParticles;
 uniform float uLifetimeMax;
 uniform float uEmitterSpread;
+uniform float uEmitterWidth;
 uniform float uEmissionShape;
 uniform float uEmitterLineY;
 uniform float uEmitterLineWidth;
@@ -120,7 +121,7 @@ void main() {
 
                 float baseAngleJitter = (hJitter - 0.5) * BASE_SPAWN_ANGLE_JITTER;
                 float baseArc = (hArc - 0.5) * 0.02;
-                float userSpread = (hSpread - 0.5) * uEmitterSpread * 0.5;
+                float userSpread = (hSpread - 0.5) * uEmitterWidth * 0.5;
 
                 float spawnAngle = angle + baseArc + baseAngleJitter + userSpread;
                 float spawnRad = rad + (hRad - 0.5) * (BASE_SPAWN_RADIAL_JITTER * rad);
@@ -155,8 +156,8 @@ void main() {
 
                 // Local offset: vertical line + tangential spread (will be tilted)
                 float spreadAngle = emitterAngleRad + 1.5708;
-                float spreadX = (hSpread - 0.5) * uEmitterSpread * cos(spreadAngle);
-                float spreadZ = (hSpread - 0.5) * uEmitterSpread * sin(spreadAngle);
+                float spreadX = (hSpread - 0.5) * uEmitterWidth * cos(spreadAngle);
+                float spreadZ = (hSpread - 0.5) * uEmitterWidth * sin(spreadAngle);
                 vec3 localOffset = vec3(spreadX, lineOffset, spreadZ);
 
                 // Tilt only the local offset around the radial axis
@@ -190,7 +191,7 @@ void main() {
                 vec3 normal = normalize(vec3(spawnX, spawnY, spawnZ));
                 vec3 tangent = normalize(cross(normal, vec3(0.0, 1.0, 0.0) + vec3(0.001)));
                 vec3 bitangent = cross(normal, tangent);
-                float spreadAmount = (hSpread - 0.5) * uEmitterSpread * 0.5;
+                float spreadAmount = (hSpread - 0.5) * uEmitterWidth * 0.5;
                 float jitterAngle = hJitter * 6.28318530718;
                 spawnX += spreadAmount * (cos(jitterAngle) * tangent.x + sin(jitterAngle) * bitangent.x);
                 spawnY += spreadAmount * (cos(jitterAngle) * tangent.y + sin(jitterAngle) * bitangent.y);

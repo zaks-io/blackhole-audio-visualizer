@@ -57,6 +57,7 @@ export interface VisualizationControlsState {
   inwardAngle: number;
   spawnRate: number;
   emitterSpread: number;
+  emitterWidth: number;
   emissionShape: number;
   emitterLineY: number;
   emitterLineWidth: number;
@@ -159,6 +160,7 @@ export const pathToKey: Record<string, keyof VisualizationControlsState> = {
   "Emitters.inwardAngle": "inwardAngle",
   "Emitters.spawnRate": "spawnRate",
   "Emitters.emitterSpread": "emitterSpread",
+  "Emitters.emitterWidth": "emitterWidth",
   "Emitters.emissionShape": "emissionShape",
   "Emitters.emitterLineY": "emitterLineY",
   "Emitters.emitterLineWidth": "emitterLineWidth",
@@ -238,6 +240,7 @@ const DEFAULT_STATE: VisualizationControlsState = {
   inwardAngle: PARAM_DEFAULTS.inwardAngle,
   spawnRate: PARAM_DEFAULTS.spawnRate,
   emitterSpread: PARAM_DEFAULTS.emitterSpread,
+  emitterWidth: PARAM_DEFAULTS.emitterWidth,
   emissionShape: PARAM_DEFAULTS.emissionShape,
   emitterLineY: PARAM_DEFAULTS.emitterLineY,
   emitterLineWidth: PARAM_DEFAULTS.emitterLineWidth,

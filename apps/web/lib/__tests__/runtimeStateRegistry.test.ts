@@ -122,6 +122,7 @@ describe("syncFromStore", () => {
       inwardAngle: PARAM_DEFAULTS.inwardAngle,
       spawnRate: PARAM_DEFAULTS.spawnRate,
       emitterSpread: PARAM_DEFAULTS.emitterSpread,
+      emitterWidth: PARAM_DEFAULTS.emitterWidth,
       emissionShape: PARAM_DEFAULTS.emissionShape,
       emitterLineY: PARAM_DEFAULTS.emitterLineY,
       emitterLineWidth: PARAM_DEFAULTS.emitterLineWidth,

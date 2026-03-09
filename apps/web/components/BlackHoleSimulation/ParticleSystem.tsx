@@ -85,6 +85,7 @@ export function ParticleSystem({
     setISCORadius,
     setISCOStrength,
     setEmitterSpread,
+    setEmitterWidth,
     setEmissionShape,
     setEmitterLineY,
     setEmitterLineWidth,
@@ -134,6 +135,7 @@ export function ParticleSystem({
     inwardAngle: number;
     iscoStrength: number;
     emitterSpread: number;
+    emitterWidth: number;
     emissionShape: number;
     emitterLineY: number;
     emitterLineWidth: number;
@@ -610,6 +612,7 @@ export function ParticleSystem({
         inwardAngle: state.inwardAngle,
         iscoStrength: state.iscoStrength,
         emitterSpread: state.emitterSpread,
+        emitterWidth: state.emitterWidth,
         emissionShape: state.emissionShape,
         emitterLineY: state.emitterLineY,
         emitterLineWidth: state.emitterLineWidth,
@@ -636,6 +639,7 @@ export function ParticleSystem({
       setInwardAngle(state.inwardAngle);
       setISCOStrength(state.iscoStrength);
       setEmitterSpread(state.emitterSpread);
+      setEmitterWidth(state.emitterWidth);
       setEmissionShape(state.emissionShape);
       setEmitterLineY(state.emitterLineY);
       setEmitterLineWidth(state.emitterLineWidth);
@@ -706,6 +710,10 @@ export function ParticleSystem({
       if (prev.emitterSpread !== state.emitterSpread) {
         prev.emitterSpread = state.emitterSpread;
         setEmitterSpread(state.emitterSpread);
+      }
+      if (prev.emitterWidth !== state.emitterWidth) {
+        prev.emitterWidth = state.emitterWidth;
+        setEmitterWidth(state.emitterWidth);
       }
       if (prev.emissionShape !== state.emissionShape) {
         prev.emissionShape = state.emissionShape;

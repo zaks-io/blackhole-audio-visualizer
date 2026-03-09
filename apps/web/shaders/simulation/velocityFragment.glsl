@@ -53,6 +53,10 @@ const float BASE_LAUNCH_ANGLE_JITTER = 0.04;   // radians
 const float BASE_LAUNCH_ELEV_JITTER  = 0.02;   // radians
 const float BASE_LAUNCH_SPEED_JITTER = 0.06;   // multiplier range ~ +/-3%
 const float BASE_LAUNCH_RADIAL_JITTER = 0.03;  // multiplier of orbitalSpeed
+// Always-on baseline noise to prevent identical particle streams (independent of spread)
+const float BASE_VEL_ANGLE_NOISE = 0.05;
+const float BASE_VEL_ELEV_NOISE  = 0.03;
+const float BASE_VEL_SPEED_NOISE = 0.04;
 // Always-on micro-turbulence applied during KICK (affects all alive particles, not just spawns).
 // This is intentionally very small; it should break persistent banding without destroying the spoke aesthetic.
 const float BASE_KICK_TURBULENCE = 0.35; // acceleration-ish magnitude (scaled by dt)
@@ -111,10 +115,10 @@ void main() {
         float rand3 = hash2(ip, 3.0);
         float rand4 = hash2(ip, 4.0);
 
-        // All jitter now scales with uEmitterSpread - when spread is 0, no jitter
-        float baseAngleJitter = (hash2(ip, uTime) - 0.5) * 0.1 * uEmitterSpread;
-        float baseElevJitter = (hash2(ip, uTime + 100.0) - 0.5) * 0.05 * uEmitterSpread;
-        float baseSpeedJitter = (hash2(ip, uTime + 200.0) - 0.5) * 0.2 * uEmitterSpread;
+        // Baseline noise (always-on, prevents identical streams)
+        float baseAngleNoise = (hash2(ip, uTime) - 0.5) * BASE_VEL_ANGLE_NOISE;
+        float baseElevNoise = (hash2(ip, uTime + 100.0) - 0.5) * BASE_VEL_ELEV_NOISE;
+        float baseSpeedNoise = (hash2(ip, uTime + 200.0) - 0.5) * BASE_VEL_SPEED_NOISE;
 
         // Micro-jitter scales with orbital decay - when decay is 0, no jitter for stable orbits
         float jitterScale = clamp(uOrbitDecay / 5.0, 0.0, 1.0);
@@ -123,12 +127,12 @@ void main() {
         float microSpeedJitter = (hash2(ip, 12000.0 + timeSeed) - 0.5) * BASE_LAUNCH_SPEED_JITTER * jitterScale;
         float microRadialJitter = (hash2(ip, 13000.0 + timeSeed) - 0.5) * BASE_LAUNCH_RADIAL_JITTER * jitterScale;
 
-        // Horizontal jitter - vary launch angle in orbital plane
-        float angleJitter = baseAngleJitter + (rand1 - 0.5) * uEmitterSpread + microAngleJitter;
+        // Horizontal jitter - cone angle in orbital plane (spread controls width)
+        float angleJitter = (rand1 - 0.5) * uEmitterSpread * 3.14159 + baseAngleNoise + microAngleJitter;
         vec3 jitteredTangent = tangent * cos(angleJitter) + r_hat * sin(angleJitter);
 
-        // Elevation jitter - vary launch angle up/down from orbital plane
-        float elevationJitter = baseElevJitter + (rand2 - 0.5) * uEmitterSpread * 0.5 + microElevJitter;
+        // Elevation jitter - cone angle up/down from orbital plane
+        float elevationJitter = (rand2 - 0.5) * uEmitterSpread * 1.5708 + baseElevNoise + microElevJitter;
         vec3 direction = normalize(jitteredTangent * cos(elevationJitter) + up * sin(elevationJitter));
 
         // Mix with inward based on uInwardAngle
@@ -137,12 +141,11 @@ void main() {
 
         vel = direction * orbitalSpeed;
 
-        // Speed jitter - also fully controlled by spread
-        vel *= (1.0 + baseSpeedJitter + (rand3 - 0.5) * uEmitterSpread * 0.3 + microSpeedJitter);
+        // Speed jitter - baseline noise only (no spread scaling)
+        vel *= (1.0 + baseSpeedNoise + microSpeedJitter);
 
-        // Radial velocity jitter - scales with spread
-        float radialJitter = (rand4 - 0.5) * orbitalSpeed * uEmitterSpread * 0.4;
-        vel += r_hat * (radialJitter + microRadialJitter * orbitalSpeed);
+        // Radial velocity jitter - micro only
+        vel += r_hat * (microRadialJitter * orbitalSpeed);
 
         // HFC boost - punch on percussive hits (snare, hi-hat)
         vel *= (1.0 + uHFCBoost * 0.3);
