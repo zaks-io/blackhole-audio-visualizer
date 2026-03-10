@@ -76,6 +76,10 @@ export function ParticleSystem({
     setSoftening,
     setOrbitDecay,
     setFrameDragging,
+    setMassContrast,
+    setMassRange,
+    setVelocityContrast,
+    setVelocityRange,
     setEmissionRadius,
     setEmitterCount,
     setEmitterAngle,
@@ -127,6 +131,10 @@ export function ParticleSystem({
     softening: number;
     orbitDecay: number;
     frameDragging: number;
+    massContrast: number;
+    massRange: number;
+    velocityContrast: number;
+    velocityRange: number;
     emitRadius: number;
     emitterCount: number;
     emitterAngle: number;
@@ -604,6 +612,10 @@ export function ParticleSystem({
         softening: state.softening,
         orbitDecay: state.orbitDecay,
         frameDragging: state.frameDragging,
+        massContrast: state.massContrast,
+        massRange: state.massRange,
+        velocityContrast: state.velocityContrast,
+        velocityRange: state.velocityRange,
         emitRadius: state.emitRadius,
         emitterCount: state.emitterCount,
         emitterAngle: state.emitterAngle,
@@ -631,6 +643,10 @@ export function ParticleSystem({
       setSoftening(state.softening);
       setOrbitDecay(state.orbitDecay);
       setFrameDragging(state.frameDragging);
+      setMassContrast(state.massContrast);
+      setMassRange(state.massRange);
+      setVelocityContrast(state.velocityContrast);
+      setVelocityRange(state.velocityRange);
       setEmissionRadius(state.emitRadius);
       setEmitterCount(state.emitterCount);
       setEmitterAngle(state.emitterAngle);
@@ -678,6 +694,22 @@ export function ParticleSystem({
       if (prev.frameDragging !== state.frameDragging) {
         prev.frameDragging = state.frameDragging;
         setFrameDragging(state.frameDragging);
+      }
+      if (prev.massContrast !== state.massContrast) {
+        prev.massContrast = state.massContrast;
+        setMassContrast(state.massContrast);
+      }
+      if (prev.massRange !== state.massRange) {
+        prev.massRange = state.massRange;
+        setMassRange(state.massRange);
+      }
+      if (prev.velocityContrast !== state.velocityContrast) {
+        prev.velocityContrast = state.velocityContrast;
+        setVelocityContrast(state.velocityContrast);
+      }
+      if (prev.velocityRange !== state.velocityRange) {
+        prev.velocityRange = state.velocityRange;
+        setVelocityRange(state.velocityRange);
       }
       if (prev.emitRadius !== state.emitRadius) {
         prev.emitRadius = state.emitRadius;

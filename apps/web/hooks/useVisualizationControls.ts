@@ -48,6 +48,10 @@ export interface VisualizationControlsState {
   lifetimeMax: number;
   lifetimeGravityMultiplier: number;
   frameDragging: number;
+  massContrast: number;
+  massRange: number;
+  velocityContrast: number;
+  velocityRange: number;
 
   // Emitters
   emitRadius: number;
@@ -153,6 +157,10 @@ export const pathToKey: Record<string, keyof VisualizationControlsState> = {
   "Physics.lifetimeMax": "lifetimeMax",
   "Physics.lifetimeGravityMultiplier": "lifetimeGravityMultiplier",
   "Physics.frameDragging": "frameDragging",
+  "Physics.massContrast": "massContrast",
+  "Physics.massRange": "massRange",
+  "Physics.velocityContrast": "velocityContrast",
+  "Physics.velocityRange": "velocityRange",
   "Emitters.emitRadius": "emitRadius",
   "Emitters.emitterCount": "emitterCount",
   "Emitters.emitterAngle": "emitterAngle",
@@ -233,6 +241,10 @@ const DEFAULT_STATE: VisualizationControlsState = {
   lifetimeMax: PARAM_DEFAULTS.lifetimeMax,
   lifetimeGravityMultiplier: PARAM_DEFAULTS.lifetimeGravityMultiplier,
   frameDragging: PARAM_DEFAULTS.frameDragging,
+  massContrast: PARAM_DEFAULTS.massContrast,
+  massRange: PARAM_DEFAULTS.massRange,
+  velocityContrast: PARAM_DEFAULTS.velocityContrast,
+  velocityRange: PARAM_DEFAULTS.velocityRange,
   emitRadius: PARAM_DEFAULTS.emitRadius,
   emitterCount: PARAM_DEFAULTS.emitterCount,
   emitterAngle: PARAM_DEFAULTS.emitterAngle,

@@ -147,7 +147,7 @@ export const PARAMS: Record<string, ParameterDef> = {
   },
   "Black Hole.eventHorizonRadius": {
     min: 2,
-    max: 20,
+    max: 10,
     default: 5,
     step: 0.5,
     description: "base sphere size (derived from mass)",
@@ -443,6 +443,46 @@ export const PARAMS: Record<string, ParameterDef> = {
     label: "Frame Dragging",
     system: true,
   },
+  "Physics.massContrast": {
+    min: 0,
+    max: 1,
+    default: 1,
+    step: 0.05,
+    description: "how much particle mass varies by frequency (0=uniform)",
+    group: "Physics",
+    label: "Freq Mass Contrast",
+    system: true,
+  },
+  "Physics.massRange": {
+    min: 1,
+    max: 500,
+    default: 10,
+    step: 1,
+    description: "mass ratio between bass (heavy) and treble (light) particles",
+    group: "Physics",
+    label: "Freq Mass Range",
+    system: true,
+  },
+  "Physics.velocityContrast": {
+    min: 0,
+    max: 1,
+    default: 0.05,
+    step: 0.05,
+    description: "how much initial velocity varies by frequency (0=uniform)",
+    group: "Physics",
+    label: "Freq Velocity Contrast",
+    system: true,
+  },
+  "Physics.velocityRange": {
+    min: 1,
+    max: 5,
+    default: 1,
+    step: 0.5,
+    description: "velocity ratio for treble vs bass particles at spawn",
+    group: "Physics",
+    label: "Freq Velocity Range",
+    system: true,
+  },
 
   // ===========================================================================
   // EMITTERS
@@ -700,7 +740,7 @@ export const PARAMS: Record<string, ParameterDef> = {
   "Audio.beatMassPulse": {
     min: 0,
     max: 1,
-    default: 0.75,
+    default: 0.5,
     step: 0.05,
     description: "BPM-synced gravitational mass modulation intensity",
     group: "Audio",
@@ -719,7 +759,7 @@ export const PARAMS: Record<string, ParameterDef> = {
   },
   "Audio.beatPulse": {
     min: 0,
-    max: 5,
+    max: 2,
     default: 1.0,
     step: 0.1,
     description: "beat-reactive pulse intensity",

@@ -47,6 +47,10 @@ export const runtimeState = {
   lifetimeMax: PARAM_DEFAULTS.lifetimeMax,
   lifetimeGravityMultiplier: PARAM_DEFAULTS.lifetimeGravityMultiplier,
   frameDragging: PARAM_DEFAULTS.frameDragging,
+  massContrast: PARAM_DEFAULTS.massContrast,
+  massRange: PARAM_DEFAULTS.massRange,
+  velocityContrast: PARAM_DEFAULTS.velocityContrast,
+  velocityRange: PARAM_DEFAULTS.velocityRange,
 
   // Emitters
   emitRadius: PARAM_DEFAULTS.emitRadius,
@@ -128,6 +132,10 @@ const runtimePathToKey: Record<string, RuntimeStateKey> = {
   "Physics.lifetimeMax": "lifetimeMax",
   "Physics.lifetimeGravityMultiplier": "lifetimeGravityMultiplier",
   "Physics.frameDragging": "frameDragging",
+  "Physics.massContrast": "massContrast",
+  "Physics.massRange": "massRange",
+  "Physics.velocityContrast": "velocityContrast",
+  "Physics.velocityRange": "velocityRange",
 
   // Emitters
   "Emitters.emitRadius": "emitRadius",
@@ -210,6 +218,10 @@ const storeKeyToRuntimeKey: Record<string, RuntimeStateKey> = {
   lifetimeMax: "lifetimeMax",
   lifetimeGravityMultiplier: "lifetimeGravityMultiplier",
   frameDragging: "frameDragging",
+  massContrast: "massContrast",
+  massRange: "massRange",
+  velocityContrast: "velocityContrast",
+  velocityRange: "velocityRange",
 
   // Emitters
   emitRadius: "emitRadius",

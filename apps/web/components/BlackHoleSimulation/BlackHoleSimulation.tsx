@@ -295,7 +295,8 @@ export function BlackHoleSimulation({
       beatPhaseCorrection,
     } = runtimeState;
     // Compute pulsed radius once - this is the single source of truth
-    const pulse = 1 + (beatIntensityRef.current ?? 0) * beatPulse;
+    // Clamp to prevent black holes from growing excessively on strong beats
+    const pulse = Math.min(1.5, 1 + (beatIntensityRef.current ?? 0) * beatPulse);
     // autoColorChange is a boolean from the store, not runtime state
     const { autoColorChange } = useVisualizationControls.getState();
     const { isLuckyPlaying } = usePresetSelector.getState();
@@ -464,6 +465,8 @@ export function BlackHoleSimulation({
           for (let i = 0; i < bh.count; i++) {
             masses[i] *= massMul;
             radii[i] *= massMul;
+            // Cap radius to 2x base to prevent massive visual jumps
+            radii[i] = Math.min(radii[i], baseRadii[i] * 2);
           }
         }
 

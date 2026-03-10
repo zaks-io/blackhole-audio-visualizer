@@ -25,6 +25,10 @@ uniform float uLifetimeMax;
 uniform float uLifetimeGravityMultiplier;
 uniform float uOrbitDecay;
 uniform float uFrameDragging;
+uniform float uMassContrast;
+uniform float uMassRange;
+uniform float uVelocityContrast;
+uniform float uVelocityRange;
 
 // Multi-black hole uniforms
 uniform vec3 uBlackHolePos[MAX_BLACK_HOLES];
@@ -45,6 +49,22 @@ float hash(vec2 p) {
 
 float hash2(vec2 p, float seed) {
     return hash13(vec3(p, seed));
+}
+
+// Per-particle mass derived from frequency band (bass=heavy, treble=light)
+float getParticleMass(vec2 ip) {
+    float emitterIndex = floor(hash2(ip, 100.0) * uEmitterCount);
+    float freqIndex = emitterIndex / uEmitterCount;
+    float rawMass = mix(uMassRange, 1.0, freqIndex);
+    return mix(1.0, rawMass, uMassContrast);
+}
+
+// Per-particle initial velocity scale (treble=fast, bass=1.0)
+float getParticleVelocityScale(vec2 ip) {
+    float emitterIndex = floor(hash2(ip, 100.0) * uEmitterCount);
+    float freqIndex = emitterIndex / uEmitterCount;
+    float rawScale = mix(1.0, uVelocityRange, freqIndex);
+    return mix(1.0, rawScale, uVelocityContrast);
 }
 
 // Always-on launch decorrelation (independent of uEmitterSpread).
@@ -139,7 +159,7 @@ void main() {
         vec3 inward = -r_hat;
         direction = normalize(mix(direction, inward, uInwardAngle));
 
-        vel = direction * orbitalSpeed;
+        vel = direction * orbitalSpeed * getParticleVelocityScale(ip);
 
         // Speed jitter - baseline noise only (no spread scaling)
         vel *= (1.0 + baseSpeedNoise + microSpeedJitter);
@@ -171,11 +191,14 @@ void main() {
         float nearestDist = 99999.0;
         vec3 nearestDir = vec3(0.0);
 
+        // Per-particle mass from frequency band
+        float pMass = getParticleMass(ip);
+
         // Lifetime decay: particles get heavier after grace period
         // Scale by orbital decay - when decay is 0, no gravity boost for stable orbits
         float decayProgress = smoothstep(uLifetimeGracePeriod, uLifetimeMax, lifetime);
         float orbitDecayFactor = clamp(uOrbitDecay / 5.0, 0.0, 1.0);
-        float gravityMultiplier = 1.0 + (uLifetimeGravityMultiplier - 1.0) * decayProgress * orbitDecayFactor;
+        float gravityMultiplier = (1.0 + (uLifetimeGravityMultiplier - 1.0) * decayProgress * orbitDecayFactor) * pMass;
 
         for (int i = 0; i < MAX_BLACK_HOLES; i++) {
             if (i >= uBlackHoleCount) break;
@@ -218,7 +241,7 @@ void main() {
         // Beat-reactive repulsion from nearest black hole
         if (uBeatRepulsion > 0.0 && uBeatIntensity > 0.0 && nearestDist > 0.1) {
             float nearestAccel = uBlackHoleMass[nearestIdx] / ((nearestDist + uSoftening) * (nearestDist + uSoftening));
-            float repulsionAccel = uBeatIntensity * (uBeatRepulsion / 100.0) * nearestAccel;
+            float repulsionAccel = uBeatIntensity * (uBeatRepulsion / 100.0) * nearestAccel / pMass;
             vel += nearestDir * repulsionAccel * uDeltaTime * 0.5;
         }
 
@@ -230,15 +253,16 @@ void main() {
             vec3 tangentialVel = vel - nearestDir * radialVel;
 
             // Decay tangential velocity - scale factor for reasonable slider values
-            float decayRate = uOrbitDecay * 0.05 * uDeltaTime;
+            float decayRate = uOrbitDecay * 0.05 * uDeltaTime * pMass;
             tangentialVel *= (1.0 - decayRate);
 
             vel = nearestDir * radialVel + tangentialVel;
         }
 
         // Combined escape velocity cap from total gravitational potential
+        // Scale by velocity factor so faster-spawned treble particles aren't immediately clamped
         float escapeVel = sqrt(2.0 * totalPotential);
-        float maxVel = escapeVel * (1.0 - uISCOStrength * 0.5);
+        float maxVel = escapeVel * (1.0 - uISCOStrength * 0.5) * getParticleVelocityScale(ip);
         float currentSpeed = length(vel);
         if (currentSpeed > maxVel) {
             vel *= maxVel / currentSpeed;

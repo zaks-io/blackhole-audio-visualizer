@@ -235,6 +235,10 @@ export function useGPUCompute(
     velocityVariable.material.uniforms.uLifetimeGravityMultiplier = { value: 3.0 };
     velocityVariable.material.uniforms.uOrbitDecay = { value: 2.0 };
     velocityVariable.material.uniforms.uFrameDragging = { value: 0.0 };
+    velocityVariable.material.uniforms.uMassContrast = { value: 0.0 };
+    velocityVariable.material.uniforms.uMassRange = { value: 5.0 };
+    velocityVariable.material.uniforms.uVelocityContrast = { value: 0.0 };
+    velocityVariable.material.uniforms.uVelocityRange = { value: 3.0 };
 
     // Multi-black hole uniforms for velocity shader
     velocityVariable.material.uniforms.uBlackHolePos = { value: bhPos };
@@ -273,6 +277,10 @@ export function useGPUCompute(
       initial.lifetimeGravityMultiplier;
     velocityVariable.material.uniforms.uOrbitDecay.value = initial.orbitDecay;
     velocityVariable.material.uniforms.uFrameDragging.value = initial.frameDragging;
+    velocityVariable.material.uniforms.uMassContrast.value = initial.massContrast;
+    velocityVariable.material.uniforms.uMassRange.value = initial.massRange;
+    velocityVariable.material.uniforms.uVelocityContrast.value = initial.velocityContrast;
+    velocityVariable.material.uniforms.uVelocityRange.value = initial.velocityRange;
 
     velocityVariable.material.uniforms.uISCORadius.value =
       initial.eventHorizonRadius * initial.iscoRatio;
@@ -596,6 +604,30 @@ export function useGPUCompute(
     }
   }, []);
 
+  const setMassContrast = useCallback((value: number) => {
+    if (velocityVariableRef.current) {
+      velocityVariableRef.current.material.uniforms.uMassContrast.value = value;
+    }
+  }, []);
+
+  const setMassRange = useCallback((value: number) => {
+    if (velocityVariableRef.current) {
+      velocityVariableRef.current.material.uniforms.uMassRange.value = value;
+    }
+  }, []);
+
+  const setVelocityContrast = useCallback((value: number) => {
+    if (velocityVariableRef.current) {
+      velocityVariableRef.current.material.uniforms.uVelocityContrast.value = value;
+    }
+  }, []);
+
+  const setVelocityRange = useCallback((value: number) => {
+    if (velocityVariableRef.current) {
+      velocityVariableRef.current.material.uniforms.uVelocityRange.value = value;
+    }
+  }, []);
+
   const setEmitterAngle = useCallback((value: number) => {
     if (positionVariableRef.current) {
       positionVariableRef.current.material.uniforms.uEmitterAngle.value = value;
@@ -879,6 +911,10 @@ export function useGPUCompute(
     registerGPUSetter("Physics.softening", setSoftening);
     registerGPUSetter("Physics.orbitDecay", setOrbitDecay);
     registerGPUSetter("Physics.frameDragging", setFrameDragging);
+    registerGPUSetter("Physics.massContrast", setMassContrast);
+    registerGPUSetter("Physics.massRange", setMassRange);
+    registerGPUSetter("Physics.velocityContrast", setVelocityContrast);
+    registerGPUSetter("Physics.velocityRange", setVelocityRange);
     registerGPUSetter("Physics.iscoStrength", setISCOStrength);
     registerGPUSetter("Physics.lifetimeGracePeriod", setLifetimeGracePeriod);
     registerGPUSetter("Physics.lifetimeMax", setLifetimeMax);
@@ -905,6 +941,10 @@ export function useGPUCompute(
     setSoftening,
     setOrbitDecay,
     setFrameDragging,
+    setMassContrast,
+    setMassRange,
+    setVelocityContrast,
+    setVelocityRange,
     setISCOStrength,
     setLifetimeGracePeriod,
     setLifetimeMax,
@@ -938,6 +978,10 @@ export function useGPUCompute(
     setEmitterCount,
     setOrbitDecay,
     setFrameDragging,
+    setMassContrast,
+    setMassRange,
+    setVelocityContrast,
+    setVelocityRange,
     setEmitterAngle,
     setEmitterTilt,
     setSpawnRate,
