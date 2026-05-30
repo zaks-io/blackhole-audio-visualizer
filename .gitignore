@@ -40,3 +40,6 @@ next-env.d.ts
 # electron
 apps/desktop/dist/
 /release/
+
+# claude
+.claude/worktrees/
