@@ -1,0 +1,9 @@
+# Extends gitleaks' built-in rules. Add allowlist entries here for known false positives.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Global allowlist"
+paths = [
+  '''bun.lock''',
+]

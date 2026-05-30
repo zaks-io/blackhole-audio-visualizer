@@ -1,2 +1,8 @@
+if ! command -v gitleaks >/dev/null 2>&1; then
+  echo "gitleaks not installed. Install it: brew install gitleaks (or see https://github.com/gitleaks/gitleaks#installing)"
+  exit 1
+fi
+gitleaks git --staged --no-banner --redact
+
 turbo typecheck lint
-prettier --check .
+bunx prettier --check .
