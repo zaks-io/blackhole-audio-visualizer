@@ -29,15 +29,18 @@ export function FirstLaunchGuide() {
   const [dismissed, setDismissed] = useState(false);
   const seen = useSyncExternalStore(subscribeToCookie, hasSeenGuide, () => true);
 
-  const handleOpenChange = (nextOpen: boolean) => {
-    if (!nextOpen) {
-      document.cookie = `${COOKIE_NAME}=${COOKIE_VALUE}; Max-Age=${COOKIE_MAX_AGE_SECONDS}; Path=/; SameSite=Lax`;
-      setDismissed(true);
-    }
+  const rememberGuide = () => {
+    document.cookie = `${COOKIE_NAME}=${COOKIE_VALUE}; Max-Age=${COOKIE_MAX_AGE_SECONDS}; Path=/; SameSite=Lax`;
+    setDismissed(true);
   };
 
   return (
-    <Dialog open={!seen && !dismissed} onOpenChange={handleOpenChange}>
+    <Dialog
+      open={!seen && !dismissed}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) rememberGuide();
+      }}
+    >
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Getting Started</DialogTitle>
@@ -46,7 +49,7 @@ export function FirstLaunchGuide() {
           </DialogDescription>
         </DialogHeader>
         <Separator />
-        <HelpDialogContent />
+        <HelpDialogContent onFullSetupGuideClick={rememberGuide} />
       </DialogContent>
     </Dialog>
   );

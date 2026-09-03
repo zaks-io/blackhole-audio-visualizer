@@ -24,16 +24,13 @@ describe("FirstLaunchGuide", () => {
     container.remove();
   });
 
-  it("shows once for a fresh browser and remembers dismissal", () => {
+  function renderGuide() {
     act(() => root.render(<FirstLaunchGuide />));
 
     expect(document.querySelector('[role="dialog"]')).not.toBeNull();
+  }
 
-    const closeButton = document.querySelector<HTMLButtonElement>('[data-slot="dialog-close"]');
-    expect(closeButton).not.toBeNull();
-
-    act(() => closeButton?.click());
-
+  function expectGuideStaysHiddenAfterRemount() {
     expect(document.cookie).toContain(`${COOKIE_NAME}=1`);
 
     act(() => root.unmount());
@@ -41,5 +38,27 @@ describe("FirstLaunchGuide", () => {
     act(() => root.render(<FirstLaunchGuide />));
 
     expect(document.querySelector('[role="dialog"]')).toBeNull();
+  }
+
+  it("shows once for a fresh browser and remembers dismissal", () => {
+    renderGuide();
+
+    const closeButton = document.querySelector<HTMLButtonElement>('[data-slot="dialog-close"]');
+    expect(closeButton).not.toBeNull();
+
+    act(() => closeButton?.click());
+
+    expectGuideStaysHiddenAfterRemount();
+  });
+
+  it("remembers a visitor who follows the full setup guide", () => {
+    renderGuide();
+
+    const setupGuideLink = document.querySelector<HTMLAnchorElement>('a[href="/getting-started"]');
+    expect(setupGuideLink).not.toBeNull();
+
+    act(() => setupGuideLink?.click());
+
+    expectGuideStaysHiddenAfterRemount();
   });
 });
