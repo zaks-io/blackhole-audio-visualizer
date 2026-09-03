@@ -1,6 +1,10 @@
 import { Monitor, Mic, Wrench, ExternalLink, ChevronRight } from "lucide-react";
 
-export function HelpDialogContent() {
+interface HelpDialogContentProps {
+  onFullSetupGuideClick?: () => void;
+}
+
+export function HelpDialogContent({ onFullSetupGuideClick }: HelpDialogContentProps) {
   return (
     <div className="space-y-6">
       <div className="flex gap-3">
@@ -54,6 +58,7 @@ export function HelpDialogContent() {
       <div className="pt-4 border-t border-white/5">
         <a
           href="/getting-started"
+          onClick={onFullSetupGuideClick}
           className="inline-flex items-center gap-1.5 text-sm text-cyan-400 hover:text-cyan-300 transition-colors"
         >
           Full setup guide

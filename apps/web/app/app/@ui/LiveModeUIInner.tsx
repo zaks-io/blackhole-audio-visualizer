@@ -5,6 +5,7 @@ import { BottomControlBar, TopControlBar } from "@/components/layout";
 import { PermissionDialog } from "@/components/PermissionDialog";
 import { MicPermissionDialog } from "@/components/MicPermissionDialog";
 import { AudioConnectOverlay } from "@/components/audio/AudioConnectOverlay";
+import { FirstLaunchGuide } from "@/components/dialogs/FirstLaunchGuide";
 import { useCameraMode, type CameraMode } from "@/components/CameraSystem";
 import { useRecording } from "@/hooks/useRecording";
 import { useViewerMode } from "@/hooks/useViewerMode";
@@ -77,6 +78,8 @@ export function LiveModeUIInner() {
 
   return (
     <>
+      <FirstLaunchGuide />
+
       <TopControlBar
         isAudioConnected={audio.isConnected}
         audioSourceType={audio.liveSourceType}
