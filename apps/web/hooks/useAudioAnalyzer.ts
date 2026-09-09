@@ -21,7 +21,7 @@ export interface AnalyzedAudio {
     bass: boolean;
     high: boolean;
   };
-  bassOnset: number;
+  onsets: { bass: number; mid: number; high: number };
   raw: {
     spectralFlux: number;
     hfc: number;
@@ -70,7 +70,7 @@ const DEFAULT_ANALYSIS: AnalyzedAudio = {
     bass: false,
     high: false,
   },
-  bassOnset: 0,
+  onsets: { bass: 0, mid: 0, high: 0 },
   raw: {
     spectralFlux: 0,
     hfc: 0,
@@ -166,7 +166,9 @@ function initWorker() {
       current.peaks.hfc = result.peaks.hfc;
       current.peaks.bass = result.peaks.bass;
       current.peaks.high = result.peaks.high;
-      current.bassOnset = result.bassOnset;
+      current.onsets.bass = result.onsets.bass;
+      current.onsets.mid = result.onsets.mid;
+      current.onsets.high = result.onsets.high;
 
       // Raw (nested object)
       current.raw.spectralFlux = result.raw.spectralFlux;

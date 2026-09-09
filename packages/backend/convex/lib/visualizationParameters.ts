@@ -752,7 +752,7 @@ export const PARAMS: Record<string, ParameterDef> = {
     max: 2,
     default: 1.0,
     step: 0.1,
-    description: "how hard bass hits kick the black hole size",
+    description: "how hard drum hits kick black hole size and how much band energy swells it",
     group: "Audio",
     label: "Beat Pulse",
     system: true,

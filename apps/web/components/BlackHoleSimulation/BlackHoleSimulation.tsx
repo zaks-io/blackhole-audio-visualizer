@@ -13,20 +13,10 @@ import { StarField } from "@/components/StarField";
 import { useVisualizationControls } from "@/hooks/useVisualizationControls";
 import { usePresetSelector } from "@/components/playlist/usePresetSelector";
 import { runtimeState } from "@/lib/runtimeStateRegistry";
-import { DampedSpring } from "@/lib/audio";
+import { BeatResponse } from "./beatResponse";
 import type { ColorPaletteId } from "@/components/ColorModeSystem";
 import type { AnalyzedAudio } from "@/hooks/useAudioAnalyzer";
 import type { CameraMode } from "@/components/CameraSystem";
-
-// Beat response: a bass onset kicks the black holes like a drum head. ~4 Hz with
-// 0.6 damping peaks ~45ms after the hit and settles within ~300ms with a small rebound.
-const BEAT_SPRING_FREQUENCY_HZ = 4;
-const BEAT_SPRING_DAMPING = 0.6;
-// Velocity impulse per unit onset strength, sized so a full-strength hit at
-// beatPulse=1 peaks near +40% radius.
-const BEAT_IMPULSE_GAIN = 20;
-const BEAT_DISPLACEMENT_MIN = -0.5;
-const BEAT_DISPLACEMENT_MAX = 1.0;
 
 // Pre-allocated scratch arrays for layout calculations (avoids per-frame GC)
 const _layoutPositions = [
@@ -260,10 +250,7 @@ export function BlackHoleSimulation({
   const spawnDecayCoef = useRef(Math.exp(-1 / (0.1 * 60))); // 100ms decay at 60fps
   const beatTimeDecayCoef = useRef(Math.exp(-1 / (0.15 * 60))); // 150ms decay at 60fps
   // beatIntensityRef uses fast-attack/slow-decay IIR (no rolling average)
-  const beatSpringRef = useRef(
-    new DampedSpring({ frequencyHz: BEAT_SPRING_FREQUENCY_HZ, dampingRatio: BEAT_SPRING_DAMPING })
-  );
-  const lastOnsetTimestampRef = useRef(0); // Analysis frame already applied as an impulse
+  const beatResponseRef = useRef(new BeatResponse()); // Per-band springs and energy swells
   const bpmOrbitMultiplierRef = useRef(1); // Smoothed orbit speed multiplier from BPM
   const orbitAngleRef = useRef(0); // Accumulated orbital angle (avoids jumps from speed changes)
 
@@ -307,26 +294,11 @@ export function BlackHoleSimulation({
       beatMassPulse,
     } = runtimeState;
 
-    // Beat spring: kick on each new bass onset, then integrate. Each analysis
-    // frame is applied once even if the render loop sees it twice.
-    const beatSpring = beatSpringRef.current;
-    if (isAudioConnected) {
-      const onsetAnalysis = getAnalysis();
-      if (
-        onsetAnalysis.bassOnset > 0 &&
-        onsetAnalysis.timestamp !== lastOnsetTimestampRef.current
-      ) {
-        lastOnsetTimestampRef.current = onsetAnalysis.timestamp;
-        beatSpring.impulse(onsetAnalysis.bassOnset * beatPulse * BEAT_IMPULSE_GAIN);
-      }
-    }
-    const beatDisplacement = Math.min(
-      BEAT_DISPLACEMENT_MAX,
-      Math.max(BEAT_DISPLACEMENT_MIN, beatSpring.step(delta))
-    );
-    // Pulsed radius is the single source of truth for both render and particle absorption
-    const pulse = 1 + beatDisplacement;
-    const massPulse = 1 + beatDisplacement * beatMassPulse;
+    // Each black hole pulses with its own band. Pulsed radius is the single
+    // source of truth for both render and particle absorption.
+    const beatResponse = beatResponseRef.current;
+    if (isAudioConnected) beatResponse.update(getAnalysis(), delta, beatPulse);
+    else beatResponse.reset();
     // autoColorChange is a boolean from the store, not runtime state
     const { autoColorChange } = useVisualizationControls.getState();
     const { isLuckyPlaying } = usePresetSelector.getState();
@@ -363,7 +335,7 @@ export function BlackHoleSimulation({
     if (progress < 0.001 || stableCount === targetCount) {
       // Integer count — no transition, identical to previous behavior
       calculateOrbitalLayout(stableCount, ...layoutArgs, positions, masses, baseRadii);
-      for (let i = 0; i < stableCount; i++) radii[i] = baseRadii[i] * pulse;
+      for (let i = 0; i < stableCount; i++) radii[i] = baseRadii[i] * beatResponse.sizePulse(i);
       for (let i = stableCount; i < 4; i++) {
         positions[i].set(0, 0, 0);
         masses[i] = 0;
@@ -388,7 +360,7 @@ export function BlackHoleSimulation({
         masses[i] = _layoutMasses[i] + (_toMasses[i] - _layoutMasses[i]) * progress;
         const br = _layoutBaseRadii[i] + (_toBaseRadii[i] - _layoutBaseRadii[i]) * progress;
         baseRadii[i] = br;
-        radii[i] = br * pulse;
+        radii[i] = br * beatResponse.sizePulse(i);
       }
 
       // Transitioning BH: emerges from parent's current blended position
@@ -398,7 +370,7 @@ export function BlackHoleSimulation({
       masses[transIdx] = _toMasses[transIdx] * progress;
       const transBr = _toBaseRadii[transIdx] * progress;
       baseRadii[transIdx] = transBr;
-      radii[transIdx] = transBr * pulse;
+      radii[transIdx] = transBr * beatResponse.sizePulse(transIdx);
 
       // Zero unused slots
       for (let i = targetCount; i < 4; i++) {
@@ -413,7 +385,7 @@ export function BlackHoleSimulation({
     // Apply Y offset and let gravity follow the beat as much as the preset asks
     for (let i = 0; i < bh.count; i++) {
       positions[i].y += blackHoleOffsetY;
-      masses[i] *= massPulse;
+      masses[i] *= beatResponse.massPulse(i, beatMassPulse);
     }
 
     if (isAudioConnected) {
@@ -441,7 +413,7 @@ export function BlackHoleSimulation({
           Math.max(analysis.bandOnsets[0] ?? 0, analysis.bandOnsets[1] ?? 0),
           1.0
         );
-        const beat = Math.max(analysis.bassOnset, onsetBeat) * (audioGain ?? 1);
+        const beat = Math.max(analysis.onsets.bass, onsetBeat) * (audioGain ?? 1);
         const clampedBeat = Math.min(beat, 0.75);
         // Fast-attack (~5ms) / slow-decay (~300ms) IIR envelope (frame-rate independent)
         const attackCoef = 1 - Math.exp(-delta / 0.005);
@@ -492,7 +464,6 @@ export function BlackHoleSimulation({
       audioData.beatIntensity = beatIntensityRef.current;
       audioData.beatTimePulse = beatTimePulseRef.current;
     } else {
-      beatSpring.reset();
       beatIntensityRef.current = 0;
       hfcBoostRef.current = 0;
       spawnBurstRef.current = 1;
