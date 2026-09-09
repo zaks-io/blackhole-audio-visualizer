@@ -27,6 +27,7 @@ export function AudioAnalysisDebug({ analysisRef }: AudioAnalysisDebugProps) {
           timestamp: current.timestamp,
           energy: { ...current.energy },
           peaks: { ...current.peaks },
+          bassOnset: current.bassOnset,
           raw: { ...current.raw },
           thresholds: {
             spectralFlux: { ...current.thresholds.spectralFlux },

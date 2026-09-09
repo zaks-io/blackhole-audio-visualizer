@@ -53,6 +53,7 @@ const DEFAULT_ANALYSIS: AnalyzedAudio = {
     bass: false,
     high: false,
   },
+  bassOnset: 0,
   raw: {
     spectralFlux: 0,
     hfc: 0,
@@ -141,6 +142,7 @@ function initSceneWorker() {
       current.peaks.hfc = result.peaks.hfc;
       current.peaks.bass = result.peaks.bass;
       current.peaks.high = result.peaks.high;
+      current.bassOnset = result.bassOnset;
 
       // Raw (nested object)
       current.raw.spectralFlux = result.raw.spectralFlux;

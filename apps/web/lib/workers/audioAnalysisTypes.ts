@@ -70,6 +70,8 @@ export interface WorkerResultMessage {
   timestamp: number;
   energy: AudioEnergy;
   peaks: AudioPeaks;
+  /** Normalized strength (0-1) of a bass onset on this frame, 0 when none */
+  bassOnset: number;
   raw: AudioRaw;
   thresholds: AudioThresholds;
   spectrum: Float32Array;

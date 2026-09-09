@@ -26,6 +26,7 @@ export function AudioDebugTab({ analysisRef, isVisible = true }: AudioDebugTabPr
           timestamp: current.timestamp,
           energy: { ...current.energy },
           peaks: { ...current.peaks },
+          bassOnset: current.bassOnset,
           raw: { ...current.raw },
           thresholds: {
             spectralFlux: { ...current.thresholds.spectralFlux },

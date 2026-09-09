@@ -14,6 +14,7 @@ import type {
 
 import {
   AdaptiveThreshold,
+  OnsetDetector,
   SimpleEnvelope,
   Smoother,
   AutoNormalizer,
@@ -210,9 +211,11 @@ const thresholds = {
     minPeakDistanceMs: 50,
   }),
   hfc: new AdaptiveThreshold({ alpha: 0.1, peakMultiplier: 1.5, minPeakDistanceMs: 30 }),
-  bass: new AdaptiveThreshold({ alpha: 0.08, peakMultiplier: 1.8, minPeakDistanceMs: 70 }),
   high: new AdaptiveThreshold({ alpha: 0.12, peakMultiplier: 1.4, minPeakDistanceMs: 30 }),
 };
+
+// Bass onsets fire on the attack of a kick, not on its level, and carry magnitude
+const bassOnsetDetector = new OnsetDetector({ minIntervalMs: 80 });
 
 const smoothers = {
   energy: {
@@ -270,6 +273,7 @@ function reset(): void {
 
   gravityWellBpm.reset();
   Object.values(thresholds).forEach((t) => t.reset());
+  bassOnsetDetector.reset();
   Object.values(smoothers.energy).forEach((s) => s.reset());
   smoothers.spectralFlux.reset();
   smoothers.hfc.reset();
@@ -343,12 +347,12 @@ function analyze(
     high: smoothers.energy.high.process(rawBandEnergies.high),
   };
 
-  // Update bass/high thresholds and check peaks
+  // Bass onset (with magnitude) and high threshold peak
   const bassEnergy = (rawBandEnergies.subBass + rawBandEnergies.bass) / 2;
   const highEnergy = (rawBandEnergies.highMid + rawBandEnergies.high) / 2;
-  thresholds.bass.update(bassEnergy);
+  const bassOnset = bassOnsetDetector.process(bassEnergy, timestamp);
+  const bassPeak = bassOnset > 0;
   thresholds.high.update(highEnergy);
-  const bassPeak = thresholds.bass.isPeak(bassEnergy, timestamp);
   const highPeak = thresholds.high.isPeak(highEnergy, timestamp);
 
   // Feed bass peaks to gravity-well BPM and update
@@ -432,8 +436,8 @@ function analyze(
       threshold: smoothers.thresholdDisplay.hfc.process(thresholds.hfc.getThreshold()),
     },
     bass: {
-      mean: thresholds.bass.getMean(),
-      threshold: smoothers.thresholdDisplay.bass.process(thresholds.bass.getThreshold()),
+      mean: bassOnsetDetector.getMean(),
+      threshold: smoothers.thresholdDisplay.bass.process(bassOnsetDetector.getThreshold()),
     },
     high: {
       mean: thresholds.high.getMean(),
@@ -465,6 +469,7 @@ function analyze(
     timestamp,
     energy,
     peaks,
+    bassOnset,
     raw,
     thresholds: audioThresholds,
     spectrum,
