@@ -65,6 +65,7 @@ export function ParticleSystem({
   const particleCount = textureSize * textureSize;
 
   const {
+    advance,
     getPositionTexture,
     getPrevPositionTexture,
     getPositionHistory1Texture,
@@ -418,7 +419,7 @@ export function ParticleSystem({
     [colorLUT, desktopAdvancedMode, resolutionScale]
   );
 
-  useFrame(() => {
+  useFrame((_, delta) => {
     // Read from runtimeState instead of store for performance during tweens
     const state = runtimeState;
     const iscoRadius = state.eventHorizonRadius * state.iscoRatio;
@@ -475,49 +476,6 @@ export function ParticleSystem({
       if (prevDebugModeRef.current !== debugMode) {
         prevDebugModeRef.current = debugMode;
         materialRef.current.uniforms.uDebugMode.value = debugMode;
-      }
-
-      const posTexture = getPositionTexture();
-      const prevPosTexture = getPrevPositionTexture();
-      const history1Texture = getPositionHistory1Texture();
-      const history2Texture = getPositionHistory2Texture();
-      const velTexture = getVelocityTexture();
-      if (posTexture) {
-        materialRef.current.uniforms.texturePosition.value = posTexture;
-
-        const densityMaterial = densityMaterialRef.current;
-        const densityScene = densitySceneRef.current;
-        const densityRT = densityRTRef.current;
-        if (densityMaterial && densityScene && densityRT) {
-          densityMaterial.uniforms.texturePosition.value = posTexture;
-          const prevTarget = gl.getRenderTarget();
-          const prevClearAlpha = gl.getClearAlpha();
-          const prevClearColor = gl.getClearColor(new THREE.Color());
-          gl.setRenderTarget(densityRT);
-          gl.setClearColor(0x000000, 0);
-          gl.clear(true, false, false);
-          gl.render(densityScene, camera);
-          gl.setRenderTarget(prevTarget);
-          gl.setClearColor(prevClearColor, prevClearAlpha);
-
-          materialRef.current.uniforms.uDensityTexture.value = densityRT.texture;
-          materialRef.current.uniforms.uDensityTexel.value.set(
-            1 / densityRT.width,
-            1 / densityRT.height
-          );
-        }
-      }
-      if (prevPosTexture) {
-        materialRef.current.uniforms.texturePrevPosition.value = prevPosTexture;
-      }
-      if (history1Texture) {
-        materialRef.current.uniforms.textureHistory1.value = history1Texture;
-      }
-      if (history2Texture) {
-        materialRef.current.uniforms.textureHistory2.value = history2Texture;
-      }
-      if (velTexture) {
-        materialRef.current.uniforms.textureVelocity.value = velTexture;
       }
 
       // Dirty updates for numeric uniforms (avoid redundant uniform writes)
@@ -871,6 +829,52 @@ export function ParticleSystem({
       if (prevDisabledIscoRadiusRef.current !== iscoRadius) {
         prevDisabledIscoRadiusRef.current = iscoRadius;
         setISCORadius(iscoRadius);
+      }
+    }
+
+    advance(delta);
+    if (materialRef.current) {
+      const posTexture = getPositionTexture();
+      const prevPosTexture = getPrevPositionTexture();
+      const history1Texture = getPositionHistory1Texture();
+      const history2Texture = getPositionHistory2Texture();
+      const velTexture = getVelocityTexture();
+      if (posTexture) {
+        materialRef.current.uniforms.texturePosition.value = posTexture;
+
+        const densityMaterial = densityMaterialRef.current;
+        const densityScene = densitySceneRef.current;
+        const densityRT = densityRTRef.current;
+        if (densityMaterial && densityScene && densityRT) {
+          densityMaterial.uniforms.texturePosition.value = posTexture;
+          const prevTarget = gl.getRenderTarget();
+          const prevClearAlpha = gl.getClearAlpha();
+          const prevClearColor = gl.getClearColor(new THREE.Color());
+          gl.setRenderTarget(densityRT);
+          gl.setClearColor(0x000000, 0);
+          gl.clear(true, false, false);
+          gl.render(densityScene, camera);
+          gl.setRenderTarget(prevTarget);
+          gl.setClearColor(prevClearColor, prevClearAlpha);
+
+          materialRef.current.uniforms.uDensityTexture.value = densityRT.texture;
+          materialRef.current.uniforms.uDensityTexel.value.set(
+            1 / densityRT.width,
+            1 / densityRT.height
+          );
+        }
+      }
+      if (prevPosTexture) {
+        materialRef.current.uniforms.texturePrevPosition.value = prevPosTexture;
+      }
+      if (history1Texture) {
+        materialRef.current.uniforms.textureHistory1.value = history1Texture;
+      }
+      if (history2Texture) {
+        materialRef.current.uniforms.textureHistory2.value = history2Texture;
+      }
+      if (velTexture) {
+        materialRef.current.uniforms.textureVelocity.value = velTexture;
       }
     }
   });

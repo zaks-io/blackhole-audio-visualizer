@@ -81,36 +81,28 @@ float hash21(vec2 p) {
 
 void main() {
     vec4 posData = texture2D(texturePosition, reference);
+    vec3 p3 = posData.xyz;
+    float lifetime = posData.w;
+    vUV = uv;
+    vColor = vec3(0.0);
+    vDensityAlphaScale = 0.0;
+
+    // Queued particles need no history, velocity, density, or palette reads.
+    float maxDistance = max(1.0, uMaxDistance * 10.0);
+    if (lifetime <= 0.0 || dot(p3, p3) > maxDistance * maxDistance) {
+        gl_Position = vec4(0.0, 0.0, -1000.0, 1.0);
+        return;
+    }
+
     vec4 prevPosData = texture2D(texturePrevPosition, reference);
     vec4 history1Data = texture2D(textureHistory1, reference);
     vec4 history2Data = texture2D(textureHistory2, reference);
     vec4 velData = texture2D(textureVelocity, reference);
-
-    // Position history: p3 (current/head) -> p2 (prev) -> p1 (history1) -> p0 (history2/tail)
-    vec3 p3 = posData.xyz;       // newest (head)
     vec3 p2 = prevPosData.xyz;
     vec3 p1 = history1Data.xyz;
-    vec3 p0 = history2Data.xyz;  // oldest (tail)
-
-    float lifetime = posData.w;
+    vec3 p0 = history2Data.xyz;
     vec3 velocity = velData.xyz;
     float colorIndex = velData.w;
-
-    vUV = uv;
-
-    // Hide queued/unspawned particles
-    if (lifetime <= 0.0) {
-        gl_Position = vec4(0.0, 0.0, -1000.0, 1.0);
-        vColor = vec3(0.0);
-        return;
-    }
-
-    // Very cheap distance cull. Keep scale conservative to preserve existing look.
-    if (length(p3) > max(1.0, uMaxDistance * 10.0)) {
-        gl_Position = vec4(0.0, 0.0, -1000.0, 1.0);
-        vColor = vec3(0.0);
-        return;
-    }
 
     // Detect respawn: if any position jumped too far, collapse to current
     float jump01 = length(p1 - p0);
@@ -124,10 +116,11 @@ void main() {
         p2 = p3;
     }
 
-    // Collapse history if spawning from recycled state (history at origin, current is not)
-    float distFromOrigin = length(p3);
-    bool historyAtOrigin = length(p0) < 0.5 || length(p1) < 0.5 || length(p2) < 0.5;
-    if (distFromOrigin > 1.0 && historyAtOrigin) {
+    // Lifetime identifies recycling even when an emitter is near the old position.
+    // A valid trajectory can cross the origin in a multi-source scene.
+    bool recycledHistory = prevPosData.w <= 0.0 || history1Data.w <= 0.0 || history2Data.w <= 0.0
+        || prevPosData.w > lifetime || history1Data.w > lifetime || history2Data.w > lifetime;
+    if (recycledHistory) {
         p0 = p3;
         p1 = p3;
         p2 = p3;

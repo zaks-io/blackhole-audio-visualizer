@@ -29,6 +29,7 @@ uniform float uMassContrast;
 uniform float uMassRange;
 uniform float uVelocityContrast;
 uniform float uVelocityRange;
+uniform sampler2D texturePreviousPosition;
 
 // Multi-black hole uniforms
 uniform vec3 uBlackHolePos[MAX_BLACK_HOLES];
@@ -49,6 +50,26 @@ float hash(vec2 p) {
 
 float hash2(vec2 p, float seed) {
     return hash13(vec3(p, seed));
+}
+
+vec3 safeNormalize(vec3 value, vec3 fallbackAxis) {
+    float lengthSquared = dot(value, value);
+    if (lengthSquared > 1e-12) {
+        return value * inversesqrt(lengthSquared);
+    }
+    return fallbackAxis;
+}
+
+vec3 tangentForRadial(vec3 radial) {
+    vec3 referenceAxis = abs(radial.y) < 0.999 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
+    return safeNormalize(cross(radial, referenceAxis), vec3(0.0, 0.0, 1.0));
+}
+
+float getLifetimeDecayProgress(float lifetime) {
+    if (uLifetimeMax <= 0.0 || uLifetimeMax <= uLifetimeGracePeriod) {
+        return 0.0;
+    }
+    return smoothstep(uLifetimeGracePeriod, uLifetimeMax, lifetime);
 }
 
 // Per-particle mass derived from frequency band (bass=heavy, treble=light)
@@ -86,6 +107,7 @@ void main() {
     vec2 ip = gl_FragCoord.xy; // integer texel coords (as floats) for PRNG seeding
 
     vec4 posData = texture2D(texturePosition, uv);
+    vec4 previousPosData = texture2D(texturePreviousPosition, uv);
     vec4 velData = texture2D(textureVelocity, uv);
 
     vec3 pos = posData.xyz;
@@ -101,13 +123,13 @@ void main() {
         colorIndex = mod(emitterIndex, 8.0) + uPaletteOffset;
         gl_FragColor = vec4(0.0, 0.0, 0.0, colorIndex);
         return;
-    } else if (dot(vel, vel) < 0.01) {
+    } else if (previousPosData.w <= 0.0) {
         // JUST SPAWNED: set orbital velocity with inward angle
         // Find nearest black hole for orbital velocity calculation
-        float nearestDist = 99999.0;
-        vec3 nearestPos = vec3(0.0);
-        float nearestMass = uGM;
-        for (int i = 0; i < MAX_BLACK_HOLES; i++) {
+        vec3 nearestPos = uBlackHolePos[0];
+        float nearestMass = uBlackHoleMass[0];
+        float nearestDist = length(pos - nearestPos);
+        for (int i = 1; i < MAX_BLACK_HOLES; i++) {
             if (i >= uBlackHoleCount) break;
             float dist = length(pos - uBlackHolePos[i]);
             if (dist < nearestDist) {
@@ -118,12 +140,19 @@ void main() {
         }
 
         vec3 toCenter = pos - nearestPos;
-        float r_soft = length(toCenter) + uSoftening;
-        float orbitalSpeed = sqrt(nearestMass / r_soft);
+        float r_soft = nearestDist + uSoftening;
+        float particleMass = getParticleMass(ip);
+        float orbitDecayFactor = clamp(uOrbitDecay / 5.0, 0.0, 1.0);
+        float decayProgress = getLifetimeDecayProgress(lifetime);
+        float gravityMultiplier = (1.0 + (uLifetimeGravityMultiplier - 1.0) * decayProgress * orbitDecayFactor) * particleMass;
+        float orbitalSpeed = 0.0;
+        if (r_soft > 0.0) {
+            orbitalSpeed = sqrt(nearestMass * gravityMultiplier * nearestDist) / r_soft;
+        }
 
         vec3 up = vec3(0.0, 1.0, 0.0);
-        vec3 r_hat = normalize(toCenter);
-        vec3 tangent = normalize(cross(r_hat, up));
+        vec3 r_hat = safeNormalize(toCenter, vec3(1.0, 0.0, 0.0));
+        vec3 tangent = tangentForRadial(r_hat);
 
         // Emitter index (matches position shader) so our time seeding is lane-aware
         float emitterIndex = floor(hash2(ip, 100.0) * uEmitterCount);
@@ -153,11 +182,11 @@ void main() {
 
         // Elevation jitter - cone angle up/down from orbital plane
         float elevationJitter = (rand2 - 0.5) * uEmitterSpread * 1.5708 + baseElevNoise + microElevJitter;
-        vec3 direction = normalize(jitteredTangent * cos(elevationJitter) + up * sin(elevationJitter));
+        vec3 direction = safeNormalize(jitteredTangent * cos(elevationJitter) + up * sin(elevationJitter), tangent);
 
         // Mix with inward based on uInwardAngle
         vec3 inward = -r_hat;
-        direction = normalize(mix(direction, inward, uInwardAngle));
+        direction = safeNormalize(mix(direction, inward, uInwardAngle), inward);
 
         vel = direction * orbitalSpeed * getParticleVelocityScale(ip);
 
@@ -188,15 +217,23 @@ void main() {
 
         // Find nearest black hole for ISCO and beat repulsion
         int nearestIdx = 0;
-        float nearestDist = 99999.0;
-        vec3 nearestDir = vec3(0.0);
+        vec3 initialOffset = pos - uBlackHolePos[0];
+        float nearestDist = length(initialOffset);
+        vec3 nearestDir = safeNormalize(initialOffset, vec3(1.0, 0.0, 0.0));
+
+        // Track potential dominance in the gravity pass for multi-source capture.
+        int dominantIdx = 0;
+        float maxPotential = 0.0;
+        float secondMaxPotential = 0.0;
+        float dominantDist = nearestDist;
+        vec3 dominantToDir = -nearestDir;
 
         // Per-particle mass from frequency band
         float pMass = getParticleMass(ip);
 
         // Lifetime decay: particles get heavier after grace period
         // Scale by orbital decay - when decay is 0, no gravity boost for stable orbits
-        float decayProgress = smoothstep(uLifetimeGracePeriod, uLifetimeMax, lifetime);
+        float decayProgress = getLifetimeDecayProgress(lifetime);
         float orbitDecayFactor = clamp(uOrbitDecay / 5.0, 0.0, 1.0);
         float gravityMultiplier = (1.0 + (uLifetimeGravityMultiplier - 1.0) * decayProgress * orbitDecayFactor) * pMass;
 
@@ -206,20 +243,35 @@ void main() {
             vec3 toSource = uBlackHolePos[i] - pos;
             float dist = length(toSource);
             float dist_soft = dist + uSoftening;
+            vec3 toSourceDir = safeNormalize(toSource, vec3(1.0, 0.0, 0.0));
 
-            // Sum gravity from all sources (with lifetime decay multiplier)
-            float accel = uBlackHoleMass[i] / (dist_soft * dist_soft) * gravityMultiplier;
-            totalAccel += normalize(toSource) * accel;
-
-            // Sum potential for escape velocity
-            totalPotential += uBlackHoleMass[i] / dist_soft;
-
-            // Track nearest for ISCO
+            // Track nearest even when this particle is at the source singularity.
             if (dist < nearestDist) {
                 nearestDist = dist;
                 nearestIdx = i;
-                nearestDir = normalize(pos - uBlackHolePos[i]);
+                nearestDir = -toSourceDir;
             }
+            if (dist_soft <= 0.0) {
+                continue;
+            }
+
+            // Sum gravity from all sources (with lifetime decay multiplier)
+            float accel = uBlackHoleMass[i] / (dist_soft * dist_soft) * gravityMultiplier;
+            totalAccel += toSourceDir * accel;
+
+            // Sum potential for escape velocity and retain the two largest contributions.
+            float potential = uBlackHoleMass[i] / dist_soft;
+            totalPotential += potential;
+            if (potential > maxPotential) {
+                secondMaxPotential = maxPotential;
+                maxPotential = potential;
+                dominantIdx = i;
+                dominantDist = dist;
+                dominantToDir = toSourceDir;
+            } else if (potential > secondMaxPotential) {
+                secondMaxPotential = potential;
+            }
+
         }
 
         // Apply gravity half-step kick
@@ -234,8 +286,9 @@ void main() {
             hash2(ip, 15000.0 + seed),
             hash2(ip, 16000.0 + seed)
         ) - 0.5;
-        vec3 nDir = normalize(n + vec3(1e-3));
-        vec3 tangentNoise = normalize(cross(nDir, normalize(vel + vec3(1e-3))));
+        vec3 nDir = safeNormalize(n, tangentForRadial(nearestDir));
+        vec3 velocityDir = safeNormalize(vel, nearestDir);
+        vec3 tangentNoise = safeNormalize(cross(nDir, velocityDir), tangentForRadial(velocityDir));
         vel += tangentNoise * (BASE_KICK_TURBULENCE * uDeltaTime * 0.5 * orbitDecayFactor);
 
         // Beat-reactive repulsion from nearest black hole
@@ -252,9 +305,9 @@ void main() {
             float radialVel = dot(vel, nearestDir);
             vec3 tangentialVel = vel - nearestDir * radialVel;
 
-            // Decay tangential velocity - scale factor for reasonable slider values
-            float decayRate = uOrbitDecay * 0.05 * uDeltaTime * pMass;
-            tangentialVel *= (1.0 - decayRate);
+            // Exponential decay makes the half kick independent of frame subdivision.
+            float decayRate = uOrbitDecay * 0.05 * pMass;
+            tangentialVel *= exp(-decayRate * abs(uDeltaTime) * 0.5);
 
             vel = nearestDir * radialVel + tangentialVel;
         }
@@ -268,66 +321,35 @@ void main() {
             vel *= maxVel / currentSpeed;
         }
 
-        // Multi-body Roche lobe physics with per-BH ISCO capture
+        // Multi-source potential-weighted capture
         if (uBlackHoleCount > 1 && uISCOStrength > 0.0) {
-            // Calculate potential contributions from ALL black holes
-            float potentials[MAX_BLACK_HOLES];
-            float totalPotential = 0.0;
-
-            for (int i = 0; i < MAX_BLACK_HOLES; i++) {
-                if (i >= uBlackHoleCount) {
-                    potentials[i] = 0.0;
-                    continue;
-                }
-                float dist = length(pos - uBlackHolePos[i]) + uSoftening;
-                potentials[i] = uBlackHoleMass[i] / dist;
-                totalPotential += potentials[i];
-            }
-
-            // Find dominant BH and second-strongest for lobe depth calculation
-            int dominantIdx = 0;
-            float maxPotential = 0.0;
-            float secondMaxPotential = 0.0;
-
-            for (int i = 0; i < MAX_BLACK_HOLES; i++) {
-                if (i >= uBlackHoleCount) break;
-                if (potentials[i] > maxPotential) {
-                    secondMaxPotential = maxPotential;
-                    maxPotential = potentials[i];
-                    dominantIdx = i;
-                } else if (potentials[i] > secondMaxPotential) {
-                    secondMaxPotential = potentials[i];
-                }
-            }
-
             // Dominance ratio: how much stronger is dominant vs next strongest
-            // High ratio = deep in lobe, low ratio = near L-point
+            // High ratio means one source controls the local motion.
             float dominanceRatio = maxPotential / (secondMaxPotential + 0.001);
 
-            // lobeDepth: 0.0 at L-point (equal potentials), approaches 1.0 deep in lobe
-            float lobeDepth = 1.0 - 1.0 / (0.5 + dominanceRatio * 0.5);
-            lobeDepth = clamp(lobeDepth, 0.0, 1.0);
+            float dominanceDepth = 1.0 - 1.0 / (0.5 + dominanceRatio * 0.5);
+            dominanceDepth = clamp(dominanceDepth, 0.0, 1.0);
 
-            // Distance/direction to dominant black hole
-            float distToDominant = length(pos - uBlackHolePos[dominantIdx]);
-            vec3 toDominant = normalize(uBlackHolePos[dominantIdx] - pos);
+            // Distance/direction retained from the gravity accumulation pass
+            float distToDominant = dominantDist;
+            vec3 toDominant = dominantToDir;
             vec3 fromDominant = -toDominant;
 
             // Per-BH ISCO radius scales with mass
             float massRatio = uBlackHoleMass[dominantIdx] / (totalPotential * distToDominant + 0.001);
             float bhISCORadius = uISCORadius * sqrt(massRatio) * 0.5 + uISCORadius * 0.5;
 
-            float lobeThreshold = 0.3;
+            float dominanceThreshold = 0.3;
             float bhEventHorizon = uBlackHoleRadius[dominantIdx];
 
-            if (lobeDepth > lobeThreshold && distToDominant < bhISCORadius && distToDominant > bhEventHorizon) {
-                // ISCO CAPTURE ZONE - spiral dynamics toward dominant BH
+            if (dominanceDepth > dominanceThreshold && distToDominant < bhISCORadius && distToDominant > bhEventHorizon) {
+                // Artist-controlled inner capture zone
 
                 float iscoDepth = 1.0 - (distToDominant - bhEventHorizon) / (bhISCORadius - bhEventHorizon);
                 iscoDepth = clamp(iscoDepth, 0.0, 1.0);
 
-                // Scale effect by both lobe depth and ISCO depth
-                float captureStrength = iscoDepth * (lobeDepth - lobeThreshold) / (1.0 - lobeThreshold);
+                // Scale effect by potential dominance and distance into the capture zone.
+                float captureStrength = iscoDepth * (dominanceDepth - dominanceThreshold) / (1.0 - dominanceThreshold);
                 captureStrength = clamp(captureStrength, 0.0, 1.0);
 
                 float orbitalSpeed = sqrt(uBlackHoleMass[dominantIdx] / (distToDominant + uSoftening));
@@ -338,7 +360,7 @@ void main() {
 
                 // Progressive tangential decay (angular momentum loss) - keep 20% for spiral
                 float tangentialDecay = captureStrength * uISCOStrength * 0.8;
-                tangentialVel *= (1.0 - tangentialDecay);
+                tangentialVel *= pow(max(1.0 - tangentialDecay, 0.0), abs(uDeltaTime) / 0.05);
 
                 // Force inward spiral
                 float targetRadialVel = -orbitalSpeed * captureStrength * uISCOStrength;
@@ -346,26 +368,29 @@ void main() {
 
                 vel = fromDominant * radialVel + tangentialVel;
             }
-            else if (lobeDepth > lobeThreshold) {
-                // DRIFT ZONE - deep in lobe but outside ISCO
-                float driftStrength = (lobeDepth - lobeThreshold) / (1.0 - lobeThreshold);
+            else if (dominanceDepth > dominanceThreshold) {
+                // Inward drift where one source dominates outside the capture zone
+                float driftStrength = (dominanceDepth - dominanceThreshold) / (1.0 - dominanceThreshold);
                 driftStrength *= uISCOStrength * 2.0 * orbitDecayFactor;
-                vel += toDominant * driftStrength * uDeltaTime;
+                vel += toDominant * driftStrength * uDeltaTime * 0.5;
             }
-            // L-point speed cap only - no damping (damping traps particles at barycenter)
-            float lPointProximity = max(0.0, 1.0 - lobeDepth / lobeThreshold);
+            // Limit speed where the two strongest source potentials are balanced.
+            float balancedPotential = max(0.0, 1.0 - dominanceDepth / dominanceThreshold);
 
-            if (lPointProximity > 0.0) {
-                float avgMass = totalPotential * (uEmissionRadius + uSoftening);
-                float maxLPointSpeed = sqrt(avgMass / (uEmissionRadius + uSoftening)) * 0.5;
-                float speed = length(vel);
-                if (speed > maxLPointSpeed) {
-                    vel *= maxLPointSpeed / speed;
+            if (balancedPotential > 0.0) {
+                float balanceRadius = uEmissionRadius + uSoftening;
+                if (balanceRadius > 0.0) {
+                    float avgMass = totalPotential * balanceRadius;
+                    float maxBalancedSpeed = sqrt(avgMass / balanceRadius) * 0.5;
+                    float speed = length(vel);
+                    if (speed > maxBalancedSpeed) {
+                        vel *= maxBalancedSpeed / speed;
+                    }
                 }
             }
         }
         else if (uBlackHoleCount == 1 && uISCOStrength > 0.0) {
-            // Single black hole: Original ISCO physics
+            // Single-source artist-controlled inner capture
             float singleBHRadius = uBlackHoleRadius[0];
             if (nearestDist < uISCORadius && nearestDist > singleBHRadius) {
                 float iscoDepth = 1.0 - (nearestDist - singleBHRadius) / (uISCORadius - singleBHRadius);
@@ -377,8 +402,8 @@ void main() {
                 float radialVel = dot(vel, nearestDir);
                 vec3 tangentialVel = vel - nearestDir * radialVel;
 
-                // Kill tangential velocity progressively
-                tangentialVel *= (1.0 - iscoDepth * uISCOStrength);
+                float tangentialDecay = iscoDepth * uISCOStrength;
+                tangentialVel *= pow(max(1.0 - tangentialDecay, 0.0), abs(uDeltaTime) / 0.05);
 
                 // Force inward
                 radialVel = min(radialVel, -orbitalSpeed * iscoDepth * uISCOStrength);
@@ -387,11 +412,10 @@ void main() {
             }
         }
 
-        // Frame dragging (Lense-Thirring) — applied LAST
+        // Artist-controlled frame rotation, applied last.
         // Blends tangential velocity toward the local co-rotation speed rather
-        // than accumulating acceleration. This can't eject particles because it
-        // converges to a finite target (orbital speed), and only speeds up
-        // particles that are slower than co-rotation — never slows them down.
+        // than accumulating acceleration. It only speeds up particles that are
+        // slower than the configured co-rotation target.
         if (uFrameDragging > 0.0) {
             vec3 spinAxis = vec3(0.0, 1.0, 0.0);
             for (int i = 0; i < MAX_BLACK_HOLES; i++) {
@@ -401,6 +425,7 @@ void main() {
                 float dist = length(toSource);
                 float dist_soft = dist + uSoftening;
                 float r_horizon = uBlackHoleRadius[i];
+                if (dist_soft <= 0.0) continue;
 
                 vec3 r_perp = toSource - spinAxis * dot(toSource, spinAxis);
                 float r_perp_len = length(r_perp);
@@ -414,24 +439,24 @@ void main() {
                     // Blend rate: how quickly to converge (scales with M/r²)
                     float blendRate = uFrameDragging * uBlackHoleMass[i] / (dist_soft * dist_soft) * 0.001;
 
-                    // Ergosphere boost zone: extends to photon sphere (1.5 Rs)
-                    float ergosphere = r_horizon * 1.5;
-                    if (dist < ergosphere) {
-                        float ergoDepth = 1.0 - (dist - r_horizon) / (ergosphere - r_horizon);
-                        ergoDepth = clamp(ergoDepth, 0.0, 1.0);
-                        blendRate = max(blendRate, ergoDepth * ergoDepth * 30.0);
-                        targetSpeed = max(targetSpeed, orbitalSpeed * ergoDepth);
+                    // Inner boost zone near the absorption radius
+                    float boostRadius = r_horizon * 1.5;
+                    if (dist < boostRadius) {
+                        float boostDepth = 1.0 - (dist - r_horizon) / (boostRadius - r_horizon);
+                        boostDepth = clamp(boostDepth, 0.0, 1.0);
+                        blendRate = max(blendRate, boostDepth * boostDepth * 30.0);
+                        targetSpeed = max(targetSpeed, orbitalSpeed * boostDepth);
                     }
 
                     // Inside ISCO: reduce co-rotation target so particles plunge.
-                    // Applied AFTER ergosphere so it wins — no stable orbits inside ISCO.
+                    // Applied after the inner boost so the capture behavior wins.
                     if (dist < uISCORadius && dist > r_horizon) {
                         float iscoDepth = 1.0 - (dist - r_horizon) / (uISCORadius - r_horizon);
                         iscoDepth = clamp(iscoDepth, 0.0, 1.0);
                         targetSpeed *= (1.0 - iscoDepth);
                     }
 
-                    float blend = 1.0 - exp(-blendRate * uDeltaTime);
+                    float blend = 1.0 - exp(-blendRate * abs(uDeltaTime) * 0.5);
 
                     // Only enforce co-rotation for particles slower than frame drag.
                     // Faster prograde particles are left alone.
