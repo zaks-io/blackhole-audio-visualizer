@@ -65,7 +65,6 @@ export function ParticleSystem({
   const particleCount = textureSize * textureSize;
 
   const {
-    advance,
     getPositionTexture,
     getPrevPositionTexture,
     getPositionHistory1Texture,
@@ -200,10 +199,6 @@ export function ParticleSystem({
     pointSize: number;
     motionBlurTaper: number;
     motionBlurFade: number;
-    redshiftStrength: number;
-    redshiftLightSpeed: number;
-    redshiftBeaming: number;
-    redshiftGravitational: number;
     brightness: number;
     alpha: number;
     maxDistance: number;
@@ -394,10 +389,6 @@ export function ParticleSystem({
       uResolutionScale: { value: resolutionScale },
       uMotionBlurTaper: { value: initialControls.motionBlurTaper },
       uMotionBlurFade: { value: initialControls.motionBlurFade },
-      uRedshiftStrength: { value: initialControls.redshiftStrength },
-      uRedshiftLightSpeed: { value: initialControls.redshiftLightSpeed },
-      uRedshiftBeaming: { value: initialControls.redshiftBeaming },
-      uRedshiftGravitational: { value: initialControls.redshiftGravitational },
       uBrightness: { value: initialControls.brightness },
       uAlpha: { value: initialControls.alpha },
       uColorLUT: { value: colorLUT.tex },
@@ -427,7 +418,7 @@ export function ParticleSystem({
     [colorLUT, desktopAdvancedMode, resolutionScale]
   );
 
-  useFrame((_, delta) => {
+  useFrame(() => {
     // Read from runtimeState instead of store for performance during tweens
     const state = runtimeState;
     const iscoRadius = state.eventHorizonRadius * state.iscoRatio;
@@ -486,16 +477,55 @@ export function ParticleSystem({
         materialRef.current.uniforms.uDebugMode.value = debugMode;
       }
 
+      const posTexture = getPositionTexture();
+      const prevPosTexture = getPrevPositionTexture();
+      const history1Texture = getPositionHistory1Texture();
+      const history2Texture = getPositionHistory2Texture();
+      const velTexture = getVelocityTexture();
+      if (posTexture) {
+        materialRef.current.uniforms.texturePosition.value = posTexture;
+
+        const densityMaterial = densityMaterialRef.current;
+        const densityScene = densitySceneRef.current;
+        const densityRT = densityRTRef.current;
+        if (densityMaterial && densityScene && densityRT) {
+          densityMaterial.uniforms.texturePosition.value = posTexture;
+          const prevTarget = gl.getRenderTarget();
+          const prevClearAlpha = gl.getClearAlpha();
+          const prevClearColor = gl.getClearColor(new THREE.Color());
+          gl.setRenderTarget(densityRT);
+          gl.setClearColor(0x000000, 0);
+          gl.clear(true, false, false);
+          gl.render(densityScene, camera);
+          gl.setRenderTarget(prevTarget);
+          gl.setClearColor(prevClearColor, prevClearAlpha);
+
+          materialRef.current.uniforms.uDensityTexture.value = densityRT.texture;
+          materialRef.current.uniforms.uDensityTexel.value.set(
+            1 / densityRT.width,
+            1 / densityRT.height
+          );
+        }
+      }
+      if (prevPosTexture) {
+        materialRef.current.uniforms.texturePrevPosition.value = prevPosTexture;
+      }
+      if (history1Texture) {
+        materialRef.current.uniforms.textureHistory1.value = history1Texture;
+      }
+      if (history2Texture) {
+        materialRef.current.uniforms.textureHistory2.value = history2Texture;
+      }
+      if (velTexture) {
+        materialRef.current.uniforms.textureVelocity.value = velTexture;
+      }
+
       // Dirty updates for numeric uniforms (avoid redundant uniform writes)
       if (!prevRenderUniformsRef.current) {
         prevRenderUniformsRef.current = {
           pointSize: state.pointSize,
           motionBlurTaper: state.motionBlurTaper,
           motionBlurFade: state.motionBlurFade,
-          redshiftStrength: state.redshiftStrength,
-          redshiftLightSpeed: state.redshiftLightSpeed,
-          redshiftBeaming: state.redshiftBeaming,
-          redshiftGravitational: state.redshiftGravitational,
           brightness: state.brightness,
           alpha: state.alpha,
           maxDistance: state.maxDistance,
@@ -506,10 +536,6 @@ export function ParticleSystem({
         materialRef.current.uniforms.uBaseSize.value = state.pointSize;
         materialRef.current.uniforms.uMotionBlurTaper.value = state.motionBlurTaper;
         materialRef.current.uniforms.uMotionBlurFade.value = state.motionBlurFade;
-        materialRef.current.uniforms.uRedshiftStrength.value = state.redshiftStrength;
-        materialRef.current.uniforms.uRedshiftLightSpeed.value = state.redshiftLightSpeed;
-        materialRef.current.uniforms.uRedshiftBeaming.value = state.redshiftBeaming;
-        materialRef.current.uniforms.uRedshiftGravitational.value = state.redshiftGravitational;
         materialRef.current.uniforms.uBrightness.value = state.brightness;
         materialRef.current.uniforms.uAlpha.value = state.alpha;
         materialRef.current.uniforms.uMaxDistance.value = state.maxDistance;
@@ -529,22 +555,6 @@ export function ParticleSystem({
         if (prevR.motionBlurFade !== state.motionBlurFade) {
           prevR.motionBlurFade = state.motionBlurFade;
           materialRef.current.uniforms.uMotionBlurFade.value = state.motionBlurFade;
-        }
-        if (prevR.redshiftStrength !== state.redshiftStrength) {
-          prevR.redshiftStrength = state.redshiftStrength;
-          materialRef.current.uniforms.uRedshiftStrength.value = state.redshiftStrength;
-        }
-        if (prevR.redshiftLightSpeed !== state.redshiftLightSpeed) {
-          prevR.redshiftLightSpeed = state.redshiftLightSpeed;
-          materialRef.current.uniforms.uRedshiftLightSpeed.value = state.redshiftLightSpeed;
-        }
-        if (prevR.redshiftBeaming !== state.redshiftBeaming) {
-          prevR.redshiftBeaming = state.redshiftBeaming;
-          materialRef.current.uniforms.uRedshiftBeaming.value = state.redshiftBeaming;
-        }
-        if (prevR.redshiftGravitational !== state.redshiftGravitational) {
-          prevR.redshiftGravitational = state.redshiftGravitational;
-          materialRef.current.uniforms.uRedshiftGravitational.value = state.redshiftGravitational;
         }
         if (prevR.brightness !== state.brightness) {
           prevR.brightness = state.brightness;
@@ -861,52 +871,6 @@ export function ParticleSystem({
       if (prevDisabledIscoRadiusRef.current !== iscoRadius) {
         prevDisabledIscoRadiusRef.current = iscoRadius;
         setISCORadius(iscoRadius);
-      }
-    }
-
-    advance(delta);
-    if (materialRef.current) {
-      const posTexture = getPositionTexture();
-      const prevPosTexture = getPrevPositionTexture();
-      const history1Texture = getPositionHistory1Texture();
-      const history2Texture = getPositionHistory2Texture();
-      const velTexture = getVelocityTexture();
-      if (posTexture) {
-        materialRef.current.uniforms.texturePosition.value = posTexture;
-
-        const densityMaterial = densityMaterialRef.current;
-        const densityScene = densitySceneRef.current;
-        const densityRT = densityRTRef.current;
-        if (densityMaterial && densityScene && densityRT) {
-          densityMaterial.uniforms.texturePosition.value = posTexture;
-          const prevTarget = gl.getRenderTarget();
-          const prevClearAlpha = gl.getClearAlpha();
-          const prevClearColor = gl.getClearColor(new THREE.Color());
-          gl.setRenderTarget(densityRT);
-          gl.setClearColor(0x000000, 0);
-          gl.clear(true, false, false);
-          gl.render(densityScene, camera);
-          gl.setRenderTarget(prevTarget);
-          gl.setClearColor(prevClearColor, prevClearAlpha);
-
-          materialRef.current.uniforms.uDensityTexture.value = densityRT.texture;
-          materialRef.current.uniforms.uDensityTexel.value.set(
-            1 / densityRT.width,
-            1 / densityRT.height
-          );
-        }
-      }
-      if (prevPosTexture) {
-        materialRef.current.uniforms.texturePrevPosition.value = prevPosTexture;
-      }
-      if (history1Texture) {
-        materialRef.current.uniforms.textureHistory1.value = history1Texture;
-      }
-      if (history2Texture) {
-        materialRef.current.uniforms.textureHistory2.value = history2Texture;
-      }
-      if (velTexture) {
-        materialRef.current.uniforms.textureVelocity.value = velTexture;
       }
     }
   });

@@ -476,7 +476,7 @@ export function BlackHoleSimulation({
       audioData.beatIntensity = 0;
       audioData.beatTimePulse = 0;
     }
-  }, -1);
+  });
 
   // Memoized callbacks to avoid per-render allocations
   const getAudioData = useCallback(() => audioDataRef.current, []);

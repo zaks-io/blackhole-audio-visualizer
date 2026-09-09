@@ -37,12 +37,6 @@ export const runtimeState = {
   densityScale: PARAM_DEFAULTS.densityScale,
   colorPaletteOffset: 0, // Palette offset for GPU - updated via callGPUSetter
 
-  // Redshift
-  redshiftStrength: PARAM_DEFAULTS.redshiftStrength,
-  redshiftLightSpeed: PARAM_DEFAULTS.redshiftLightSpeed,
-  redshiftBeaming: PARAM_DEFAULTS.redshiftBeaming,
-  redshiftGravitational: PARAM_DEFAULTS.redshiftGravitational,
-
   // Physics
   gravity: PARAM_DEFAULTS.gravity,
   timeScale: PARAM_DEFAULTS.timeScale,
@@ -125,12 +119,6 @@ const runtimePathToKey: Record<string, RuntimeStateKey> = {
   "Particles.denseCenterBias": "denseCenterBias",
   "Particles.densityScale": "densityScale",
   "Particles.colorPaletteOffset": "colorPaletteOffset",
-
-  // Redshift
-  "Redshift.redshiftStrength": "redshiftStrength",
-  "Redshift.redshiftLightSpeed": "redshiftLightSpeed",
-  "Redshift.redshiftBeaming": "redshiftBeaming",
-  "Redshift.redshiftGravitational": "redshiftGravitational",
 
   // Physics
   "Physics.gravity": "gravity",
@@ -217,12 +205,6 @@ const storeKeyToRuntimeKey: Record<string, RuntimeStateKey> = {
   denseCenterBias: "denseCenterBias",
   densityScale: "densityScale",
   // Note: colorPaletteOffset is NOT synced from store - it's set directly via callGPUSetter
-
-  // Redshift
-  redshiftStrength: "redshiftStrength",
-  redshiftLightSpeed: "redshiftLightSpeed",
-  redshiftBeaming: "redshiftBeaming",
-  redshiftGravitational: "redshiftGravitational",
 
   // Physics
   gravity: "gravity",
