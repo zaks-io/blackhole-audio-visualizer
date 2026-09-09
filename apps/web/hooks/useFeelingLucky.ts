@@ -164,13 +164,17 @@ export function useFeelingLucky(allPresets: Preset[]) {
   }, [isLuckyPlaying]);
 
   useEffect(() => {
-    if (shouldPlay && mode === "feeling-lucky" && !isLuckyPlaying) {
-      queueMicrotask(() => start());
+    if (shouldPlay && mode === "feeling-lucky") {
+      if (!isLuckyPlaying) {
+        queueMicrotask(() => start());
+      } else {
+        queueMicrotask(() => resume());
+      }
       clearTriggerPlay();
     } else if (shouldPlay && mode !== "feeling-lucky") {
       clearTriggerPlay();
     }
-  }, [shouldPlay, mode, isLuckyPlaying, start, clearTriggerPlay]);
+  }, [shouldPlay, mode, isLuckyPlaying, start, resume, clearTriggerPlay]);
 
   useEffect(() => {
     if (shouldStop && isLuckyPlaying) {
