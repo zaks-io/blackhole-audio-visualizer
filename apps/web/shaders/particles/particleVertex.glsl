@@ -159,7 +159,9 @@ void main() {
         float zoneOuter = max(uISCORadius * 2.0, bhR * 6.0);
         float prox = clamp(1.0 - (dist - bhR) / (zoneOuter - bhR), 0.0, 1.0);
         bhDensityProxy = max(bhDensityProxy, prox);
-        gravShiftSq = min(gravShiftSq, 1.0 - bhR / max(dist, bhR * 1.02));
+        if (uRedshiftStrength > 0.0) {
+            gravShiftSq = min(gravShiftSq, 1.0 - bhR / max(dist, bhR * 1.02));
+        }
     }
 
     // Screen-space density proxy from low-resolution occupancy buffer.
