@@ -1,4 +1,4 @@
-import { useRef, useCallback, useEffect, useMemo, useState } from "react";
+import { useRef, useCallback, useEffect, useMemo, useState, useEffectEvent } from "react";
 import gsap from "gsap";
 import { shuffle, seededRandom } from "@/lib/shuffle";
 import { usePlayPreset } from "@/components/ProducerMode/usePlayPreset";
@@ -16,7 +16,7 @@ export interface FeelingLuckyState {
   cycleKey: number;
 }
 
-export function useFeelingLucky(allPresets: Preset[]) {
+export function useFeelingLucky(allPresets: Preset[], audioConnected: boolean) {
   const { playPreset, stopAll } = usePlayPreset();
   const { setMode: setCameraMode } = useCameraMode();
 
@@ -119,7 +119,7 @@ export function useFeelingLucky(allPresets: Preset[]) {
   }, [shuffledIds]);
 
   const start = useCallback(() => {
-    if (!shuffledIds || shuffledIds.length === 0) return;
+    if (isActiveRef.current || !audioConnected || !shuffledIds || shuffledIds.length === 0) return;
 
     presetIndexRef.current = 0;
     cameraOrderRef.current = [];
@@ -128,7 +128,7 @@ export function useFeelingLucky(allPresets: Preset[]) {
     setLuckyPlaying(true);
     setState((s) => ({ isPlaying: true, isPaused: false, cycleKey: s.cycleKey + 1 }));
     playNextRef.current();
-  }, [shuffledIds, setLuckyPlaying]);
+  }, [audioConnected, shuffledIds, setLuckyPlaying]);
 
   const stop = useCallback(() => {
     isActiveRef.current = false;
@@ -150,18 +150,32 @@ export function useFeelingLucky(allPresets: Preset[]) {
   }, [isLuckyPlaying, state.isPaused]);
 
   const resume = useCallback(() => {
-    if (!isLuckyPlaying || !state.isPaused) return;
+    if (!audioConnected || !isLuckyPlaying || !state.isPaused) return;
     timerRef.current?.resume();
     setState((s) => ({ ...s, isPaused: false }));
-  }, [isLuckyPlaying, state.isPaused]);
+  }, [audioConnected, isLuckyPlaying, state.isPaused]);
 
   const skip = useCallback(() => {
-    if (!isLuckyPlaying) return;
+    if (!audioConnected || !isLuckyPlaying || state.isPaused) return;
     timerRef.current?.kill();
     timerRef.current = null;
     setState((s) => ({ ...s, isPaused: false }));
     playNextRef.current();
-  }, [isLuckyPlaying]);
+  }, [audioConnected, isLuckyPlaying, state.isPaused]);
+
+  const syncAudioPlayback = useEffectEvent(() => {
+    if (!audioConnected) {
+      pause();
+    } else if (mode === "feeling-lucky") {
+      if (isLuckyPlaying) resume();
+      else start();
+    }
+  });
+  const hasPresets = shuffledIds.length > 0;
+
+  useEffect(() => {
+    syncAudioPlayback();
+  }, [audioConnected, mode, hasPresets]);
 
   useEffect(() => {
     if (shouldPlay && mode === "feeling-lucky") {

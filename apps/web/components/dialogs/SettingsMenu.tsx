@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useSyncExternalStore } from "react";
-import { Circle, Code, Gauge, HelpCircle, Monitor, Pin, Settings, Zap } from "lucide-react";
+import { Circle, Code, Mic, Gauge, HelpCircle, Monitor, Pin, Settings, Zap } from "lucide-react";
+import { CameraControls } from "@/components/camera";
+import { PresetSelector } from "@/components/playlist";
+import { usePresetSelection } from "@/components/playlist/usePresetSelection";
+import type { AudioSourceType } from "@/hooks/useAudioSource";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -28,6 +32,9 @@ const RESOLUTION_LABELS: Record<Resolution, string> = {
 };
 
 interface SettingsMenuProps {
+  audioSourceType: AudioSourceType;
+  canUseSystemAudio: boolean;
+  onAudioSourceChange: (type: AudioSourceType) => void;
   isRecording: boolean;
   recordingDuration: number;
   onRecordToggle: () => void;
@@ -35,11 +42,15 @@ interface SettingsMenuProps {
 }
 
 export function SettingsMenu({
+  audioSourceType,
+  canUseSystemAudio,
+  onAudioSourceChange,
   isRecording,
   recordingDuration,
   onRecordToggle,
   recordDisabled,
 }: SettingsMenuProps) {
+  const presetSelection = usePresetSelection();
   const {
     fpsVisible,
     toggleFPS,
@@ -80,6 +91,26 @@ export function SettingsMenu({
         <div className="px-2 py-1.5">
           <h4 className="font-medium text-sm">Settings</h4>
         </div>
+        <DropdownMenuSeparator />
+        <CameraControls />
+        <PresetSelector {...presetSelection} />
+        {canUseSystemAudio && (
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+              <Mic className="h-4 w-4 text-muted-foreground" />
+              Audio source
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent>
+              <DropdownMenuRadioGroup
+                value={audioSourceType}
+                onValueChange={(value) => onAudioSourceChange(value as AudioSourceType)}
+              >
+                <DropdownMenuRadioItem value="microphone">Microphone</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="system">System Audio</DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+        )}
         <DropdownMenuSeparator />
         <div className="flex items-center justify-between px-2 py-1.5">
           <div className="flex items-center gap-2">

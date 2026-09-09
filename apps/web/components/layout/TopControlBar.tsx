@@ -1,6 +1,7 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, SlidersHorizontal } from "lucide-react";
+import { useRef, useState } from "react";
+import { ChevronLeft, ChevronRight, SlidersHorizontal, SkipForward } from "lucide-react";
 import { AudioSourceButton } from "@/components/audio";
 import { SettingsMenu } from "@/components/dialogs";
 import { useProducerMode } from "@/components/ProducerMode";
@@ -10,13 +11,14 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import type { AudioSourceType } from "@/hooks/useAudioSource";
 import { useUIState } from "@/hooks/useUIState";
 import { cn } from "@/lib/utils";
-import { MobileOverflowMenu } from "./MobileOverflowMenu";
+import { usePresets } from "@/components/ProducerMode/usePresets";
+import { useFeelingLucky } from "@/hooks/useFeelingLucky";
 
 interface TopControlBarProps {
   isAudioConnected: boolean;
   audioSourceType: AudioSourceType | null;
   canUseSystemAudio: boolean;
-  onAudioConnect: (sourceType: AudioSourceType) => void;
+  onAudioConnect: (sourceType: AudioSourceType) => Promise<void>;
   onAudioDisconnect: () => void;
   isRecording: boolean;
   recordingDuration: number;
@@ -35,6 +37,44 @@ export function TopControlBar({
   onRecordToggle,
   recordDisabled,
 }: TopControlBarProps) {
+  const presets = usePresets((state) => state.presets);
+  const feelingLucky = useFeelingLucky(presets, isAudioConnected);
+  const [preferredSource, setPreferredSource] = useState<AudioSourceType | null>(null);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const connectingRef = useRef(false);
+  const selectedSource =
+    audioSourceType ?? preferredSource ?? (canUseSystemAudio ? "system" : "microphone");
+
+  const connectAudio = async (source: AudioSourceType) => {
+    if (connectingRef.current) return;
+    connectingRef.current = true;
+    setIsConnecting(true);
+    try {
+      await onAudioConnect(source);
+    } finally {
+      connectingRef.current = false;
+      setIsConnecting(false);
+    }
+  };
+
+  const toggleAudio = () => {
+    if (isAudioConnected) {
+      feelingLucky.pause();
+      onAudioDisconnect();
+    } else {
+      void connectAudio(selectedSource);
+    }
+  };
+
+  const changeAudioSource = (source: AudioSourceType) => {
+    setPreferredSource(source);
+    if (isAudioConnected && source !== audioSourceType) {
+      feelingLucky.pause();
+      onAudioDisconnect();
+      void connectAudio(source);
+    }
+  };
+
   const isProducerModeOpen = useProducerMode((state) => state.isOpen);
   const toggleProducerMode = useProducerMode((state) => state.toggleOpen);
   const setProducerModeOpen = useProducerMode((state) => state.setOpen);
@@ -87,22 +127,32 @@ export function TopControlBar({
           <Separator orientation="vertical" className="hidden md:block h-6 mx-1 sm:mx-2" />
           <AudioSourceButton
             isConnected={isAudioConnected}
-            sourceType={audioSourceType}
-            canUseSystemAudio={canUseSystemAudio}
-            onConnect={onAudioConnect}
-            onDisconnect={onAudioDisconnect}
+            isConnecting={isConnecting}
+            sourceType={selectedSource}
+            onToggle={toggleAudio}
           />
-          <MobileOverflowMenu />
-          <Separator orientation="vertical" className="hidden sm:block h-6 mx-1 sm:mx-2" />
-
-          <div className="hidden md:block">
-            <SettingsMenu
-              isRecording={isRecording}
-              recordingDuration={recordingDuration}
-              onRecordToggle={onRecordToggle}
-              recordDisabled={recordDisabled}
-            />
-          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={feelingLucky.skip}
+            disabled={
+              !isAudioConnected || !feelingLucky.state.isPlaying || feelingLucky.state.isPaused
+            }
+            className="h-10 w-10 rounded-full"
+            aria-label="Next preset"
+          >
+            <SkipForward className="h-4 w-4" />
+          </Button>
+          <Separator orientation="vertical" className="h-6 mx-1 sm:mx-2" />
+          <SettingsMenu
+            audioSourceType={selectedSource}
+            canUseSystemAudio={canUseSystemAudio}
+            onAudioSourceChange={changeAudioSource}
+            isRecording={isRecording}
+            recordingDuration={recordingDuration}
+            onRecordToggle={onRecordToggle}
+            recordDisabled={recordDisabled}
+          />
 
           <Separator orientation="vertical" className="hidden md:block h-6 mx-1 sm:mx-2" />
           <div className="hidden md:block">

@@ -40,7 +40,7 @@ export default function GettingStartedPage() {
             Getting Started
           </h1>
           <p className="mt-3 text-lg sm:text-xl text-muted-foreground tracking-wide">
-            Connect audio and press play
+            Connect audio and start watching
           </p>
         </header>
 

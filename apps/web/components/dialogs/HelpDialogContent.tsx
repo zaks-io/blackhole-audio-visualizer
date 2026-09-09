@@ -27,7 +27,8 @@ export function HelpDialogContent({ onFullSetupGuideClick }: HelpDialogContentPr
         <div>
           <h4 className="text-sm font-medium mb-1">Microphone</h4>
           <p className="text-sm text-muted-foreground">
-            Uses a microphone or another audio input recognized by your computer.
+            Uses a microphone or another audio input recognized by your computer. Start connects
+            audio and runs random presets. Pause stops audio and pauses preset changes.
           </p>
         </div>
       </div>

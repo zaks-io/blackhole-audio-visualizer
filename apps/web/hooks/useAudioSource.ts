@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useSyncExternalStore } from "react";
 import { useAudioAnalyzer, type AnalyzedAudio } from "./useAudioAnalyzer";
 import { useAudioConnectionState } from "./useAudioConnectionState";
 import { usePresetSelector } from "@/components/playlist/usePresetSelector";
@@ -63,6 +63,14 @@ export function useAudioSource(): UseAudioSourceReturn {
 
   const connect = useCallback(
     async (type: AudioSourceType = "microphone") => {
+      const finishConnection = (source: AudioSourceType) => {
+        setLiveConnected(true, source);
+        const presetSelector = usePresetSelector.getState();
+        presetSelector.setMode("feeling-lucky");
+        presetSelector.setSelectedPresetId(null);
+        presetSelector.triggerPlay();
+      };
+
       if (analyzer.isConnected()) {
         analyzer.disconnect();
         setLiveConnected(false);
@@ -92,7 +100,7 @@ export function useAudioSource(): UseAudioSourceReturn {
         const stream = await getSystemAudioStream();
         if (stream) {
           await analyzer.connect(stream);
-          setLiveConnected(true, "system");
+          finishConnection("system");
         } else {
           // Stream failed, show permission dialog
           setShowPermissionDialog(true);
@@ -100,11 +108,7 @@ export function useAudioSource(): UseAudioSourceReturn {
       } else {
         try {
           await analyzer.connect();
-          setLiveConnected(true, "microphone");
-          const presetSelector = usePresetSelector.getState();
-          presetSelector.setMode("feeling-lucky");
-          presetSelector.setSelectedPresetId(null);
-          presetSelector.triggerPlay();
+          finishConnection("microphone");
         } catch (err) {
           if (err instanceof Error && err.name === "NotAllowedError") {
             setShowMicPermissionDialog(true);
@@ -128,6 +132,18 @@ export function useAudioSource(): UseAudioSourceReturn {
     analyzer.disconnect();
     setLiveConnected(false);
   }, [analyzer, sourceType, setLiveConnected]);
+
+  useEffect(() => {
+    if (!isConnected) return;
+    const stream = analyzer.getStream();
+    if (!stream) return;
+    const tracks = stream.getAudioTracks();
+    const handleEnded = () => disconnect();
+    for (const track of tracks) track.addEventListener("ended", handleEnded);
+    return () => {
+      for (const track of tracks) track.removeEventListener("ended", handleEnded);
+    };
+  }, [isConnected, analyzer, disconnect]);
 
   return {
     connect,

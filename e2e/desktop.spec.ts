@@ -81,11 +81,11 @@ test("packaged app plays and saves presets, playlists, and video offline", async
     expect(saved.presets[0].name).toBe("Offline test preset");
     expect(saved.playlists[0].items[0].presetId).toBe(saved.presets[0].id);
 
-    await page.getByRole("button", { name: "Connect audio", exact: true }).click();
-    await page.getByRole("menuitem", { name: "Microphone", exact: true }).click();
-    await expect(
-      page.getByRole("button", { name: "Microphone connected", exact: true })
-    ).toBeVisible();
+    await page.getByRole("button", { name: "Settings", exact: true }).click();
+    await page.getByRole("menuitem", { name: "Audio source", exact: true }).click();
+    await page.getByRole("menuitemradio", { name: "Microphone", exact: true }).click();
+    await page.getByRole("button", { name: "Start", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Pause", exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Settings", exact: true }).click();
     await page.getByRole("button", { name: "Start Recording", exact: true }).click();
     await expect(page.getByRole("button", { name: /^Recording / })).toBeVisible();
