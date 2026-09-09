@@ -58,6 +58,13 @@ export interface WorkerSetDecayMessage {
 
 export type WorkerInput = WorkerAnalyzeMessage | WorkerResetMessage | WorkerSetDecayMessage;
 
+/** Normalized strength (0-1) of an onset on this frame per band, 0 when none */
+export interface AudioOnsets {
+  bass: number;
+  mid: number;
+  high: number;
+}
+
 export interface AudioTiming {
   workerProcessMs: number;
   roundTripMs: number;
@@ -70,6 +77,7 @@ export interface WorkerResultMessage {
   timestamp: number;
   energy: AudioEnergy;
   peaks: AudioPeaks;
+  onsets: AudioOnsets;
   raw: AudioRaw;
   thresholds: AudioThresholds;
   spectrum: Float32Array;

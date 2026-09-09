@@ -7,6 +7,7 @@ import type {
   WorkerInput,
   WorkerResultMessage,
   AudioEnergy,
+  AudioOnsets,
   AudioPeaks,
   AudioRaw,
   AudioThresholds,
@@ -14,6 +15,7 @@ import type {
 
 import {
   AdaptiveThreshold,
+  OnsetDetector,
   SimpleEnvelope,
   Smoother,
   AutoNormalizer,
@@ -210,8 +212,14 @@ const thresholds = {
     minPeakDistanceMs: 50,
   }),
   hfc: new AdaptiveThreshold({ alpha: 0.1, peakMultiplier: 1.5, minPeakDistanceMs: 30 }),
-  bass: new AdaptiveThreshold({ alpha: 0.08, peakMultiplier: 1.8, minPeakDistanceMs: 70 }),
-  high: new AdaptiveThreshold({ alpha: 0.12, peakMultiplier: 1.4, minPeakDistanceMs: 30 }),
+};
+
+// Band onsets fire on the attack of a hit, not on its level, and carry magnitude.
+// Hats repeat faster than kicks and snares, so the high band gets a shorter refractory.
+const onsetDetectors = {
+  bass: new OnsetDetector({ minIntervalMs: 80 }),
+  mid: new OnsetDetector({ minIntervalMs: 80 }),
+  high: new OnsetDetector({ minIntervalMs: 50 }),
 };
 
 const smoothers = {
@@ -270,6 +278,7 @@ function reset(): void {
 
   gravityWellBpm.reset();
   Object.values(thresholds).forEach((t) => t.reset());
+  Object.values(onsetDetectors).forEach((d) => d.reset());
   Object.values(smoothers.energy).forEach((s) => s.reset());
   smoothers.spectralFlux.reset();
   smoothers.hfc.reset();
@@ -343,13 +352,20 @@ function analyze(
     high: smoothers.energy.high.process(rawBandEnergies.high),
   };
 
-  // Update bass/high thresholds and check peaks
-  const bassEnergy = (rawBandEnergies.subBass + rawBandEnergies.bass) / 2;
-  const highEnergy = (rawBandEnergies.highMid + rawBandEnergies.high) / 2;
-  thresholds.bass.update(bassEnergy);
-  thresholds.high.update(highEnergy);
-  const bassPeak = thresholds.bass.isPeak(bassEnergy, timestamp);
-  const highPeak = thresholds.high.isPeak(highEnergy, timestamp);
+  // Per-band onsets: kick, snare, hats
+  const onsets: AudioOnsets = {
+    bass: onsetDetectors.bass.process(
+      (rawBandEnergies.subBass + rawBandEnergies.bass) / 2,
+      timestamp
+    ),
+    mid: onsetDetectors.mid.process((rawBandEnergies.lowMid + rawBandEnergies.mid) / 2, timestamp),
+    high: onsetDetectors.high.process(
+      (rawBandEnergies.highMid + rawBandEnergies.high) / 2,
+      timestamp
+    ),
+  };
+  const bassPeak = onsets.bass > 0;
+  const highPeak = onsets.high > 0;
 
   // Feed bass peaks to gravity-well BPM and update
   if (bassPeak) gravityWellBpm.addBeat(timestamp);
@@ -432,12 +448,12 @@ function analyze(
       threshold: smoothers.thresholdDisplay.hfc.process(thresholds.hfc.getThreshold()),
     },
     bass: {
-      mean: thresholds.bass.getMean(),
-      threshold: smoothers.thresholdDisplay.bass.process(thresholds.bass.getThreshold()),
+      mean: onsetDetectors.bass.getMean(),
+      threshold: smoothers.thresholdDisplay.bass.process(onsetDetectors.bass.getThreshold()),
     },
     high: {
-      mean: thresholds.high.getMean(),
-      threshold: smoothers.thresholdDisplay.high.process(thresholds.high.getThreshold()),
+      mean: onsetDetectors.high.getMean(),
+      threshold: smoothers.thresholdDisplay.high.process(onsetDetectors.high.getThreshold()),
     },
   };
 
@@ -465,6 +481,7 @@ function analyze(
     timestamp,
     energy,
     peaks,
+    onsets,
     raw,
     thresholds: audioThresholds,
     spectrum,

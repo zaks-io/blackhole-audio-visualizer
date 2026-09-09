@@ -11,6 +11,7 @@ export interface BlackHoleData {
   positions: THREE.Vector3[];
   masses: number[];
   radii: number[];
+  baseRadii: number[];
   count: number;
 }
 
@@ -84,10 +85,12 @@ export function BlackHole({ blackHoleDataRef, index }: BlackHoleProps) {
     meshRef.current.visible = true;
     meshRef.current.position.copy(bhData.positions[index]);
 
-    const targetScale = bhData.radii[index];
+    // Smooth layout-driven size changes, but apply the beat pulse unsmoothed so it lands on the hit
+    const baseRadius = bhData.baseRadii[index];
     const lerpFactor = 1 - Math.exp(-12 * delta);
-    smoothedScaleRef.current += (targetScale - smoothedScaleRef.current) * lerpFactor;
-    meshRef.current.scale.setScalar(smoothedScaleRef.current);
+    smoothedScaleRef.current += (baseRadius - smoothedScaleRef.current) * lerpFactor;
+    const pulse = baseRadius > 0 ? bhData.radii[index] / baseRadius : 1;
+    meshRef.current.scale.setScalar(smoothedScaleRef.current * pulse);
   });
 
   return (

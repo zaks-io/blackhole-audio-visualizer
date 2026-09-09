@@ -13,6 +13,7 @@ import { StarField } from "@/components/StarField";
 import { useVisualizationControls } from "@/hooks/useVisualizationControls";
 import { usePresetSelector } from "@/components/playlist/usePresetSelector";
 import { runtimeState } from "@/lib/runtimeStateRegistry";
+import { BeatResponse } from "./beatResponse";
 import type { ColorPaletteId } from "@/components/ColorModeSystem";
 import type { AnalyzedAudio } from "@/hooks/useAudioAnalyzer";
 import type { CameraMode } from "@/components/CameraSystem";
@@ -249,8 +250,7 @@ export function BlackHoleSimulation({
   const spawnDecayCoef = useRef(Math.exp(-1 / (0.1 * 60))); // 100ms decay at 60fps
   const beatTimeDecayCoef = useRef(Math.exp(-1 / (0.15 * 60))); // 150ms decay at 60fps
   // beatIntensityRef uses fast-attack/slow-decay IIR (no rolling average)
-  const beatPhaseRef = useRef(0); // PLL phase accumulator for BPM-synced mass pulse
-  const lastBeatTimeRef = useRef(0); // Last bass peak timestamp for PLL correction
+  const beatResponseRef = useRef(new BeatResponse()); // Per-band springs and energy swells
   const bpmOrbitMultiplierRef = useRef(1); // Smoothed orbit speed multiplier from BPM
   const orbitAngleRef = useRef(0); // Accumulated orbital angle (avoids jumps from speed changes)
 
@@ -292,11 +292,13 @@ export function BlackHoleSimulation({
       beatPulse,
       blackHoleOffsetY,
       beatMassPulse,
-      beatPhaseCorrection,
     } = runtimeState;
-    // Compute pulsed radius once - this is the single source of truth
-    // Clamp to prevent black holes from growing excessively on strong beats
-    const pulse = Math.min(1.5, 1 + (beatIntensityRef.current ?? 0) * beatPulse);
+
+    // Each black hole pulses with its own band. Pulsed radius is the single
+    // source of truth for both render and particle absorption.
+    const beatResponse = beatResponseRef.current;
+    if (isAudioConnected) beatResponse.update(getAnalysis(), delta, beatPulse);
+    else beatResponse.reset();
     // autoColorChange is a boolean from the store, not runtime state
     const { autoColorChange } = useVisualizationControls.getState();
     const { isLuckyPlaying } = usePresetSelector.getState();
@@ -333,7 +335,7 @@ export function BlackHoleSimulation({
     if (progress < 0.001 || stableCount === targetCount) {
       // Integer count — no transition, identical to previous behavior
       calculateOrbitalLayout(stableCount, ...layoutArgs, positions, masses, baseRadii);
-      for (let i = 0; i < stableCount; i++) radii[i] = baseRadii[i] * pulse;
+      for (let i = 0; i < stableCount; i++) radii[i] = baseRadii[i] * beatResponse.sizePulse(i);
       for (let i = stableCount; i < 4; i++) {
         positions[i].set(0, 0, 0);
         masses[i] = 0;
@@ -358,7 +360,7 @@ export function BlackHoleSimulation({
         masses[i] = _layoutMasses[i] + (_toMasses[i] - _layoutMasses[i]) * progress;
         const br = _layoutBaseRadii[i] + (_toBaseRadii[i] - _layoutBaseRadii[i]) * progress;
         baseRadii[i] = br;
-        radii[i] = br * pulse;
+        radii[i] = br * beatResponse.sizePulse(i);
       }
 
       // Transitioning BH: emerges from parent's current blended position
@@ -368,7 +370,7 @@ export function BlackHoleSimulation({
       masses[transIdx] = _toMasses[transIdx] * progress;
       const transBr = _toBaseRadii[transIdx] * progress;
       baseRadii[transIdx] = transBr;
-      radii[transIdx] = transBr * pulse;
+      radii[transIdx] = transBr * beatResponse.sizePulse(transIdx);
 
       // Zero unused slots
       for (let i = targetCount; i < 4; i++) {
@@ -380,9 +382,10 @@ export function BlackHoleSimulation({
       bh.count = targetCount;
     }
 
-    // Apply Y offset
+    // Apply Y offset and let gravity follow the beat as much as the preset asks
     for (let i = 0; i < bh.count; i++) {
       positions[i].y += blackHoleOffsetY;
+      masses[i] *= beatResponse.massPulse(i, beatMassPulse);
     }
 
     if (isAudioConnected) {
@@ -398,27 +401,19 @@ export function BlackHoleSimulation({
         analysis.timing.totalLatencyMs = now - analysis.timestamp;
       }
 
-      // Keep PLL phase advancing even during stale frames so bounce doesn't freeze
-      const TWO_PI = 2 * Math.PI;
-      if (isStale) {
-        beatPhaseRef.current =
-          (beatPhaseRef.current + TWO_PI * (analysis.bpm / 60) * delta) % TWO_PI;
-      }
-
       if (isStale) {
         beatIntensityRef.current *= 0.85;
         hfcBoostRef.current *= 0.85;
         spawnBurstRef.current = 1 + (spawnBurstRef.current - 1) * 0.85;
         beatTimePulseRef.current *= 0.85;
       } else {
-        // Use bass peak detection for beat intensity, or fall back to band onsets
+        // Bass onset strength drives beat intensity, with band onsets as a fallback
         // Clamp onsets to prevent audio glitch spikes before gain multiplication
-        const bassBeat = analysis.peaks.bass ? 1 : 0;
         const onsetBeat = Math.min(
           Math.max(analysis.bandOnsets[0] ?? 0, analysis.bandOnsets[1] ?? 0),
           1.0
         );
-        const beat = Math.max(bassBeat * 0.8, onsetBeat) * (audioGain ?? 1);
+        const beat = Math.max(analysis.onsets.bass, onsetBeat) * (audioGain ?? 1);
         const clampedBeat = Math.min(beat, 0.75);
         // Fast-attack (~5ms) / slow-decay (~300ms) IIR envelope (frame-rate independent)
         const attackCoef = 1 - Math.exp(-delta / 0.005);
@@ -427,47 +422,6 @@ export function BlackHoleSimulation({
           beatIntensityRef.current += (clampedBeat - beatIntensityRef.current) * attackCoef;
         } else {
           beatIntensityRef.current *= decayCoef;
-        }
-
-        // BPM-synced phase accumulator (PLL) — always advance so phase is ready
-        // Phase convention: sin(phase)=1 at phase=π/2, so we correct toward π/2
-        // on each detected onset so the sine peak aligns with the audible beat.
-        {
-          const HALF_PI = Math.PI * 0.5;
-          beatPhaseRef.current += TWO_PI * (analysis.bpm / 60) * delta;
-          beatPhaseRef.current %= TWO_PI;
-
-          // Correct on bass OR spectral flux peaks (flux fires ~10-20ms earlier)
-          const onsetDetected = analysis.peaks.bass || analysis.peaks.spectralFlux;
-          const beatPeriodMs = 60000 / analysis.bpm;
-          const minCooldown = beatPeriodMs * 0.4;
-          if (onsetDetected && now - lastBeatTimeRef.current > minCooldown) {
-            lastBeatTimeRef.current = now;
-            // Target π/2 (sine peak) — no latency offset needed because
-            // AnalyserNode data leads speakers by ~outputLatency, which
-            // roughly cancels the software pipeline delay (capture → render)
-            let error = HALF_PI - beatPhaseRef.current;
-            // Wrap to [-π, π]
-            if (error > Math.PI) error -= TWO_PI;
-            if (error < -Math.PI) error += TWO_PI;
-            // Scale correction strength by BPM confidence
-            const correctionStrength =
-              beatPhaseCorrection * Math.min(1, analysis.bpmConfidence * 2);
-            beatPhaseRef.current =
-              (((beatPhaseRef.current + error * correctionStrength) % TWO_PI) + TWO_PI) % TWO_PI;
-          }
-        }
-
-        // Apply BPM-synced mass pulsation — all black holes breathe together
-        // Clamp to prevent zero mass/radius at max pulse amplitude
-        if (beatMassPulse > 0) {
-          const massMul = Math.max(0.01, 1 + beatMassPulse * Math.sin(beatPhaseRef.current));
-          for (let i = 0; i < bh.count; i++) {
-            masses[i] *= massMul;
-            radii[i] *= massMul;
-            // Cap radius to 2x base to prevent massive visual jumps
-            radii[i] = Math.min(radii[i], baseRadii[i] * 2);
-          }
         }
 
         // HFC boost - envelope follow the raw HFC with attack/decay
