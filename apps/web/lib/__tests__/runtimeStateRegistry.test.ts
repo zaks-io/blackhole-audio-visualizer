@@ -14,6 +14,7 @@ beforeEach(() => {
   setRuntimeValue("amplitude", PARAM_DEFAULTS.amplitude);
   setRuntimeValue("eventHorizonRadius", PARAM_DEFAULTS.eventHorizonRadius);
   setRuntimeValue("emitRadius", PARAM_DEFAULTS.emitRadius);
+  setRuntimeValue("redshiftStrength", PARAM_DEFAULTS.redshiftStrength);
   setRuntimeValue("bloomBaseIntensity", PARAM_DEFAULTS.bloomBaseIntensity);
 });
 
@@ -55,6 +56,11 @@ describe("setRuntimeValueByPath", () => {
   it("maps Emitters paths correctly", () => {
     setRuntimeValueByPath("Emitters.emitRadius", 350);
     expect(runtimeState.emitRadius).toBe(350);
+  });
+
+  it("maps Redshift paths correctly", () => {
+    setRuntimeValueByPath("Redshift.redshiftStrength", 0.75);
+    expect(runtimeState.redshiftStrength).toBe(0.75);
   });
 
   it("maps Post-FX paths correctly", () => {

@@ -16,6 +16,10 @@ uniform float uDenseGuardStrength;
 uniform float uCenterBiasStrength;
 uniform float uMaxDistance;
 uniform float uMotionBlurTaper;
+uniform float uRedshiftStrength;
+uniform float uRedshiftLightSpeed;
+uniform float uRedshiftBeaming;
+uniform float uRedshiftGravitational;
 
 #define MAX_BLACK_HOLES 4
 uniform vec3 uBlackHolePos[MAX_BLACK_HOLES];
@@ -79,6 +83,14 @@ float hash21(vec2 p) {
     return fract((p3.x + p3.y) * p3.z);
 }
 
+float luminance(vec3 c) {
+    return dot(c, vec3(0.2126, 0.7152, 0.0722));
+}
+
+// (1.0, 0.22, 0.08) and (0.35, 0.55, 1.0) divided by their own luminance.
+const vec3 REDSHIFT_TINT = vec3(2.6616, 0.5855, 0.2129);
+const vec3 BLUESHIFT_TINT = vec3(0.6482, 1.0186, 1.8520);
+
 void main() {
     vec4 posData = texture2D(texturePosition, reference);
     vec4 prevPosData = texture2D(texturePrevPosition, reference);
@@ -137,6 +149,8 @@ void main() {
     // (ISCO capture zone, frame dragging). Used to reduce per-particle rendering
     // cost via ribbon kill, width reduction, and alpha scaling.
     float bhDensityProxy = 0.0;
+    // Squared Schwarzschild factor from the deepest well; the redshift block takes one sqrt.
+    float gravShiftSq = 1.0;
     for (int i = 0; i < MAX_BLACK_HOLES; i++) {
         if (i >= uBlackHoleCount) break;
         float bhR = uBlackHoleRadius[i];
@@ -145,6 +159,7 @@ void main() {
         float zoneOuter = max(uISCORadius * 2.0, bhR * 6.0);
         float prox = clamp(1.0 - (dist - bhR) / (zoneOuter - bhR), 0.0, 1.0);
         bhDensityProxy = max(bhDensityProxy, prox);
+        gravShiftSq = min(gravShiftSq, 1.0 - bhR / max(dist, bhR * 1.02));
     }
 
     // Screen-space density proxy from low-resolution occupancy buffer.
@@ -217,6 +232,25 @@ void main() {
     // Color from LUT
     float idx = clamp(floor(colorIndex + 0.5), 0.0, uColorLUTSize - 1.0);
     vColor = texture2D(uColorLUT, vec2((idx + 0.5) / uColorLUTSize, 0.5)).rgb;
+
+    // Relativistic color shift. Doppler from line-of-sight velocity, gravitational from the
+    // nearest well, beaming scales brightness. This runs for all 64 ribbon vertices of every
+    // particle, so it stays to a handful of ops: one rsqrt, two sqrt, one pow.
+    if (uRedshiftStrength > 0.0) {
+        vec3 toCamera = cameraPosition - p3;
+        float losSpeed = dot(velocity, toCamera) * inversesqrt(max(dot(toCamera, toCamera), 1e-6));
+        float beta = clamp(losSpeed / max(uRedshiftLightSpeed, 1.0), -0.95, 0.95);
+        float doppler = sqrt((1.0 + beta) / (1.0 - beta));
+        float shift = doppler * mix(1.0, sqrt(gravShiftSq), uRedshiftGravitational);
+
+        // Tint targets are pre-scaled to luminance 1 so brightness is owned by beaming alone.
+        float shiftDelta = shift - 1.0;
+        vec3 target = (shiftDelta < 0.0 ? REDSHIFT_TINT : BLUESHIFT_TINT) * luminance(vColor);
+        float tintAmount = clamp(abs(shiftDelta) * 2.5, 0.0, 1.0) * uRedshiftStrength;
+        vColor = mix(vColor, target, tintAmount);
+
+        vColor *= pow(shift, 3.0 * uRedshiftBeaming * uRedshiftStrength);
+    }
 
     // Debug visualization: show fractional parts of position at different scales.
     // Use this to detect quantization (steppy bands) vs correlated randomness.

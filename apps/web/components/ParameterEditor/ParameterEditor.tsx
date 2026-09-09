@@ -27,6 +27,7 @@ const SKYBOX_OPTIONS = [
 const GROUP_IDS: Record<string, string> = {
   "Black Hole": "black-hole",
   Particles: "particles",
+  Redshift: "redshift",
   Physics: "physics",
   Emitters: "emitters",
   Skybox: "skybox",
