@@ -346,6 +346,51 @@ export const PARAMS: Record<string, ParameterDef> = {
   },
 
   // ===========================================================================
+  // REDSHIFT
+  // ===========================================================================
+  "Redshift.redshiftStrength": {
+    min: 0,
+    max: 1,
+    default: 0,
+    step: 0.05,
+    description: "how strongly velocity and gravity shift particle color (0=off)",
+    group: "Redshift",
+    label: "Strength",
+    system: false,
+  },
+  "Redshift.redshiftLightSpeed": {
+    min: 20,
+    max: 1000,
+    default: 150,
+    step: 10,
+    description:
+      "speed of light in simulation units; orbits near the emitter run about 70, so lower values push particles relativistic",
+    group: "Redshift",
+    label: "Light Speed",
+    system: false,
+  },
+  "Redshift.redshiftBeaming": {
+    min: 0,
+    max: 1,
+    default: 0.5,
+    step: 0.05,
+    description: "how much approaching particles brighten and receding particles dim",
+    group: "Redshift",
+    label: "Beaming",
+    system: false,
+  },
+  "Redshift.redshiftGravitational": {
+    min: 0,
+    max: 1,
+    default: 0.5,
+    step: 0.05,
+    description: "how much light climbing out of a black hole's gravity well reddens and dims",
+    group: "Redshift",
+    label: "Gravitational",
+    system: false,
+  },
+
+  // ===========================================================================
   // PHYSICS
   // ===========================================================================
   "Physics.gravity": {
