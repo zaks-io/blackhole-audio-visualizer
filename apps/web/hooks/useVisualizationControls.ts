@@ -38,12 +38,6 @@ export interface VisualizationControlsState {
   denseCenterBias: number;
   densityScale: number;
 
-  // Redshift
-  redshiftStrength: number;
-  redshiftLightSpeed: number;
-  redshiftBeaming: number;
-  redshiftGravitational: number;
-
   // Physics
   gravity: number;
   timeScale: number;
@@ -152,10 +146,6 @@ export const pathToKey: Record<string, keyof VisualizationControlsState> = {
   "Particles.denseGuardStrength": "denseGuardStrength",
   "Particles.denseCenterBias": "denseCenterBias",
   "Particles.densityScale": "densityScale",
-  "Redshift.redshiftStrength": "redshiftStrength",
-  "Redshift.redshiftLightSpeed": "redshiftLightSpeed",
-  "Redshift.redshiftBeaming": "redshiftBeaming",
-  "Redshift.redshiftGravitational": "redshiftGravitational",
   "Physics.gravity": "gravity",
   "Physics.timeScale": "timeScale",
   "Physics.softening": "softening",
@@ -240,10 +230,6 @@ const DEFAULT_STATE: VisualizationControlsState = {
   denseGuardStrength: PARAM_DEFAULTS.denseGuardStrength,
   denseCenterBias: PARAM_DEFAULTS.denseCenterBias,
   densityScale: PARAM_DEFAULTS.densityScale,
-  redshiftStrength: PARAM_DEFAULTS.redshiftStrength,
-  redshiftLightSpeed: PARAM_DEFAULTS.redshiftLightSpeed,
-  redshiftBeaming: PARAM_DEFAULTS.redshiftBeaming,
-  redshiftGravitational: PARAM_DEFAULTS.redshiftGravitational,
   gravity: PARAM_DEFAULTS.gravity,
   timeScale: PARAM_DEFAULTS.timeScale,
   softening: PARAM_DEFAULTS.softening,

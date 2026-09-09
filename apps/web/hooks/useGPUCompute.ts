@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useMemo, useEffect, useCallback } from "react";
-import { useThree } from "@react-three/fiber";
+import { useThree, useFrame } from "@react-three/fiber";
 import { GPUComputationRenderer } from "three/examples/jsm/misc/GPUComputationRenderer.js";
 import type { Variable } from "three/examples/jsm/misc/GPUComputationRenderer.js";
 import * as THREE from "three";
@@ -18,7 +18,7 @@ import { registerGPUSetter, clearGPUSetters } from "@/lib/gpuSetterRegistry";
 import { PALETTE_OFFSETS } from "@/components/ColorModeSystem";
 import positionFragmentShader from "@/shaders/simulation/positionFragment.glsl";
 import velocityFragmentShader from "@/shaders/simulation/velocityFragment.glsl";
-import { ParticleSimulation } from "@/lib/gpu/ParticleSimulation";
+import copyTextureShader from "@/shaders/simulation/copyTexture.glsl";
 
 const MAX_BANDS = 36;
 const SPECTRUM_SIZE = 128; // FFT bins to send to GPU
@@ -43,7 +43,12 @@ export function useGPUCompute(
   const blackHolePosRef = useRef<THREE.Vector3[] | null>(null);
   const blackHoleMassRef = useRef<number[] | null>(null);
   const blackHoleRadiusRef = useRef<number[] | null>(null);
-  const simulationRef = useRef<ParticleSimulation | null>(null);
+  // Position history for motion blur trails (ring buffer: history2 <- history1 <- prev <- current)
+  const positionHistory1RTRef = useRef<THREE.WebGLRenderTarget | null>(null);
+  const positionHistory2RTRef = useRef<THREE.WebGLRenderTarget | null>(null);
+  const copyMaterialRef = useRef<THREE.ShaderMaterial | null>(null);
+  const copySceneRef = useRef<THREE.Scene | null>(null);
+  const copyCameraRef = useRef<THREE.Camera | null>(null);
   const loggedCapsRef = useRef(false);
 
   const textures = useMemo(() => {
@@ -140,7 +145,8 @@ export function useGPUCompute(
       velData[i] = initVelData[i];
     }
 
-    // ParticleSimulation schedules the dependent kick and drift passes explicitly.
+    // Add velocity variable FIRST so it runs before position
+    // Both shaders need to see the same state to detect spawn condition
     const velocityVariable = gpuCompute.addVariable(
       "textureVelocity",
       velocityFragmentShader,
@@ -185,7 +191,6 @@ export function useGPUCompute(
     positionVariable.material.uniforms.uBeatPulse = { value: 2.0 };
     // Very small drift dither to break residual lattice lock without changing the overall aesthetic.
     positionVariable.material.uniforms.uDither = { value: 0.006 };
-    positionVariable.material.uniforms.uOrbitDecay = { value: 2.0 };
 
     // Multi-black hole uniforms for position shader
     const bhPos = [
@@ -241,7 +246,9 @@ export function useGPUCompute(
     velocityVariable.material.uniforms.uBlackHoleRadius = { value: bhRadius };
     velocityVariable.material.uniforms.uBlackHoleCount = { value: 1 };
 
-    // Initialize from the store before the first particle update.
+    // IMPORTANT: Initialize uniforms from the visualization store immediately.
+    // `useGPUCompute`'s `useFrame` runs before `ParticleSystem`'s `useFrame` (hook order),
+    // so defaults here can permanently affect spawn velocities/colors in the first compute tick.
     const initial = useVisualizationControls.getState();
     timeScaleRef.current = initial.timeScale;
 
@@ -269,7 +276,6 @@ export function useGPUCompute(
     velocityVariable.material.uniforms.uLifetimeGravityMultiplier.value =
       initial.lifetimeGravityMultiplier;
     velocityVariable.material.uniforms.uOrbitDecay.value = initial.orbitDecay;
-    positionVariable.material.uniforms.uOrbitDecay.value = initial.orbitDecay;
     velocityVariable.material.uniforms.uFrameDragging.value = initial.frameDragging;
     velocityVariable.material.uniforms.uMassContrast.value = initial.massContrast;
     velocityVariable.material.uniforms.uMassRange.value = initial.massRange;
@@ -332,30 +338,9 @@ export function useGPUCompute(
     gpuCompute.setVariableDependencies(positionVariable, [positionVariable, velocityVariable]);
     gpuCompute.setVariableDependencies(velocityVariable, [positionVariable, velocityVariable]);
 
-    const dispose = () => {
-      simulationRef.current?.dispose();
-      simulationRef.current = null;
-      // Dispose GPUComputationRenderer and its internal render targets
-      gpuCompute.dispose();
-      gpuComputeRef.current = null;
-      positionVariableRef.current = null;
-      velocityVariableRef.current = null;
-
-      textures.initialPosition.dispose();
-      textures.initialVelocity.dispose();
-      textures.bandOnsetsTexture.dispose();
-      textures.spectrumTexture.dispose();
-      bandOnsetsTextureRef.current = null;
-      spectrumTextureRef.current = null;
-      blackHolePosRef.current = null;
-      blackHoleMassRef.current = null;
-      blackHoleRadiusRef.current = null;
-    };
-
     const error = gpuCompute.init();
     if (error !== null) {
       console.error("GPUComputationRenderer error:", error);
-      dispose();
       return;
     }
 
@@ -386,64 +371,171 @@ export function useGPUCompute(
     positionVariableRef.current = positionVariable;
     velocityVariableRef.current = velocityVariable;
 
-    simulationRef.current = new ParticleSimulation(
-      gpuCompute,
-      positionVariable,
-      velocityVariable,
-      enableHistory
-    );
+    if (enableHistory) {
+      // Create position history render targets for motion blur trails
+      const rtOptions: THREE.RenderTargetOptions = {
+        wrapS: THREE.ClampToEdgeWrapping,
+        wrapT: THREE.ClampToEdgeWrapping,
+        minFilter: THREE.NearestFilter,
+        magFilter: THREE.NearestFilter,
+        format: THREE.RGBAFormat,
+        type: THREE.FloatType,
+        depthBuffer: false,
+      };
+      const history1RT = new THREE.WebGLRenderTarget(textureSize, textureSize, rtOptions);
+      const history2RT = new THREE.WebGLRenderTarget(textureSize, textureSize, rtOptions);
+      positionHistory1RTRef.current = history1RT;
+      positionHistory2RTRef.current = history2RT;
 
-    return dispose;
+      // Create copy material and scene for shifting history textures
+      const copyMaterial = new THREE.ShaderMaterial({
+        uniforms: {
+          tSource: { value: null },
+          resolution: { value: new THREE.Vector2(textureSize, textureSize) },
+        },
+        vertexShader: `void main() { gl_Position = vec4(position, 1.0); }`,
+        fragmentShader: copyTextureShader,
+        depthTest: false,
+        depthWrite: false,
+      });
+      copyMaterialRef.current = copyMaterial;
+
+      const copyScene = new THREE.Scene();
+      const copyPlane = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), copyMaterial);
+      copyScene.add(copyPlane);
+      copySceneRef.current = copyScene;
+
+      const copyCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+      copyCameraRef.current = copyCamera;
+    } else {
+      positionHistory1RTRef.current = null;
+      positionHistory2RTRef.current = null;
+      copyMaterialRef.current = null;
+      copySceneRef.current = null;
+      copyCameraRef.current = null;
+    }
+
+    return () => {
+      // Dispose GPUComputationRenderer and its internal render targets
+      gpuComputeRef.current?.dispose();
+      gpuComputeRef.current = null;
+      positionVariableRef.current = null;
+      velocityVariableRef.current = null;
+
+      textures.initialPosition.dispose();
+      textures.initialVelocity.dispose();
+      textures.bandOnsetsTexture.dispose();
+      textures.spectrumTexture.dispose();
+      bandOnsetsTextureRef.current = null;
+      spectrumTextureRef.current = null;
+      blackHolePosRef.current = null;
+      blackHoleMassRef.current = null;
+      blackHoleRadiusRef.current = null;
+
+      // Dispose history resources
+      positionHistory1RTRef.current?.dispose();
+      positionHistory2RTRef.current?.dispose();
+      copyMaterialRef.current?.dispose();
+      positionHistory1RTRef.current = null;
+      positionHistory2RTRef.current = null;
+      copyMaterialRef.current = null;
+      copySceneRef.current = null;
+      copyCameraRef.current = null;
+    };
   }, [gl, textures, enableHistory, textureSize]);
 
-  const advance = useCallback(
-    (delta: number) => {
-      if (!gpuComputeRef.current || !positionVariableRef.current || !velocityVariableRef.current) {
-        return;
-      }
+  useFrame((state, delta) => {
+    if (!gpuComputeRef.current || !positionVariableRef.current || !velocityVariableRef.current) {
+      return;
+    }
 
-      // Cap wall-clock stalls before scaling so ordinary playback matches the selected speed.
-      const baseDelta = Math.min(delta, 0.05) * timeScaleRef.current;
-      const scaledDelta = baseDelta * beatTimeScaleMultiplierRef.current;
+    // Apply frame-drop safety cap on base time scale, then layer beat modulation on top
+    const scaledTime = state.clock.elapsedTime * timeScaleRef.current;
+    const baseDelta = Math.min(delta * timeScaleRef.current, 0.05);
+    const scaledDelta = baseDelta * beatTimeScaleMultiplierRef.current;
 
-      // If audio data changed, upload textures once per frame at most.
-      if (bandOnsetsDirtyRef.current && bandOnsetsTextureRef.current) {
-        bandOnsetsTextureRef.current.needsUpdate = true;
-        bandOnsetsDirtyRef.current = false;
-      }
-      if (spectrumDirtyRef.current && spectrumTextureRef.current) {
-        spectrumTextureRef.current.needsUpdate = true;
-        spectrumDirtyRef.current = false;
-      }
+    // Update time uniforms
+    positionVariableRef.current.material.uniforms.uTime.value = scaledTime;
+    positionVariableRef.current.material.uniforms.uDeltaTime.value = scaledDelta;
+    velocityVariableRef.current.material.uniforms.uTime.value = scaledTime;
+    velocityVariableRef.current.material.uniforms.uDeltaTime.value = scaledDelta;
 
-      try {
-        simulationRef.current?.advance(scaledDelta);
-      } catch (e) {
-        console.error("GPU compute failed, triggering recovery:", e);
-        onError?.();
+    // If audio data changed, upload textures once per frame at most.
+    if (bandOnsetsDirtyRef.current && bandOnsetsTextureRef.current) {
+      bandOnsetsTextureRef.current.needsUpdate = true;
+      bandOnsetsDirtyRef.current = false;
+    }
+    if (spectrumDirtyRef.current && spectrumTextureRef.current) {
+      spectrumTextureRef.current.needsUpdate = true;
+      spectrumDirtyRef.current = false;
+    }
+
+    if (enableHistory) {
+      // Shift position history ring buffer BEFORE physics compute
+      // Order: history2 <- history1, history1 <- prevPosition
+      const copyMaterial = copyMaterialRef.current;
+      const copyScene = copySceneRef.current;
+      const copyCamera = copyCameraRef.current;
+      const history1RT = positionHistory1RTRef.current;
+      const history2RT = positionHistory2RTRef.current;
+
+      if (copyMaterial && copyScene && copyCamera && history1RT && history2RT) {
+        // Copy history1 -> history2
+        copyMaterial.uniforms.tSource.value = history1RT.texture;
+        gl.setRenderTarget(history2RT);
+        gl.render(copyScene, copyCamera);
+
+        // Copy prevPosition (alternate RT) -> history1
+        const prevPosTexture = gpuComputeRef.current.getAlternateRenderTarget(
+          positionVariableRef.current
+        ).texture;
+        copyMaterial.uniforms.tSource.value = prevPosTexture;
+        gl.setRenderTarget(history1RT);
+        gl.render(copyScene, copyCamera);
+
+        // Reset render target
+        gl.setRenderTarget(null);
       }
-    },
-    [onError]
-  );
+    }
+
+    // KICK-DRIFT-KICK (Leapfrog) Integration:
+    try {
+      // Pass 1: First KICK (half-step velocity update)
+      velocityVariableRef.current.material.uniforms.uDoKick.value = true;
+      positionVariableRef.current.material.uniforms.uDoDrift.value = false;
+      gpuComputeRef.current.compute();
+
+      // Pass 2: DRIFT (position update) + Second KICK (half-step velocity update)
+      velocityVariableRef.current.material.uniforms.uDoKick.value = true;
+      positionVariableRef.current.material.uniforms.uDoDrift.value = true;
+      gpuComputeRef.current.compute();
+    } catch (e) {
+      console.error("GPU compute failed, triggering recovery:", e);
+      onError?.();
+    }
+  });
 
   const getPositionTexture = useCallback((): THREE.Texture | null => {
-    return simulationRef.current?.positionTexture ?? null;
+    if (!gpuComputeRef.current || !positionVariableRef.current) return null;
+    return gpuComputeRef.current.getCurrentRenderTarget(positionVariableRef.current).texture;
   }, []);
 
   const getPrevPositionTexture = useCallback((): THREE.Texture | null => {
-    return simulationRef.current?.previousPositionTexture ?? null;
+    if (!gpuComputeRef.current || !positionVariableRef.current) return null;
+    return gpuComputeRef.current.getAlternateRenderTarget(positionVariableRef.current).texture;
   }, []);
 
   const getVelocityTexture = useCallback((): THREE.Texture | null => {
-    return simulationRef.current?.velocityTexture ?? null;
+    if (!gpuComputeRef.current || !velocityVariableRef.current) return null;
+    return gpuComputeRef.current.getCurrentRenderTarget(velocityVariableRef.current).texture;
   }, []);
 
   const getPositionHistory1Texture = useCallback((): THREE.Texture | null => {
-    return simulationRef.current?.history1Texture ?? null;
+    return positionHistory1RTRef.current?.texture ?? null;
   }, []);
 
   const getPositionHistory2Texture = useCallback((): THREE.Texture | null => {
-    return simulationRef.current?.history2Texture ?? null;
+    return positionHistory2RTRef.current?.texture ?? null;
   }, []);
 
   const setGravitationalParameter = useCallback((value: number) => {
@@ -501,9 +593,6 @@ export function useGPUCompute(
   }, []);
 
   const setOrbitDecay = useCallback((value: number) => {
-    if (positionVariableRef.current) {
-      positionVariableRef.current.material.uniforms.uOrbitDecay.value = value;
-    }
     if (velocityVariableRef.current) {
       velocityVariableRef.current.material.uniforms.uOrbitDecay.value = value;
     }
@@ -876,7 +965,6 @@ export function useGPUCompute(
   ]);
 
   return {
-    advance,
     getPositionTexture,
     getPrevPositionTexture,
     getPositionHistory1Texture,

@@ -65,14 +65,7 @@ bun run lint
 bun run typecheck
 bun run format:check
 bun run test
-bunx playwright install chromium
-bun run test:physics
 ```
-
-The physics tests execute the simulation shaders in Chromium and check orbital
-conservation, spawning, absorption, and trail history. See
-[particle physics](docs/particle-physics.md) for the numerical model and its
-artistic controls.
 
 After packaging for your platform, run `bun run test:desktop`. It launches the
 packaged app offline, checks preset and playlist persistence, and saves a recording

@@ -21,8 +21,7 @@
     "test": "turbo test",
     "test:coverage": "turbo test -- --coverage",
     "prepare": "husky",
-    "test:desktop": "playwright test e2e/desktop.spec.ts",
-    "test:physics": "playwright test e2e/particle-physics.spec.ts"
+    "test:desktop": "playwright test"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",

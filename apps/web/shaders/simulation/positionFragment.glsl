@@ -32,7 +32,6 @@ uniform float uSpawnBurst;
 uniform float uBeatIntensity;
 uniform float uBeatPulse;
 uniform float uDither;
-uniform float uOrbitDecay;
 
 // Multi-black hole uniforms
 uniform vec3 uBlackHolePos[MAX_BLACK_HOLES];
@@ -55,19 +54,6 @@ float hash2(vec2 p, float seed) {
     return hash13(vec3(p, seed));
 }
 
-vec3 safeNormalize(vec3 value, vec3 fallbackAxis) {
-    float lengthSquared = dot(value, value);
-    if (lengthSquared > 1e-12) {
-        return value * inversesqrt(lengthSquared);
-    }
-    return fallbackAxis;
-}
-
-vec3 tangentForRadial(vec3 radial) {
-    vec3 referenceAxis = abs(radial.y) < 0.999 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
-    return safeNormalize(cross(radial, referenceAxis), vec3(0.0, 0.0, 1.0));
-}
-
 // Always-on spawn decorrelation (independent of uEmitterSpread).
 // Keep these small so we preserve "spokes" while breaking phase-locked banding.
 const float BASE_SPAWN_ANGLE_JITTER = 0.035; // ~2 degrees
@@ -85,20 +71,22 @@ void main() {
     vec3 vel = velData.xyz;
 
     if (lifetime <= 0.0) {
-        // Only the drift pass advances the queue, once per simulation step.
+        // PASS 1: keep queued particles unchanged to avoid bunching spawns into the same frame.
+        // PASS 2 (drift pass): advance the spawn queue with a doubled dt to preserve overall spawn rate.
         if (!uDoDrift) {
             gl_FragColor = vec4(pos, lifetime);
             return;
         }
 
         // WAITING: count up toward 0
+        float dt = uDeltaTime * 2.0;
         // Rate = particlesPerSecond / totalParticles per second
-        lifetime += abs(uDeltaTime) * (uParticlesPerSecond / uTotalParticles) * uSpawnBurst;
+        lifetime += dt * (uParticlesPerSecond / uTotalParticles) * uSpawnBurst;
 
         if (lifetime >= 0.0) {
             // De-quantize spawn timing: use a per-particle sub-frame time for spawn computations.
             // This prevents "beads/grid points" that appear when many particles compress into thin streams.
-            float spawnTime = uTime - hash2(ip, 9100.0) * abs(uDeltaTime);
+            float spawnTime = uTime - hash2(ip, 9100.0) * uDeltaTime;
 
             // Pick which emitter this particle spawns from
             float emitterIndex = floor(hash2(ip, 100.0) * uEmitterCount);
@@ -200,8 +188,8 @@ void main() {
                 float spawnZ = spawnRad * sin(phi) * sin(theta);
 
                 // Tangential spread jitter
-                vec3 normal = safeNormalize(vec3(spawnX, spawnY, spawnZ), vec3(1.0, 0.0, 0.0));
-                vec3 tangent = tangentForRadial(normal);
+                vec3 normal = normalize(vec3(spawnX, spawnY, spawnZ));
+                vec3 tangent = normalize(cross(normal, vec3(0.0, 1.0, 0.0) + vec3(0.001)));
                 vec3 bitangent = cross(normal, tangent);
                 float spreadAmount = (hSpread - 0.5) * uEmitterWidth * 0.5;
                 float jitterAngle = hJitter * 6.28318530718;
@@ -233,10 +221,11 @@ void main() {
         // DRIFT: compute new position first
         vec3 newPos = pos + vel * uDeltaTime;
 
-        // Check the swept segment against every absorption sphere.
+        // Check if path intersects ANY black hole (ray-sphere intersection)
+        // This prevents fast particles from tunneling through
         bool shouldRecycle = false;
-        vec3 segment = newPos - pos;
-        float segmentLengthSquared = dot(segment, segment);
+        vec3 rayDir = newPos - pos;
+        float rayLen = length(rayDir);
 
         for (int i = 0; i < MAX_BLACK_HOLES; i++) {
             if (i >= uBlackHoleCount) break;
@@ -245,15 +234,34 @@ void main() {
             // Radius already includes pulse from CPU
             float radius = uBlackHoleRadius[i];
 
-            vec3 fromCenter = pos - uBlackHolePos[i];
-            float closestT = 0.0;
-            if (segmentLengthSquared > 0.0) {
-                closestT = clamp(-dot(fromCenter, segment) / segmentLengthSquared, 0.0, 1.0);
-            }
-            vec3 closestOffset = fromCenter + segment * closestT;
-            if (dot(closestOffset, closestOffset) <= radius * radius) {
+            // Check if new position is inside (handles slow particles)
+            if (length(newPos - uBlackHolePos[i]) < radius) {
                 shouldRecycle = true;
                 break;
+            }
+
+            // Ray-sphere intersection for fast particles
+            if (rayLen > 0.001) {
+                vec3 d = rayDir / rayLen; // normalized direction
+                vec3 oc = pos - uBlackHolePos[i];
+                float b = dot(oc, d);
+                float c = dot(oc, oc) - radius * radius;
+                float discriminant = b * b - c;
+
+                if (discriminant >= 0.0) {
+                    // Check entry point
+                    float t = -b - sqrt(discriminant);
+                    if (t >= 0.0 && t <= rayLen) {
+                        shouldRecycle = true;
+                        break;
+                    }
+                    // Check exit point (in case we started inside)
+                    t = -b + sqrt(discriminant);
+                    if (t >= 0.0 && t <= rayLen) {
+                        shouldRecycle = true;
+                        break;
+                    }
+                }
             }
         }
 
@@ -276,8 +284,7 @@ void main() {
         } else {
             // No collision: commit new position
             pos = newPos;
-            // Reverse-on-beat changes motion, while the emission lifecycle keeps advancing.
-            lifetime += abs(uDeltaTime);
+            lifetime += uDeltaTime;
 
             // Micro-dither in world space to prevent static lattice alignment.
             // Time is quantized to avoid per-frame shimmer; magnitude is intentionally tiny.
@@ -288,8 +295,7 @@ void main() {
                 hash2(ip, seed + 2.0),
                 hash2(ip, seed + 3.0)
             ) - 0.5;
-            float ditherScale = (uDeltaTime / 0.05) * clamp(uOrbitDecay / 5.0, 0.0, 1.0);
-            pos += n * uDither * ditherScale;
+            pos += n * uDither;
         }
     }
 

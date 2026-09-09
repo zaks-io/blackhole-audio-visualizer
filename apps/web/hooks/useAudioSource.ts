@@ -3,7 +3,6 @@
 import { useCallback, useSyncExternalStore } from "react";
 import { useAudioAnalyzer, type AnalyzedAudio } from "./useAudioAnalyzer";
 import { useAudioConnectionState } from "./useAudioConnectionState";
-import { usePresetSelector } from "@/components/playlist/usePresetSelector";
 import {
   isElectron,
   getSystemAudioStream,
@@ -101,10 +100,6 @@ export function useAudioSource(): UseAudioSourceReturn {
         try {
           await analyzer.connect();
           setLiveConnected(true, "microphone");
-          const presetSelector = usePresetSelector.getState();
-          presetSelector.setMode("feeling-lucky");
-          presetSelector.setSelectedPresetId(null);
-          presetSelector.triggerPlay();
         } catch (err) {
           if (err instanceof Error && err.name === "NotAllowedError") {
             setShowMicPermissionDialog(true);
