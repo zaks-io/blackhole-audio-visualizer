@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { getParameterGroups } from "@blackhole/backend/convex/lib/visualizationParameters";
+import { getParameterGroups } from "@/lib/visualizationParameters";
 import { PALETTE_IDS } from "@/components/ColorModeSystem";
 import { SelectControl } from "@/components/controls/SelectControl";
 import { SwitchControl } from "@/components/controls/SwitchControl";

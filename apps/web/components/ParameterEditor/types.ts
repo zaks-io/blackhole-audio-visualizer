@@ -1,7 +1,4 @@
-export type {
-  ParameterInfo,
-  ParameterGroup,
-} from "@blackhole/backend/convex/lib/visualizationParameters";
+export type { ParameterInfo, ParameterGroup } from "@/lib/visualizationParameters";
 export type { EaseFunction } from "@/components/ProducerMode/types";
 
 export type EditorMode = "dev" | "preset";

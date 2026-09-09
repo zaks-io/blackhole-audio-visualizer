@@ -6,12 +6,10 @@ type SelectionMode = "none" | "preset" | "feeling-lucky";
 interface PresetSelectorState {
   mode: SelectionMode;
   selectedPresetId: string | null;
-  activePresetId: string | null;
   isLuckyPlaying: boolean;
 
   setMode: (mode: SelectionMode) => void;
   setSelectedPresetId: (id: string | null) => void;
-  setActivePresetId: (id: string | null) => void;
   setLuckyPlaying: (playing: boolean) => void;
 
   shouldPlay: boolean;
@@ -27,12 +25,10 @@ export const usePresetSelector = create<PresetSelectorState>()(
     (set) => ({
       mode: "feeling-lucky",
       selectedPresetId: null,
-      activePresetId: null,
       isLuckyPlaying: false,
 
       setMode: (mode) => set({ mode }),
       setSelectedPresetId: (id) => set({ selectedPresetId: id }),
-      setActivePresetId: (id) => set({ activePresetId: id }),
       setLuckyPlaying: (playing) => set({ isLuckyPlaying: playing }),
 
       shouldPlay: false,

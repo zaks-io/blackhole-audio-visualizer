@@ -6,7 +6,7 @@ import {
   syncFromStore,
 } from "../runtimeStateRegistry";
 import type { VisualizationControlsState } from "@/hooks/useVisualizationControls";
-import { PARAM_DEFAULTS } from "@blackhole/backend/convex/lib/visualizationParameters";
+import { PARAM_DEFAULTS } from "@/lib/visualizationParameters";
 
 // Reset runtime state between tests so they don't bleed into each other
 beforeEach(() => {

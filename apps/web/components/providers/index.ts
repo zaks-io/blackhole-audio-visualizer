@@ -1,1 +1,0 @@
-export { ConvexClientProvider } from "./ConvexClientProvider";

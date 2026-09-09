@@ -1,4 +1,4 @@
-import { Monitor, Mic, Wrench, ExternalLink, ChevronRight } from "lucide-react";
+import { Circle, ChevronRight, Mic, Monitor } from "lucide-react";
 
 interface HelpDialogContentProps {
   onFullSetupGuideClick?: () => void;
@@ -12,11 +12,10 @@ export function HelpDialogContent({ onFullSetupGuideClick }: HelpDialogContentPr
           <Monitor className="h-4 w-4 text-cyan-400" />
         </div>
         <div>
-          <h4 className="text-sm font-medium mb-1">
-            Desktop App <span className="text-cyan-400">(Recommended)</span>
-          </h4>
+          <h4 className="text-sm font-medium mb-1">System Audio</h4>
           <p className="text-sm text-muted-foreground">
-            Captures system audio directly. Just play music and the visualizer reacts automatically.
+            Captures audio playing on your computer. macOS asks for Screen Recording permission the
+            first time you connect.
           </p>
         </div>
       </div>
@@ -26,32 +25,22 @@ export function HelpDialogContent({ onFullSetupGuideClick }: HelpDialogContentPr
           <Mic className="h-4 w-4 text-purple-400" />
         </div>
         <div>
-          <h4 className="text-sm font-medium mb-1">Web & Mobile</h4>
+          <h4 className="text-sm font-medium mb-1">Microphone</h4>
           <p className="text-sm text-muted-foreground">
-            Uses your microphone to capture sound. Play music through your speakers or let it pick
-            up ambient audio around you.
+            Uses a microphone or another audio input recognized by your computer.
           </p>
         </div>
       </div>
 
       <div className="flex gap-3">
-        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-orange-500/20 flex items-center justify-center">
-          <Wrench className="h-4 w-4 text-orange-400" />
+        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center">
+          <Circle className="h-4 w-4 text-red-400" />
         </div>
         <div>
-          <h4 className="text-sm font-medium mb-1">Advanced: BlackHole (macOS)</h4>
-          <p className="text-sm text-muted-foreground mb-2">
-            Route system audio directly to your microphone input for high-quality capture on web.
+          <h4 className="text-sm font-medium mb-1">Recording</h4>
+          <p className="text-sm text-muted-foreground">
+            Start and stop recording from Settings. The finished video downloads to this device.
           </p>
-          <a
-            href="https://existential.audio/blackhole/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-sm text-cyan-400 hover:text-cyan-300 transition-colors"
-          >
-            Download BlackHole
-            <ExternalLink className="h-3 w-3" />
-          </a>
         </div>
       </div>
 

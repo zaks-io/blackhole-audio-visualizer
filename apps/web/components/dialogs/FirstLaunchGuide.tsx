@@ -11,26 +11,23 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { HelpDialogContent } from "./HelpDialogContent";
 
-const COOKIE_NAME = "blackhole_getting_started";
-const COOKIE_VALUE = "1";
-const COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365;
+const STORAGE_KEY = "blackhole_getting_started";
 
-function subscribeToCookie() {
-  return () => undefined;
+function subscribeToStorage(onChange: () => void) {
+  window.addEventListener("storage", onChange);
+  return () => window.removeEventListener("storage", onChange);
 }
 
 function hasSeenGuide() {
-  return document.cookie
-    .split(";")
-    .some((cookie) => cookie.trim() === `${COOKIE_NAME}=${COOKIE_VALUE}`);
+  return localStorage.getItem(STORAGE_KEY) === "1";
 }
 
 export function FirstLaunchGuide() {
   const [dismissed, setDismissed] = useState(false);
-  const seen = useSyncExternalStore(subscribeToCookie, hasSeenGuide, () => true);
+  const seen = useSyncExternalStore(subscribeToStorage, hasSeenGuide, () => true);
 
   const rememberGuide = () => {
-    document.cookie = `${COOKIE_NAME}=${COOKIE_VALUE}; Max-Age=${COOKIE_MAX_AGE_SECONDS}; Path=/; SameSite=Lax`;
+    localStorage.setItem(STORAGE_KEY, "1");
     setDismissed(true);
   };
 

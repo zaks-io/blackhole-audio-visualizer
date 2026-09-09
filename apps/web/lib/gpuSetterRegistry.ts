@@ -1,7 +1,7 @@
 // Registry for GPU setter functions - allows direct GSAP → GPU communication
 // bypassing React state during animations for better performance
 
-import { getParam } from "@blackhole/backend/convex/lib/visualizationParameters";
+import { getParam } from "@/lib/visualizationParameters";
 import { setRuntimeValueByPath } from "./runtimeStateRegistry";
 
 type GPUSetter = (value: number) => void;

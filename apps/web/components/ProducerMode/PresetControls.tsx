@@ -1,30 +1,20 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import {
-  Save,
-  Play,
-  Square,
   Download,
-  Upload,
   MoreHorizontal,
-  Trash2,
   Pencil,
-  RotateCcw,
-  Globe,
-  Loader2,
-  CloudUpload,
+  Play,
   Plus,
+  RotateCcw,
+  Save,
+  Square,
+  Trash2,
+  Upload,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,109 +22,54 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { usePresets } from "./usePresets";
-import { usePlayPreset } from "./usePlayPreset";
-import { useProducerMode } from "./useProducerMode";
-import { useVisualizationControls } from "@/hooks/useVisualizationControls";
-import { useConvexPresets } from "@/hooks/useConvexPresets";
-import { usePresetSelector } from "@/components/playlist/usePresetSelector";
-import { PRODUCER_PARAMETERS, DEFAULT_DURATION, DEFAULT_EASE } from "./producerConfig";
 import {
-  PresetNameDialog,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useCameraMode, type CameraMode } from "@/components/CameraSystem";
+import { usePresetSelector } from "@/components/playlist/usePresetSelector";
+import { useVisualizationControls } from "@/hooks/useVisualizationControls";
+import {
   PresetExportDialog,
   PresetImportDialog,
-  PresetMigrateDialog,
+  PresetNameDialog,
   PresetOverwriteDialog,
 } from "./PresetSaveDialog";
-import type { PresetParameter } from "./types";
-
-type UnifiedPreset = {
-  id: string;
-  source: "local" | "convex";
-  name: string;
-  colorPalette: string;
-  parameters: PresetParameter[];
-  isPublic: boolean;
-  updatedAt?: number;
-};
-
-function buildParametersFromState(): PresetParameter[] {
-  const vizState = useVisualizationControls.getState();
-  const producerState = useProducerMode.getState();
-
-  const parameters: PresetParameter[] = [];
-  for (const group of PRODUCER_PARAMETERS) {
-    for (const param of group.parameters) {
-      const value = vizState.getByPath(param.path) as number;
-      const tweenState = producerState.tweenStates[param.path];
-      parameters.push({
-        path: param.path,
-        value,
-        duration: tweenState?.duration ?? DEFAULT_DURATION,
-        ease: tweenState?.ease ?? DEFAULT_EASE,
-      });
-    }
-  }
-  return parameters;
-}
+import { usePlayPreset } from "./usePlayPreset";
+import { usePresets } from "./usePresets";
+import { useProducerMode } from "./useProducerMode";
 
 export function PresetControls() {
-  const localPresets = usePresets();
-  const convexPresets = useConvexPresets();
-
+  const camera = useCameraMode();
+  const {
+    presets,
+    activePresetId,
+    setActivePreset,
+    savePreset,
+    updatePreset,
+    deletePreset,
+    renamePreset,
+    exportPresets,
+    importPresets,
+  } = usePresets();
   const { playPreset, stopAll, isPlaying } = usePlayPreset();
-  const resetVisualization = useVisualizationControls((s) => s.reset);
-  const resetAllTweens = useProducerMode((s) => s.resetAllTweens);
+  const resetVisualization = useVisualizationControls((state) => state.reset);
+  const resetAllTweens = useProducerMode((state) => state.resetAllTweens);
+  const triggerStop = usePresetSelector((state) => state.triggerStop);
 
-  const [activePresetId, setActivePresetId] = useState<string | null>(null);
-  const setVotingPresetId = usePresetSelector((s) => s.setActivePresetId);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [overwriteDialogOpen, setOverwriteDialogOpen] = useState(false);
   const [presetName, setPresetName] = useState("");
   const [importJson, setImportJson] = useState("");
   const [importError, setImportError] = useState("");
-  const [migrateDialogOpen, setMigrateDialogOpen] = useState(false);
-  const [migrating, setMigrating] = useState(false);
-  const [overwriteDialogOpen, setOverwriteDialogOpen] = useState(false);
-  const [migrateProgress, setMigrateProgress] = useState({ current: 0, total: 0 });
 
-  const cloudPresets: UnifiedPreset[] = useMemo(() => {
-    return convexPresets.presets
-      .map((p) => ({
-        id: p._id,
-        source: "convex" as const,
-        name: p.name,
-        colorPalette: p.colorPalette,
-        parameters: p.parameters,
-        isPublic: p.isPublic,
-        updatedAt: p.updatedAt,
-      }))
-      .sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0));
-  }, [convexPresets.presets]);
-
-  const localPresetsList: UnifiedPreset[] = useMemo(() => {
-    return localPresets.presets.map((p) => ({
-      id: p.id,
-      source: "local" as const,
-      name: p.name,
-      colorPalette: p.colorPalette,
-      parameters: p.parameters,
-      isPublic: false,
-    }));
-  }, [localPresets.presets]);
-
-  const unifiedPresets: UnifiedPreset[] = useMemo(() => {
-    if (convexPresets.isAuthenticated) {
-      return cloudPresets;
-    }
-    return localPresetsList;
-  }, [convexPresets.isAuthenticated, cloudPresets, localPresetsList]);
-
-  const selectedPreset = useMemo(() => {
-    return unifiedPresets.find((p) => p.id === activePresetId) ?? null;
-  }, [unifiedPresets, activePresetId]);
+  const selectedPreset = presets.find((preset) => preset.id === activePresetId) ?? null;
 
   const resetToDefaults = () => {
     stopAll();
@@ -142,223 +77,108 @@ export function PresetControls() {
     resetAllTweens();
   };
 
-  const handleCreatePreset = async () => {
-    if (!presetName.trim()) return;
+  const handleCreatePreset = () => {
+    const name = presetName.trim();
+    if (!name) return;
 
-    const vizState = useVisualizationControls.getState();
-    const parameters = buildParametersFromState();
-
-    if (convexPresets.isAuthenticated) {
-      const result = await convexPresets.createPreset(
-        presetName.trim(),
-        vizState.colorPalette,
-        parameters,
-        false
-      );
-      const id = result.presetId as string;
-      setActivePresetId(id);
-      setVotingPresetId(id);
-      triggerStop();
-    } else {
-      const newId = localPresets.savePreset(presetName.trim());
-      setActivePresetId(newId);
-    }
-    toast.success(`Created "${presetName.trim()}"`);
+    savePreset(name);
+    toast.success(`Created "${name}"`);
     setPresetName("");
     setSaveDialogOpen(false);
   };
 
-  const handleUpdatePreset = async () => {
+  const handleUpdatePreset = () => {
     if (!selectedPreset) return;
-
-    const vizState = useVisualizationControls.getState();
-    const parameters = buildParametersFromState();
-
-    if (selectedPreset.source === "convex") {
-      await convexPresets.updatePreset(selectedPreset.id, {
-        colorPalette: vizState.colorPalette,
-        parameters,
-      });
-    } else {
-      localPresets.updatePreset(selectedPreset.id);
-    }
+    updatePreset(selectedPreset.id);
     toast.success(`Saved "${selectedPreset.name}"`);
   };
 
-  const handleRename = async () => {
-    if (!activePresetId || !presetName.trim() || !selectedPreset) return;
+  const handleRename = () => {
+    const name = presetName.trim();
+    if (!activePresetId || !name) return;
 
-    if (selectedPreset.source === "convex") {
-      await convexPresets.updatePreset(activePresetId, { name: presetName.trim() });
-    } else {
-      localPresets.renamePreset(activePresetId, presetName.trim());
-    }
+    renamePreset(activePresetId, name);
     setPresetName("");
     setRenameDialogOpen(false);
   };
 
-  const handleDelete = async () => {
-    if (!activePresetId || !selectedPreset) return;
-
-    if (selectedPreset.source === "convex") {
-      await convexPresets.deletePreset(activePresetId);
-    } else {
-      localPresets.deletePreset(activePresetId);
-    }
-    setActivePresetId(null);
-    setVotingPresetId(null);
-  };
-
-  const handleTogglePublic = async () => {
-    if (!activePresetId || !selectedPreset || selectedPreset.source !== "convex") return;
-    await convexPresets.updatePreset(activePresetId, { isPublic: !selectedPreset.isPublic });
-  };
-
-  const getExportJson = () => {
-    if (convexPresets.isAuthenticated) {
-      return JSON.stringify(convexPresets.presets, null, 2);
-    }
-    return localPresets.exportPresets();
+  const handleDelete = () => {
+    if (!activePresetId) return;
+    deletePreset(activePresetId);
   };
 
   const handleCopyExport = () => {
-    navigator.clipboard.writeText(getExportJson());
+    void navigator.clipboard.writeText(exportPresets());
     setExportDialogOpen(false);
   };
 
   const handleDownloadExport = () => {
-    const blob = new Blob([getExportJson()], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "producer-presets.json";
-    a.click();
+    const url = URL.createObjectURL(new Blob([exportPresets()], { type: "application/json" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "producer-presets.json";
+    link.click();
     URL.revokeObjectURL(url);
     setExportDialogOpen(false);
   };
 
-  const handleImportSubmit = async () => {
-    if (convexPresets.isAuthenticated) {
-      try {
-        const imported = JSON.parse(importJson);
-        const presets = Array.isArray(imported) ? imported : [imported];
-        let lastCreatedId: string | null = null;
-        for (const preset of presets) {
-          if (preset.name && preset.colorPalette && Array.isArray(preset.parameters)) {
-            const result = await convexPresets.createPreset(
-              preset.name,
-              preset.colorPalette,
-              preset.parameters,
-              false
-            );
-            lastCreatedId = result.presetId as string;
-          }
-        }
-        if (lastCreatedId) {
-          setActivePresetId(lastCreatedId);
-          setVotingPresetId(lastCreatedId);
-        }
-        setImportDialogOpen(false);
-        setImportJson("");
-        setImportError("");
-      } catch {
-        setImportError("Invalid JSON format");
-      }
-    } else {
-      const result = localPresets.importPresets(importJson);
-      if (result.success) {
-        setImportDialogOpen(false);
-        setImportJson("");
-        setImportError("");
-      } else {
-        setImportError("Invalid JSON format");
-      }
+  const handleImportSubmit = () => {
+    const result = importPresets(importJson);
+    if (!result.success) {
+      setImportError("Invalid preset JSON");
+      return;
     }
+
+    toast.success(`Imported ${result.count} preset${result.count === 1 ? "" : "s"}`);
+    setImportDialogOpen(false);
+    setImportJson("");
+    setImportError("");
   };
 
-  const handleFileImport = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        setImportJson(event.target?.result as string);
-      };
-      reader.readAsText(file);
-    }
+  const handleFileImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (loadEvent) => setImportJson(String(loadEvent.target?.result ?? ""));
+    reader.readAsText(file);
   };
 
-  const handleMigrateToCloud = async () => {
-    if (localPresetsList.length === 0) return;
+  const handleSelectPreset = (id: string | null) => {
+    setActivePreset(id);
+    if (!id) return;
 
-    setMigrating(true);
-    setMigrateProgress({ current: 0, total: localPresetsList.length });
+    const preset = presets.find((candidate) => candidate.id === id);
+    if (!preset) return;
 
-    for (let i = 0; i < localPresetsList.length; i++) {
-      const preset = localPresetsList[i];
-      await convexPresets.createPreset(preset.name, preset.colorPalette, preset.parameters, false);
-      setMigrateProgress({ current: i + 1, total: localPresetsList.length });
-    }
-
-    localPresets.clearPresets();
-    setMigrating(false);
-    setMigrateDialogOpen(false);
+    triggerStop();
+    if (preset.cameraMode) camera.setMode(preset.cameraMode as CameraMode);
+    playPreset(preset);
   };
 
   const openRenameDialog = () => {
-    if (selectedPreset) {
-      setPresetName(selectedPreset.name);
-      setRenameDialogOpen(true);
-    }
+    if (!selectedPreset) return;
+    setPresetName(selectedPreset.name);
+    setRenameDialogOpen(true);
   };
-
-  const triggerStop = usePresetSelector((s) => s.triggerStop);
-
-  const handleSelectPreset = (id: string | null) => {
-    setActivePresetId(id);
-    if (id) {
-      const preset = unifiedPresets.find((p) => p.id === id);
-      if (preset) {
-        setVotingPresetId(preset.source === "convex" ? id : null);
-        if (preset.source === "local") {
-          localPresets.setActivePreset(id);
-        }
-        triggerStop();
-        playPreset({
-          id: preset.id,
-          name: preset.name,
-          colorPalette: preset.colorPalette,
-          parameters: preset.parameters,
-        });
-      }
-    } else {
-      setVotingPresetId(null);
-      localPresets.setActivePreset(null);
-    }
-  };
-
-  const isLoading = convexPresets.isLoading;
 
   return (
     <div className="px-3 py-3 border-b border-white/5 space-y-2">
       <div className="flex items-center gap-2">
-        <Select value={activePresetId ?? ""} onValueChange={(v) => handleSelectPreset(v || null)}>
+        <Select
+          value={activePresetId ?? ""}
+          onValueChange={(value) => handleSelectPreset(value || null)}
+        >
           <SelectTrigger size="sm" className="flex-1 h-8 text-xs">
-            {isLoading ? (
-              <Loader2 className="h-3 w-3 animate-spin" />
-            ) : (
-              <SelectValue placeholder="Select preset..." />
-            )}
+            <SelectValue placeholder="Select preset..." />
           </SelectTrigger>
           <SelectContent>
-            {unifiedPresets.length === 0 ? (
+            {presets.length === 0 ? (
               <div className="px-2 py-1.5 text-xs text-muted-foreground">No presets saved</div>
             ) : (
-              unifiedPresets.map((preset) => (
+              presets.map((preset) => (
                 <SelectItem key={preset.id} value={preset.id} className="text-xs">
-                  <span className="flex items-center gap-1.5">
-                    {preset.name}
-                    {preset.isPublic && <Globe className="h-3 w-3 text-muted-foreground" />}
-                  </span>
+                  {preset.name}
                 </SelectItem>
               ))
             )}
@@ -372,16 +192,17 @@ export function PresetControls() {
           onClick={() => setOverwriteDialogOpen(true)}
           disabled={!selectedPreset}
           title="Save changes to preset"
+          aria-label="Save changes to preset"
         >
           <Save className="h-4 w-4" />
         </Button>
-
         <Button
           variant="ghost"
           size="icon"
           className="h-8 w-8 shrink-0"
           onClick={() => setSaveDialogOpen(true)}
           title="Create new preset"
+          aria-label="Create new preset"
         >
           <Plus className="h-4 w-4" />
         </Button>
@@ -393,6 +214,7 @@ export function PresetControls() {
             className="h-8 w-8 shrink-0"
             onClick={stopAll}
             title="Stop all tweens"
+            aria-label="Stop preset"
           >
             <Square className="h-4 w-4" />
           </Button>
@@ -401,19 +223,10 @@ export function PresetControls() {
             variant="ghost"
             size="icon"
             className="h-8 w-8 shrink-0"
-            onClick={() => {
-              if (selectedPreset) {
-                triggerStop();
-                playPreset({
-                  id: selectedPreset.id,
-                  name: selectedPreset.name,
-                  colorPalette: selectedPreset.colorPalette,
-                  parameters: selectedPreset.parameters,
-                });
-              }
-            }}
+            onClick={() => selectedPreset && handleSelectPreset(selectedPreset.id)}
             disabled={!selectedPreset}
             title="Play preset"
+            aria-label="Play preset"
           >
             <Play className="h-4 w-4" />
           </Button>
@@ -421,7 +234,12 @@ export function PresetControls() {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 shrink-0"
+              aria-label="Preset actions"
+            >
               <MoreHorizontal className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -430,12 +248,6 @@ export function PresetControls() {
               <Pencil className="h-4 w-4 mr-2" />
               Rename
             </DropdownMenuItem>
-            {selectedPreset?.source === "convex" && (
-              <DropdownMenuItem onClick={handleTogglePublic}>
-                <Globe className="h-4 w-4 mr-2" />
-                {selectedPreset.isPublic ? "Make Private" : "Make Public"}
-              </DropdownMenuItem>
-            )}
             <DropdownMenuItem
               onClick={handleDelete}
               disabled={!selectedPreset}
@@ -452,7 +264,7 @@ export function PresetControls() {
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={() => setExportDialogOpen(true)}
-              disabled={unifiedPresets.length === 0}
+              disabled={presets.length === 0}
             >
               <Download className="h-4 w-4 mr-2" />
               Export JSON
@@ -467,15 +279,6 @@ export function PresetControls() {
               <Upload className="h-4 w-4 mr-2" />
               Import JSON
             </DropdownMenuItem>
-            {convexPresets.isAuthenticated && localPresetsList.length > 0 && (
-              <>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => setMigrateDialogOpen(true)}>
-                  <CloudUpload className="h-4 w-4 mr-2" />
-                  Migrate to Cloud ({localPresetsList.length})
-                </DropdownMenuItem>
-              </>
-            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
@@ -484,13 +287,12 @@ export function PresetControls() {
         open={saveDialogOpen}
         onOpenChange={setSaveDialogOpen}
         title="Create New Preset"
-        description="Save the current parameter values and tween settings as a new preset."
+        description="Save the current parameters, camera, and tween settings as a new preset."
         value={presetName}
         onChange={setPresetName}
         onConfirm={handleCreatePreset}
         confirmLabel="Create"
       />
-
       <PresetNameDialog
         open={renameDialogOpen}
         onOpenChange={setRenameDialogOpen}
@@ -500,15 +302,13 @@ export function PresetControls() {
         onConfirm={handleRename}
         confirmLabel="Rename"
       />
-
       <PresetExportDialog
         open={exportDialogOpen}
         onOpenChange={setExportDialogOpen}
-        getJson={getExportJson}
+        getJson={exportPresets}
         onCopy={handleCopyExport}
         onDownload={handleDownloadExport}
       />
-
       <PresetImportDialog
         open={importDialogOpen}
         onOpenChange={setImportDialogOpen}
@@ -518,16 +318,6 @@ export function PresetControls() {
         onSubmit={handleImportSubmit}
         onFileChange={handleFileImport}
       />
-
-      <PresetMigrateDialog
-        open={migrateDialogOpen}
-        onOpenChange={setMigrateDialogOpen}
-        localPresets={localPresetsList}
-        migrating={migrating}
-        progress={migrateProgress}
-        onMigrate={handleMigrateToCloud}
-      />
-
       <PresetOverwriteDialog
         open={overwriteDialogOpen}
         onOpenChange={setOverwriteDialogOpen}

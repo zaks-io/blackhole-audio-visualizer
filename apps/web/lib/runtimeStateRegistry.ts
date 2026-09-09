@@ -3,7 +3,7 @@
 // IMPORTANT: Heavy 3D components should ONLY read from runtimeState, never subscribe to Zustand
 
 import type { VisualizationControlsState } from "@/hooks/useVisualizationControls";
-import { PARAM_DEFAULTS } from "@blackhole/backend/convex/lib/visualizationParameters";
+import { PARAM_DEFAULTS } from "@/lib/visualizationParameters";
 
 // Runtime state containing all values that render loops need
 // These values are mutated directly for performance during tweens

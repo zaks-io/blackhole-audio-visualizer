@@ -1,5 +1,4 @@
-import { Download } from "lucide-react";
-import { TrackedLink, TrackedAnchor } from "@/components/TrackedLink";
+import Link from "next/link";
 
 export default function LandingPage() {
   return (
@@ -29,64 +28,22 @@ export default function LandingPage() {
           Audio Visualizer
         </p>
         <p className="text-sm text-muted-foreground/60 mt-4 max-w-xs">Listen to the void</p>
-        <TrackedLink
+        <Link
           href="/app"
           className="mt-10 px-8 py-3 rounded-full bg-cyan text-cyan-foreground font-medium transition-all duration-300 hover:scale-105"
           style={{ animation: "pulse-glow 3s ease-in-out infinite" }}
-          event="launch_visualizer"
         >
           Launch Visualizer
-        </TrackedLink>
-
-        {/* Download Links - using <a> tags because these redirect to external storage URLs */}
-        <div className="flex flex-col sm:flex-row gap-3 mt-8">
-          <TrackedAnchor
-            href="/release/macos/latest"
-            className="inline-flex items-center gap-2 px-5 py-2 rounded-full border border-white/10 text-sm text-muted-foreground hover:text-foreground hover:border-white/20 transition-colors"
-            event="download_macos"
-          >
-            <Download className="h-4 w-4" />
-            Download for Mac
-          </TrackedAnchor>
-          <TrackedAnchor
-            href="/release/windows/latest"
-            className="inline-flex items-center gap-2 px-5 py-2 rounded-full border border-white/10 text-sm text-muted-foreground hover:text-foreground hover:border-white/20 transition-colors"
-            event="download_windows"
-          >
-            <Download className="h-4 w-4" />
-            Download for Windows
-          </TrackedAnchor>
-        </div>
+        </Link>
 
         <div className="mt-8 flex items-center gap-3 text-sm text-muted-foreground/50">
-          <TrackedLink
-            href="/getting-started"
-            event="landing_getting_started"
-            className="hover:text-muted-foreground transition-colors"
-          >
+          <Link href="/getting-started" className="hover:text-muted-foreground transition-colors">
             Getting Started
-          </TrackedLink>
+          </Link>
           <span>&middot;</span>
-          <TrackedLink
-            href="/about"
-            event="landing_about"
-            className="hover:text-muted-foreground transition-colors"
-          >
+          <Link href="/about" className="hover:text-muted-foreground transition-colors">
             About
-          </TrackedLink>
-          <span>&middot;</span>
-          <span>
-            Created by{" "}
-            <TrackedAnchor
-              href="https://isaacsuttell.com"
-              event="landing_author"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-muted-foreground transition-colors"
-            >
-              Isaac Suttell
-            </TrackedAnchor>
-          </span>
+          </Link>
         </div>
       </div>
     </main>

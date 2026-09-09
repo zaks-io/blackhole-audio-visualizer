@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import type { ColorPaletteId } from "@/components/ColorModeSystem";
 import { syncFromStore } from "@/lib/runtimeStateRegistry";
-import { PARAM_DEFAULTS } from "@blackhole/backend/convex/lib/visualizationParameters";
+import { PARAM_DEFAULTS } from "@/lib/visualizationParameters";
 
 export interface VisualizationControlsState {
   // Black Hole

@@ -1,5 +1,6 @@
-import { useRef, useState, useCallback, useEffect } from "react";
+import { useRef, useState, useCallback, useEffect, useMemo } from "react";
 import gsap from "gsap";
+import { shuffle as shuffleArray } from "@/lib/shuffle";
 import type { CameraMode } from "@/components/CameraSystem";
 import type { CameraPresetItem } from "@/components/ProducerMode/types";
 
@@ -17,21 +18,6 @@ const initialState: CameraPlaylistState = {
   currentMode: null,
 };
 
-function shuffleArray<T>(array: T[]): T[] {
-  const result = [...array];
-  for (let i = result.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [result[i], result[j]] = [result[j], result[i]];
-  }
-  return result;
-}
-
-// Normalize camera presets to handle both old string format and new object format
-function normalizePresets(presets: (CameraPresetItem | string)[] | undefined): CameraPresetItem[] {
-  if (!presets) return [];
-  return presets.map((p) => (typeof p === "string" ? { mode: p } : p));
-}
-
 export function useCameraPlaylist(
   cameraPresets: CameraPresetItem[] | undefined,
   shuffle: boolean,
@@ -46,10 +32,7 @@ export function useCameraPlaylist(
   const timerRef = useRef<gsap.core.Tween | null>(null);
   const scheduleNextRef = useRef<((duration: number) => void) | null>(null);
 
-  // Normalize presets to handle legacy string format
-  const normalizedPresets = normalizePresets(
-    cameraPresets as (CameraPresetItem | string)[] | undefined
-  );
+  const normalizedPresets = useMemo(() => cameraPresets ?? [], [cameraPresets]);
   const effectiveDuration = defaultDuration ?? DEFAULT_CAMERA_DURATION;
 
   const advanceToNext = useCallback(() => {
@@ -135,9 +118,12 @@ export function useCameraPlaylist(
     };
   }, []);
 
-  return {
-    state,
-    start,
-    stop,
-  };
+  const pause = useCallback(() => {
+    timerRef.current?.pause();
+  }, []);
+  const resume = useCallback(() => {
+    timerRef.current?.resume();
+  }, []);
+
+  return { state, start, stop, pause, resume };
 }

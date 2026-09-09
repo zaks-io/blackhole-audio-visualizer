@@ -1,185 +1,79 @@
 # Blackhole Audio Visualizer
 
-Real-time music visualization built around a GPU-accelerated black hole particle
-simulation. Thousands of particles orbit and fall toward a central singularity,
-with physics and color reacting to live audio frequency data and beat detection.
+An offline desktop music visualizer built with Electron, React Three Fiber, and
+GPU particle shaders. Microphone or system audio drives the black hole simulation,
+colors, and camera movement. No account, backend, or cloud credentials are needed.
 
-Runs as a web app or a native desktop app (Electron).
+## Run locally
 
-> **Note on setup.** This is my personal project, opened up under MIT. It's wired
-> to a specific cloud stack (Convex, Auth0, Cloudflare R2, and a few AI providers)
-> and expects those to be configured — there is no offline/demo mode, and the app
-> will not boot without the required environment variables. If you just want the
-> rendering engine, the interesting, dependency-free parts are
-> `apps/web/lib/audio` (the audio analysis) and
-> `apps/web/components/BlackHoleSimulation` (the GPU renderer). Lift those out and
-> skip the rest. PRs welcome but support is best-effort.
+Install [Bun](https://bun.sh), then:
 
-## Features
-
-- **GPU particle system** — particles simulated entirely on the GPU via WebGL
-  compute shaders (position/velocity feedback textures), rendered with React
-  Three Fiber.
-- **Audio reactive** — custom in-browser spectral analysis (FFT-based band
-  energies, spectral flux beat detection with adaptive thresholds) running in a
-  Web Worker. No third-party audio library.
-- **Multiple audio sources** — microphone (web + desktop) or system audio
-  capture (desktop only).
-- **Presets, playlists, scenes** — save and share visualization configs, backed
-  by Convex.
-- **AI scenes** — agent-driven scene generation (LLM via OpenRouter, plus voice
-  and song generation). Optional feature cluster.
-- **Color palettes & camera modes** — beat-reactive palette transitions, multiple
-  camera presets with GSAP transitions.
-- **Recording** — export visualizations to video, stored in R2.
-
-## Tech Stack
-
-| Layer     | Tech                                                                                         |
-| --------- | -------------------------------------------------------------------------------------------- |
-| Framework | [Next.js 16](https://nextjs.org) (App Router), React 19                                      |
-| Rendering | [React Three Fiber](https://r3f.docs.pmnd.rs) + [Three.js](https://threejs.org), custom GLSL |
-| Audio     | Web Audio API + custom analysis worker (`apps/web/lib/audio`)                                |
-| State     | [Zustand](https://zustand.docs.pmnd.rs)                                                      |
-| UI        | Radix UI, Tailwind CSS v4, Framer Motion, GSAP                                               |
-| Backend   | [Convex](https://convex.dev) (DB + functions)                                                |
-| Auth      | [Auth0](https://auth0.com) (web), custom PKCE flow (desktop)                                 |
-| Storage   | Cloudflare R2 (S3-compatible)                                                                |
-| AI        | [AI SDK](https://sdk.vercel.ai) via OpenRouter, ElevenLabs, Coconut                          |
-| Desktop   | [Electron](https://electronjs.org) + electron-audio-loopback                                 |
-| Monorepo  | Turborepo + Bun workspaces                                                                   |
-
-## Repository Layout
-
-```
-apps/
-├── web/                  @blackhole/web — the Next.js app (web + Electron renderer)
-│   ├── app/              App Router. Parallel routes: @canvas (3D) + @ui (overlay)
-│   ├── components/       Feature-organized React components
-│   │   └── BlackHoleSimulation/   The simulation orchestrator + renderer
-│   ├── hooks/            use[Feature] hooks (audio, GPU, Convex data, recording)
-│   ├── lib/
-│   │   ├── audio/        Spectral analysis, envelope followers, beat detection
-│   │   ├── gpu/          GPU compute setup, Verlet physics constants
-│   │   └── workers/      audioAnalysis.worker.ts
-│   └── shaders/          GLSL (particles, simulation, starfield)
-│
-└── desktop/              @blackhole/desktop — Electron wrapper
-    └── src/              main.ts (main process), preload.ts (IPC bridge)
-
-packages/
-├── backend/              @blackhole/backend — Convex backend
-│   └── convex/
-│       ├── schema.ts     Table definitions
-│       ├── model/        Domain-organized functions (public/server/agents)
-│       └── lib/          Shared backend utilities (auth, r2, validators)
-├── eslint-config/        Shared ESLint config
-└── typescript-config/    Shared TS config
-```
-
-For a deeper map (data flow, key files, Convex conventions), see
-[CLAUDE.md](./CLAUDE.md).
-
-### How the pieces connect
-
-```
-Audio input (mic / system)
-    ↓
-audioAnalysis.worker.ts        ← FFT, band energies, spectral-flux beats
-    ↓
-useAudioAnalyzer               ← envelope followers, smoothing
-    ↓
-BlackHoleSimulation            ← orchestrator
-    ↓
-useGPUCompute                  ← position/velocity shaders (GPU feedback loop)
-    ↓
-ParticleSystem                 ← render shaders → screen
-```
-
-## Setup
-
-### Prerequisites
-
-- [Bun](https://bun.sh) 1.3.5+
-- A [Convex](https://convex.dev) account and project
-- An [Auth0](https://auth0.com) application (for web auth)
-- A Cloudflare R2 bucket (for recordings/releases)
-- API keys for the AI features (optional — see `.env.example`)
-
-### 1. Install
-
-```bash
+```sh
 bun install
+bun run electron:dev
 ```
 
-### 2. Environment
+For renderer development in a browser, use `bun run dev:web` and open
+http://localhost:3000/app. System audio capture is available in Electron;
+the browser supports microphone input.
 
-```bash
-cp .env.example .env.local
+## Presets and playlists
+
+The bundled collection lives in [apps/web/config/presets.json](apps/web/config/presets.json).
+It contains 77 supported presets and 17 playlists exported from production Convex.
+The export archive and migration details are in [exports/README.md](exports/README.md).
+
+Edit that JSON to change the collection shipped in the next release. Presets retain
+stable IDs so playlist references survive updates. Parameter definitions, defaults,
+and slider ranges live in [visualizationParameters.ts](apps/web/lib/visualizationParameters.ts).
+The app validates the bundled configuration at startup.
+
+The preset editor saves user changes locally. Only local edits, additions, and
+explicit deletions are persisted, so new releases can update unedited bundled
+presets. Existing `producer-presets` local storage is retained. Preset JSON import
+and export remain available in the editor.
+
+Some exported playlists reference deleted or unsupported presets. These entries
+remain visible as unavailable in the editor and must be removed before playback.
+No missing preset is silently replaced.
+
+## Recording
+
+Connect audio, then start recording from Settings. Stopping recording saves a local
+video file. Recordings are not uploaded. On macOS, system audio may require Screen
+Recording permission and microphone input requires Microphone permission.
+
+## Build
+
+```sh
+bun run electron:package:mac
+bun run electron:package:win
 ```
 
-Fill in the values. See `.env.example` for what each variable does and which are
-required to boot vs. optional. Server-side secrets (R2, AI keys) are set on the
-Convex deployment, not in `.env.local`.
+Installers are written to `release/`. The renderer is exported as static files and
+bundled inside the Electron app. No hosted web deployment is involved. Dependency
+installation and builds may download packages and fonts; the packaged app runs
+offline.
 
-### 3. Backend
+The manual `Build Electron App` GitHub Actions workflow builds desktop artifacts.
+Signing, notarization, and publishing a release are separate from local packaging.
 
-```bash
-cd packages/backend
-bunx convex dev          # provisions your dev deployment, prints NEXT_PUBLIC_CONVEX_URL
+## Checks
+
+```sh
+bun run lint
+bun run typecheck
+bun run format:check
+bun run test
 ```
 
-Set the server-side secrets on the deployment via the Convex dashboard or
-`bunx convex env set NAME value`.
+After packaging for your platform, run `bun run test:desktop`. It launches the
+packaged app offline, checks preset and playlist persistence, and saves a recording
+using synthetic audio. Physical microphone and system-audio permissions still need
+a manual check on the target machine.
 
-### 4. Run
-
-```bash
-bun dev                  # web + backend (Turborepo)
-```
-
-Open [http://localhost:3000](http://localhost:3000).
-
-## Development
-
-```bash
-bun dev                  # web + backend dev
-bun run dev:web          # web only
-bun run electron:dev     # desktop (launches Next dev server + Electron)
-
-bun run lint             # ESLint across all workspaces
-bun run typecheck        # TypeScript check across all workspaces
-bun run format:check     # Prettier check
-bun run test             # all tests (Vitest, via Turborepo)
-```
-
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for the contribution workflow.
-
-## Building
-
-**Web** (deployed on Vercel; `vercel.json` runs the Convex deploy + Next build):
-
-```bash
-bun run build
-```
-
-**Desktop:**
-
-```bash
-bun run electron:package:mac     # macOS
-bun run electron:package:win     # Windows
-```
-
-Output lands in `release/`. CI can also build desktop artifacts via the
-`Build Electron App` GitHub Actions workflow (manual dispatch).
-
-## Audio Input
-
-- **Web** — microphone only. Grant mic permission when prompted.
-- **Desktop** — microphone or system audio capture. System audio on macOS
-  requires Screen Recording permission (the app prompts you to enable it in
-  System Settings).
+See [CONTRIBUTING.md](CONTRIBUTING.md) and [CLAUDE.md](CLAUDE.md) for conventions.
 
 ## License
 
-[MIT](./LICENSE) © Isaac Suttell
+[MIT](LICENSE) © Isaac Suttell

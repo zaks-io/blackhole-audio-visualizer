@@ -1,5 +1,5 @@
 // ColorPaletteId is imported from the single source of truth
-import { type ColorPaletteId } from "@blackhole/backend/convex/lib/visualizationParameters";
+import { type ColorPaletteId } from "@/lib/visualizationParameters";
 export type { ColorPaletteId };
 
 export interface ColorPalette {

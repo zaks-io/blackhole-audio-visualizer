@@ -19,11 +19,9 @@ import {
 import {
   ArrowLeft,
   Plus,
-  Globe,
   Pencil,
   Check,
   X,
-  Loader2,
   Music,
   Shuffle,
   Clock,
@@ -36,7 +34,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Progress } from "@/components/ui/progress";
-import { useConvexPlaylists, usePlaylistWithPresets } from "@/hooks/useConvexPlaylists";
+import { usePlaylists, usePlaylistWithPresets } from "@/hooks/usePlaylists";
 import { usePlaylistPlayer } from "@/hooks/usePlaylistPlayer";
 import { PlaylistPresetItem } from "./PlaylistPresetItem";
 import { PresetPicker } from "./PresetPicker";
@@ -57,8 +55,8 @@ export function PlaylistEditor({ playlistId, onBack }: PlaylistEditorProps) {
     addCameraPreset,
     updateCameraPreset,
     removeCameraPreset,
-  } = useConvexPlaylists();
-  const { playlist, isLoading } = usePlaylistWithPresets(playlistId);
+  } = usePlaylists();
+  const { playlist } = usePlaylistWithPresets(playlistId);
   const {
     state: playerState,
     play,
@@ -80,18 +78,22 @@ export function PlaylistEditor({ playlistId, onBack }: PlaylistEditorProps) {
     })
   );
 
-  if (isLoading || !playlist) {
+  if (!playlist) {
     return (
-      <div className="flex-1 flex items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      <div className="flex-1 flex flex-col items-center justify-center gap-3 px-6 text-center">
+        <p className="text-sm text-muted-foreground">This playlist is unavailable.</p>
+        <Button variant="outline" size="sm" onClick={onBack}>
+          Back to Playlists
+        </Button>
       </div>
     );
   }
 
   const items = playlist.items ?? [];
   const presetIds = items.map((item) => item.presetId);
+  const hasMissingPresets = playlist.presets.some((preset) => preset === null);
 
-  const handleDragEnd = async (event: DragEndEvent) => {
+  const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
 
@@ -100,13 +102,13 @@ export function PlaylistEditor({ playlistId, onBack }: PlaylistEditorProps) {
 
     if (oldIndex !== -1 && newIndex !== -1) {
       const newOrder = arrayMove(presetIds, oldIndex, newIndex);
-      await reorderPresets(playlistId, newOrder);
+      reorderPresets(playlistId, newOrder);
     }
   };
 
-  const handleSaveName = async () => {
+  const handleSaveName = () => {
     if (editedName.trim() && editedName !== playlist.name) {
-      await updatePlaylist(playlistId, { name: editedName.trim() });
+      updatePlaylist(playlistId, { name: editedName.trim() });
     }
     setIsEditingName(false);
   };
@@ -116,7 +118,13 @@ export function PlaylistEditor({ playlistId, onBack }: PlaylistEditorProps) {
       {/* Header */}
       <div className="px-3 py-3 border-b border-white/5 space-y-3">
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={onBack}>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 shrink-0"
+            onClick={onBack}
+            aria-label="Back to playlists"
+          >
             <ArrowLeft className="h-4 w-4" />
           </Button>
 
@@ -137,6 +145,7 @@ export function PlaylistEditor({ playlistId, onBack }: PlaylistEditorProps) {
                 size="icon"
                 className="h-7 w-7 shrink-0"
                 onClick={handleSaveName}
+                aria-label="Save playlist name"
               >
                 <Check className="h-3 w-3" />
               </Button>
@@ -145,6 +154,7 @@ export function PlaylistEditor({ playlistId, onBack }: PlaylistEditorProps) {
                 size="icon"
                 className="h-7 w-7 shrink-0"
                 onClick={() => setIsEditingName(false)}
+                aria-label="Cancel playlist rename"
               >
                 <X className="h-3 w-3" />
               </Button>
@@ -160,22 +170,12 @@ export function PlaylistEditor({ playlistId, onBack }: PlaylistEditorProps) {
                   setEditedName(playlist.name);
                   setIsEditingName(true);
                 }}
+                aria-label="Rename playlist"
               >
                 <Pencil className="h-3 w-3" />
               </Button>
             </div>
           )}
-        </div>
-
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Globe className="h-4 w-4 text-muted-foreground" />
-            <span className="text-xs text-muted-foreground">Public</span>
-          </div>
-          <Switch
-            checked={playlist.isPublic}
-            onCheckedChange={() => updatePlaylist(playlistId, { isPublic: !playlist.isPublic })}
-          />
         </div>
 
         <div className="flex items-center justify-between">
@@ -238,13 +238,12 @@ export function PlaylistEditor({ playlistId, onBack }: PlaylistEditorProps) {
             <SortableContext items={presetIds} strategy={verticalListSortingStrategy}>
               <div className="space-y-1">
                 {playlist.items.map((item, index) => {
-                  const preset = playlist.presets.find((p) => p?._id === item.presetId);
-                  if (!preset) return null;
+                  const preset = playlist.presets[index];
                   return (
                     <PlaylistPresetItem
                       key={item.presetId}
                       id={item.presetId}
-                      name={preset.name}
+                      name={preset?.name ?? "Unavailable preset"}
                       index={index}
                       waitDuration={item.waitDuration}
                       defaultWaitDuration={playlist.defaultWaitDuration}
@@ -260,12 +259,15 @@ export function PlaylistEditor({ playlistId, onBack }: PlaylistEditorProps) {
             </SortableContext>
           </DndContext>
         )}
+        {hasMissingPresets && (
+          <p className="mt-3 text-xs text-destructive">
+            Remove unavailable presets before playing this playlist.
+          </p>
+        )}
       </div>
 
       <CameraPresetEditor
-        cameraPresets={
-          playlist.cameraPresets as (string | { mode: string; duration?: number })[] | undefined
-        }
+        cameraPresets={playlist.cameraPresets}
         defaultCameraDuration={playlist.defaultCameraDuration}
         onAdd={(mode) => addCameraPreset(playlistId, mode)}
         onUpdate={(index, duration) => updateCameraPreset(playlistId, index, duration)}
@@ -280,22 +282,52 @@ export function PlaylistEditor({ playlistId, onBack }: PlaylistEditorProps) {
         <div className="flex items-center justify-center gap-2">
           {playerState.isPlaying && !playerState.isPaused ? (
             <>
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={pause}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={pause}
+                aria-label="Pause playlist"
+              >
                 <Pause className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={skip}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={skip}
+                aria-label="Skip preset"
+              >
                 <SkipForward className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={stop}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={stop}
+                aria-label="Stop playlist"
+              >
                 <Square className="h-4 w-4" />
               </Button>
             </>
           ) : playerState.isPaused ? (
             <>
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={resume}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={resume}
+                aria-label="Resume playlist"
+              >
                 <Play className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={stop}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={stop}
+                aria-label="Stop playlist"
+              >
                 <Square className="h-4 w-4" />
               </Button>
             </>
@@ -304,7 +336,7 @@ export function PlaylistEditor({ playlistId, onBack }: PlaylistEditorProps) {
               variant="default"
               size="sm"
               onClick={play}
-              disabled={playlist.items.length === 0}
+              disabled={playlist.items.length === 0 || hasMissingPresets}
               className="h-8"
             >
               <Play className="h-4 w-4 mr-2" />
@@ -328,8 +360,8 @@ export function PlaylistEditor({ playlistId, onBack }: PlaylistEditorProps) {
       <PresetPicker
         open={pickerOpen}
         onOpenChange={setPickerOpen}
-        onSelect={async (presetId) => {
-          await addPreset(playlistId, presetId);
+        onSelect={(presetId) => {
+          addPreset(playlistId, presetId);
           setPickerOpen(false);
         }}
         excludeIds={presetIds}

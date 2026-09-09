@@ -1,0 +1,548 @@
+[
+  {
+    "id": "j970289sjp9ydegkbqbcp5d5cs7z6xgs",
+    "name": "Cinematic Jazz Entry",
+    "issues": [
+      {
+        "path": ["parameters", 10, "path"],
+        "message": "Unknown visualization parameter"
+      }
+    ]
+  },
+  {
+    "id": "j9705dr8cyb3qh0ftre1tbvk2x7z7dk5",
+    "name": "Dancing on the Edge",
+    "issues": [
+      {
+        "path": ["parameters", 10, "path"],
+        "message": "Unknown visualization parameter"
+      }
+    ]
+  },
+  {
+    "id": "j9708vebmqhksbq8azc20b7mvd7z60qa",
+    "name": "Echoes in the Void",
+    "issues": [
+      {
+        "path": ["parameters", 10, "path"],
+        "message": "Unknown visualization parameter"
+      }
+    ]
+  },
+  {
+    "id": "j970wjr24ed11pnfz1rr2wfcbx823a6d",
+    "name": "Surface Fadeout",
+    "issues": [
+      {
+        "path": ["parameters", 16, "path"],
+        "message": "Unknown visualization parameter"
+      }
+    ]
+  },
+  {
+    "id": "j971p00ww2xhvvdnfgcextzkts82263e",
+    "name": "Headed for the Fray",
+    "issues": [
+      {
+        "path": ["colorPalette"],
+        "message": "Invalid option: expected one of \"default\"|\"cool\"|\"warm\"|\"neon\"|\"sunset\"|\"ocean\"|\"grayscale\"|\"nebula-dreams\"|\"aurora-borealis\"|\"cosmic-twilight\"|\"solar-flare\"|\"lunar-eclipse\"|\"galactic-core\"|\"starfield\"|\"synthwave-horizon\"|\"vaporwave\"|\"cyberpunk-city\"|\"miami-vice\"|\"retrowave-outrun\"|\"electric-arcade\"|\"deep-ocean\"|\"bioluminescence\"|\"volcanic-ember\"|\"autumn-forest\"|\"arctic-aurora\"|\"tropical-reef\"|\"forest-mist\"|\"desert-dusk\"|\"cotton-candy\"|\"pastel-dreams\"|\"lavender-haze\"|\"rose-gold\"|\"bubblegum-pop\"|\"midnight-blue\"|\"crimson-noir\"|\"emerald-depths\"|\"amber-glow\""
+      },
+      {
+        "path": ["parameters", 16, "path"],
+        "message": "Unknown visualization parameter"
+      }
+    ]
+  },
+  {
+    "id": "j9720br64d1346hr08w3snq8hh822kxv",
+    "name": "Industrial Shredder",
+    "issues": [
+      {
+        "path": ["parameters", 16, "path"],
+        "message": "Unknown visualization parameter"
+      }
+    ]
+  },
+  {
+    "id": "j97260tspfjveh26yj9es43hg17z6va6",
+    "name": "Sultry Gravity",
+    "issues": [
+      {
+        "path": ["parameters", 10, "path"],
+        "message": "Unknown visualization parameter"
+      }
+    ]
+  },
+  {
+    "id": "j972d0gnp8j58946350kfyr1bs823kd9",
+    "name": "Speranza Underground",
+    "issues": [
+      {
+        "path": ["parameters", 16, "path"],
+        "message": "Unknown visualization parameter"
+      }
+    ]
+  },
+  {
+    "id": "j972dy9xe318k5t1bhqyrfy3td7z77av",
+    "name": "The Singularity Approaches",
+    "issues": [
+      {
+        "path": ["parameters", 10, "path"],
+        "message": "Unknown visualization parameter"
+      }
+    ]
+  },
+  {
+    "id": "j972qxmg4qk6y2scanvrbc1v057z7geb",
+    "name": "CHORUS: Spaghettified in Love",
+    "issues": [
+      {
+        "path": ["parameters", 10, "path"],
+        "message": "Unknown visualization parameter"
+      }
+    ]
+  },
+  {
+    "id": "j972vg4nwyrj1skhm7papfw1sh8259z7",
+    "name": "Interstellar Finale",
+    "issues": [
+      {
+        "path": ["parameters", 16, "path"],
+        "message": "Unknown visualization parameter"
+      }
+    ]
+  },
+  {
+    "id": "j9735hgfv1zebfb84k63x508wh822sjr",
+    "name": "Rust Belt Rhapsody",
+    "issues": [
+      {
+        "path": ["colorPalette"],
+        "message": "Invalid option: expected one of \"default\"|\"cool\"|\"warm\"|\"neon\"|\"sunset\"|\"ocean\"|\"grayscale\"|\"nebula-dreams\"|\"aurora-borealis\"|\"cosmic-twilight\"|\"solar-flare\"|\"lunar-eclipse\"|\"galactic-core\"|\"starfield\"|\"synthwave-horizon\"|\"vaporwave\"|\"cyberpunk-city\"|\"miami-vice\"|\"retrowave-outrun\"|\"electric-arcade\"|\"deep-ocean\"|\"bioluminescence\"|\"volcanic-ember\"|\"autumn-forest\"|\"arctic-aurora\"|\"tropical-reef\"|\"forest-mist\"|\"desert-dusk\"|\"cotton-candy\"|\"pastel-dreams\"|\"lavender-haze\"|\"rose-gold\"|\"bubblegum-pop\"|\"midnight-blue\"|\"crimson-noir\"|\"emerald-depths\"|\"amber-glow\""
+      },
+      {
+        "path": ["parameters", 16, "path"],
+        "message": "Unknown visualization parameter"
+      }
+    ]
+  },
+  {
+    "id": "j9745knn2gakq6tckgcj68y3q1823nyj",
+    "name": "Trust in the Dust",
+    "issues": [
+      {
+        "path": ["parameters", 16, "path"],
+        "message": "Unknown visualization parameter"
+      }
+    ]
+  },
+  {
+    "id": "j974xxsnz8sqttmkrb2g9qm7rn8229w2",
+    "name": "Speranza Sunset Resolution",
+    "issues": [
+      {
+        "path": ["colorPalette"],
+        "message": "Invalid option: expected one of \"default\"|\"cool\"|\"warm\"|\"neon\"|\"sunset\"|\"ocean\"|\"grayscale\"|\"nebula-dreams\"|\"aurora-borealis\"|\"cosmic-twilight\"|\"solar-flare\"|\"lunar-eclipse\"|\"galactic-core\"|\"starfield\"|\"synthwave-horizon\"|\"vaporwave\"|\"cyberpunk-city\"|\"miami-vice\"|\"retrowave-outrun\"|\"electric-arcade\"|\"deep-ocean\"|\"bioluminescence\"|\"volcanic-ember\"|\"autumn-forest\"|\"arctic-aurora\"|\"tropical-reef\"|\"forest-mist\"|\"desert-dusk\"|\"cotton-candy\"|\"pastel-dreams\"|\"lavender-haze\"|\"rose-gold\"|\"bubblegum-pop\"|\"midnight-blue\"|\"crimson-noir\"|\"emerald-depths\"|\"amber-glow\""
+      },
+      {
+        "path": ["parameters", 16, "path"],
+        "message": "Unknown visualization parameter"
+      }
+    ]
+  },
+  {
+    "id": "j974zcdz7b8vmn5epksghmewnx823rgx",
+    "name": "Memory of 2180",
+    "issues": [
+      {
+        "path": ["parameters", 16, "path"],
+        "message": "Unknown visualization parameter"
+      }
+    ]
+  },
+  {
+    "id": "j9753610zcjthw908evb1wxdxx7z6f3a",
+    "name": "Vast Cosmic Waltz Intro",
+    "issues": [
+      {
+        "path": ["parameters", 10, "path"],
+        "message": "Unknown visualization parameter"
+      }
+    ]
+  },
+  {
+    "id": "j9757r4pv4g3a3pwv72bc97xnn824n73",
+    "name": "The Final Echo",
+    "issues": [
+      {
+        "path": ["parameters", 16, "path"],
+        "message": "Unknown visualization parameter"
+      }
+    ]
+  },
+  {
+    "id": "j975pc1tws0c8fx1x9c2d5m4k57z7k2d",
+    "name": "The Triumphant Collapse",
+    "issues": [
+      {
+        "path": ["parameters", 10, "path"],
+        "message": "Unknown visualization parameter"
+      }
+    ]
+  },
+  {
+    "id": "j975rk0c5csh6ffp6cs9b4ne997z7zhf",
+    "name": "Spaghettified Love",
+    "issues": [
+      {
+        "path": ["parameters", 10, "path"],
+        "message": "Unknown visualization parameter"
+      }
+    ]
+  },
+  {
+    "id": "j9762rdxv58zmgqc5qpb5974wh822p9f",
+    "name": "Raider's Ultimate Bounce",
+    "issues": [
+      {
+        "path": ["colorPalette"],
+        "message": "Invalid option: expected one of \"default\"|\"cool\"|\"warm\"|\"neon\"|\"sunset\"|\"ocean\"|\"grayscale\"|\"nebula-dreams\"|\"aurora-borealis\"|\"cosmic-twilight\"|\"solar-flare\"|\"lunar-eclipse\"|\"galactic-core\"|\"starfield\"|\"synthwave-horizon\"|\"vaporwave\"|\"cyberpunk-city\"|\"miami-vice\"|\"retrowave-outrun\"|\"electric-arcade\"|\"deep-ocean\"|\"bioluminescence\"|\"volcanic-ember\"|\"autumn-forest\"|\"arctic-aurora\"|\"tropical-reef\"|\"forest-mist\"|\"desert-dusk\"|\"cotton-candy\"|\"pastel-dreams\"|\"lavender-haze\"|\"rose-gold\"|\"bubblegum-pop\"|\"midnight-blue\"|\"crimson-noir\"|\"emerald-depths\"|\"amber-glow\""
+      },
+      {
+        "path": ["parameters", 16, "path"],
+        "message": "Unknown visualization parameter"
+      }
+    ]
+  },
+  {
+    "id": "j9762s6h3w7fnnzbajea85xwkd7z78zf",
+    "name": "Swallowed by the Void",
+    "issues": [
+      {
+        "path": ["parameters", 10, "path"],
+        "message": "Unknown visualization parameter"
+      }
+    ]
+  },
+  {
+    "id": "j976cq6n6187gy7aa2mbc21adx7z6rh8",
+    "name": "Stretched Thin as Glass",
+    "issues": [
+      {
+        "path": ["parameters", 10, "path"],
+        "message": "Unknown visualization parameter"
+      }
+    ]
+  },
+  {
+    "id": "j976waz1tmj80qrnz8wbadf79d8221kp",
+    "name": "Moonlight Momentum",
+    "issues": [
+      {
+        "path": ["parameters", 16, "path"],
+        "message": "Unknown visualization parameter"
+      }
+    ]
+  },
+  {
+    "id": "j97763knjkwvj46141ef6w9fnx82272v",
+    "name": "Wreckage Recovery",
+    "issues": [
+      {
+        "path": ["parameters", 16, "path"],
+        "message": "Unknown visualization parameter"
+      }
+    ]
+  },
+  {
+    "id": "j977x06bsb8jp19zedmsb870s97z7c60",
+    "name": "Total Singularity Breakdown",
+    "issues": [
+      {
+        "path": ["parameters", 10, "path"],
+        "message": "Unknown visualization parameter"
+      }
+    ]
+  },
+  {
+    "id": "j978d0ct4krj81xm7eqy1by0n5823j0v",
+    "name": "Scrappy's Jazz Rhythm",
+    "issues": [
+      {
+        "path": ["colorPalette"],
+        "message": "Invalid option: expected one of \"default\"|\"cool\"|\"warm\"|\"neon\"|\"sunset\"|\"ocean\"|\"grayscale\"|\"nebula-dreams\"|\"aurora-borealis\"|\"cosmic-twilight\"|\"solar-flare\"|\"lunar-eclipse\"|\"galactic-core\"|\"starfield\"|\"synthwave-horizon\"|\"vaporwave\"|\"cyberpunk-city\"|\"miami-vice\"|\"retrowave-outrun\"|\"electric-arcade\"|\"deep-ocean\"|\"bioluminescence\"|\"volcanic-ember\"|\"autumn-forest\"|\"arctic-aurora\"|\"tropical-reef\"|\"forest-mist\"|\"desert-dusk\"|\"cotton-candy\"|\"pastel-dreams\"|\"lavender-haze\"|\"rose-gold\"|\"bubblegum-pop\"|\"midnight-blue\"|\"crimson-noir\"|\"emerald-depths\"|\"amber-glow\""
+      },
+      {
+        "path": ["parameters", 16, "path"],
+        "message": "Unknown visualization parameter"
+      }
+    ]
+  },
+  {
+    "id": "j978fc20wd141m3x05rzpsapad823xd2",
+    "name": "Sky Cracked Open",
+    "issues": [
+      {
+        "path": ["parameters", 16, "path"],
+        "message": "Unknown visualization parameter"
+      }
+    ]
+  },
+  {
+    "id": "j978gwfkhbmdpbw7djdd0ejg95823t9f",
+    "name": "Trumpet Shout Surge",
+    "issues": [
+      {
+        "path": ["colorPalette"],
+        "message": "Invalid option: expected one of \"default\"|\"cool\"|\"warm\"|\"neon\"|\"sunset\"|\"ocean\"|\"grayscale\"|\"nebula-dreams\"|\"aurora-borealis\"|\"cosmic-twilight\"|\"solar-flare\"|\"lunar-eclipse\"|\"galactic-core\"|\"starfield\"|\"synthwave-horizon\"|\"vaporwave\"|\"cyberpunk-city\"|\"miami-vice\"|\"retrowave-outrun\"|\"electric-arcade\"|\"deep-ocean\"|\"bioluminescence\"|\"volcanic-ember\"|\"autumn-forest\"|\"arctic-aurora\"|\"tropical-reef\"|\"forest-mist\"|\"desert-dusk\"|\"cotton-candy\"|\"pastel-dreams\"|\"lavender-haze\"|\"rose-gold\"|\"bubblegum-pop\"|\"midnight-blue\"|\"crimson-noir\"|\"emerald-depths\"|\"amber-glow\""
+      },
+      {
+        "path": ["parameters", 16, "path"],
+        "message": "Unknown visualization parameter"
+      }
+    ]
+  },
+  {
+    "id": "j978yv2h5z42p1h0ex9cvjp0ws823tt5",
+    "name": "We Still Stand",
+    "issues": [
+      {
+        "path": ["parameters", 16, "path"],
+        "message": "Unknown visualization parameter"
+      }
+    ]
+  },
+  {
+    "id": "j979bv29p4xtcz8mpfkvcydbv18232mc",
+    "name": "Cosmic Bouncing Kittens",
+    "issues": [
+      {
+        "path": ["parameters", 16, "path"],
+        "message": "Unknown visualization parameter"
+      }
+    ]
+  },
+  {
+    "id": "j979kndt2y4vpf0t9q8vh3k4vn825m59",
+    "name": "Saxophone Glitch Burst",
+    "issues": [
+      {
+        "path": ["parameters", 16, "path"],
+        "message": "Unknown visualization parameter"
+      }
+    ]
+  },
+  {
+    "id": "j97a6hmfaw187f4gp4bd9r2ess7z6pe7",
+    "name": "FINAL CHORUS: Triumphant Collision",
+    "issues": [
+      {
+        "path": ["parameters", 10, "path"],
+        "message": "Unknown visualization parameter"
+      }
+    ]
+  },
+  {
+    "id": "j97ad5wz233ad7wnksrzsnspg57z6hrr",
+    "name": "The Event Horizon Swell",
+    "issues": [
+      {
+        "path": ["parameters", 10, "path"],
+        "message": "Unknown visualization parameter"
+      }
+    ]
+  },
+  {
+    "id": "j97afer2ksc4tvx6xcfhbcf605823h0m",
+    "name": "Arc Raiders Rising",
+    "issues": [
+      {
+        "path": ["parameters", 16, "path"],
+        "message": "Unknown visualization parameter"
+      }
+    ]
+  },
+  {
+    "id": "j97afqzxqx0wm57n55p8jbtzqd8243v7",
+    "name": "Event Horizon Crawl",
+    "issues": [
+      {
+        "path": ["parameters", 16, "path"],
+        "message": "Unknown visualization parameter"
+      }
+    ]
+  },
+  {
+    "id": "j97ag1xssgc50tx3djv1wy8f7n82203d",
+    "name": "Mechanical Drones",
+    "issues": [
+      {
+        "path": ["parameters", 16, "path"],
+        "message": "Unknown visualization parameter"
+      }
+    ]
+  },
+  {
+    "id": "j97akepd55jxv8j6t376p0m0d5823j72",
+    "name": "Fanfare Flare",
+    "issues": [
+      {
+        "path": ["colorPalette"],
+        "message": "Invalid option: expected one of \"default\"|\"cool\"|\"warm\"|\"neon\"|\"sunset\"|\"ocean\"|\"grayscale\"|\"nebula-dreams\"|\"aurora-borealis\"|\"cosmic-twilight\"|\"solar-flare\"|\"lunar-eclipse\"|\"galactic-core\"|\"starfield\"|\"synthwave-horizon\"|\"vaporwave\"|\"cyberpunk-city\"|\"miami-vice\"|\"retrowave-outrun\"|\"electric-arcade\"|\"deep-ocean\"|\"bioluminescence\"|\"volcanic-ember\"|\"autumn-forest\"|\"arctic-aurora\"|\"tropical-reef\"|\"forest-mist\"|\"desert-dusk\"|\"cotton-candy\"|\"pastel-dreams\"|\"lavender-haze\"|\"rose-gold\"|\"bubblegum-pop\"|\"midnight-blue\"|\"crimson-noir\"|\"emerald-depths\"|\"amber-glow\""
+      },
+      {
+        "path": ["parameters", 16, "path"],
+        "message": "Unknown visualization parameter"
+      }
+    ]
+  },
+  {
+    "id": "j97amctmgd10nra7mgs678ea317z61gk",
+    "name": "Spheres of Desire",
+    "issues": [
+      {
+        "path": ["parameters", 10, "path"],
+        "message": "Unknown visualization parameter"
+      }
+    ]
+  },
+  {
+    "id": "j97b03rkd6f5rc4c2z1g5kcd3s8255t4",
+    "name": "Singularity Tension",
+    "issues": [
+      {
+        "path": ["parameters", 16, "path"],
+        "message": "Unknown visualization parameter"
+      }
+    ]
+  },
+  {
+    "id": "j97b3vtyf50p77nsc6gkg623y97z66vg",
+    "name": "BRIDGE: Brass Explosion & Glitch",
+    "issues": [
+      {
+        "path": ["parameters", 10, "path"],
+        "message": "Unknown visualization parameter"
+      }
+    ]
+  },
+  {
+    "id": "j97bh3vmk7h9p8qf9dpmpjg3b9823qee",
+    "name": "Purr of Delight",
+    "issues": [
+      {
+        "path": ["parameters", 16, "path"],
+        "message": "Unknown visualization parameter"
+      }
+    ]
+  },
+  {
+    "id": "j97cqvwj58t9j1cm6kc259x31s7z7148",
+    "name": "Romantic Gravitational Pull",
+    "issues": [
+      {
+        "path": ["parameters", 10, "path"],
+        "message": "Unknown visualization parameter"
+      }
+    ]
+  },
+  {
+    "id": "j97d8jt1zqycnkssaq0qqbjwp9823jch",
+    "name": "Rosie's Swirling Grace",
+    "issues": [
+      {
+        "path": ["parameters", 16, "path"],
+        "message": "Unknown visualization parameter"
+      }
+    ]
+  },
+  {
+    "id": "j97dj6sc0pmewm3vhhd006dm7n823hv8",
+    "name": "Rocket's Feline Ambition",
+    "issues": [
+      {
+        "path": ["parameters", 16, "path"],
+        "message": "Unknown visualization parameter"
+      }
+    ]
+  },
+  {
+    "id": "j97dj8fmy2grkt43aan5rbnx2582265z",
+    "name": "Speranza Underground",
+    "issues": [
+      {
+        "path": ["colorPalette"],
+        "message": "Invalid option: expected one of \"default\"|\"cool\"|\"warm\"|\"neon\"|\"sunset\"|\"ocean\"|\"grayscale\"|\"nebula-dreams\"|\"aurora-borealis\"|\"cosmic-twilight\"|\"solar-flare\"|\"lunar-eclipse\"|\"galactic-core\"|\"starfield\"|\"synthwave-horizon\"|\"vaporwave\"|\"cyberpunk-city\"|\"miami-vice\"|\"retrowave-outrun\"|\"electric-arcade\"|\"deep-ocean\"|\"bioluminescence\"|\"volcanic-ember\"|\"autumn-forest\"|\"arctic-aurora\"|\"tropical-reef\"|\"forest-mist\"|\"desert-dusk\"|\"cotton-candy\"|\"pastel-dreams\"|\"lavender-haze\"|\"rose-gold\"|\"bubblegum-pop\"|\"midnight-blue\"|\"crimson-noir\"|\"emerald-depths\"|\"amber-glow\""
+      },
+      {
+        "path": ["parameters", 16, "path"],
+        "message": "Unknown visualization parameter"
+      }
+    ]
+  },
+  {
+    "id": "j97drd1wcewe8s6b6143rkryhn824yjg",
+    "name": "Spaghettified Love",
+    "issues": [
+      {
+        "path": ["parameters", 16, "path"],
+        "message": "Unknown visualization parameter"
+      }
+    ]
+  },
+  {
+    "id": "j97ee5572fcp1v6xm15raw99vn823vyc",
+    "name": "Surface Run Urgent",
+    "issues": [
+      {
+        "path": ["parameters", 16, "path"],
+        "message": "Unknown visualization parameter"
+      }
+    ]
+  },
+  {
+    "id": "j97egf6q7w1h7p5e46t9ya0wq5823660",
+    "name": "Nebula Awakening",
+    "issues": [
+      {
+        "path": ["parameters", 16, "path"],
+        "message": "Unknown visualization parameter"
+      }
+    ]
+  },
+  {
+    "id": "j97eh9abyzqpg0hrxg4td2vqkx7z7fky",
+    "name": "Romantic Orbit Waltz",
+    "issues": [
+      {
+        "path": ["parameters", 10, "path"],
+        "message": "Unknown visualization parameter"
+      }
+    ]
+  },
+  {
+    "id": "j97et2fn1b4pf362m1qypfs3fs8237k1",
+    "name": "Loadout Build-Up",
+    "issues": [
+      {
+        "path": ["colorPalette"],
+        "message": "Invalid option: expected one of \"default\"|\"cool\"|\"warm\"|\"neon\"|\"sunset\"|\"ocean\"|\"grayscale\"|\"nebula-dreams\"|\"aurora-borealis\"|\"cosmic-twilight\"|\"solar-flare\"|\"lunar-eclipse\"|\"galactic-core\"|\"starfield\"|\"synthwave-horizon\"|\"vaporwave\"|\"cyberpunk-city\"|\"miami-vice\"|\"retrowave-outrun\"|\"electric-arcade\"|\"deep-ocean\"|\"bioluminescence\"|\"volcanic-ember\"|\"autumn-forest\"|\"arctic-aurora\"|\"tropical-reef\"|\"forest-mist\"|\"desert-dusk\"|\"cotton-candy\"|\"pastel-dreams\"|\"lavender-haze\"|\"rose-gold\"|\"bubblegum-pop\"|\"midnight-blue\"|\"crimson-noir\"|\"emerald-depths\"|\"amber-glow\""
+      },
+      {
+        "path": ["parameters", 16, "path"],
+        "message": "Unknown visualization parameter"
+      }
+    ]
+  },
+  {
+    "id": "j97expn6qbvfyza85nw1j4qeks7z6r28",
+    "name": "Massive Dilation",
+    "issues": [
+      {
+        "path": ["parameters", 10, "path"],
+        "message": "Unknown visualization parameter"
+      }
+    ]
+  }
+]

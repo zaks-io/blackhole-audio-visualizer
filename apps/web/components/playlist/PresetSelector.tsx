@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo } from "react";
 import { Sparkles, Play, Pause, SkipForward } from "lucide-react";
-import { useConvexAuth } from "convex/react";
 import {
   Select,
   SelectContent,
@@ -15,38 +14,26 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useConvexPresets } from "@/hooks/useConvexPresets";
-import { useConvexPlaylists } from "@/hooks/useConvexPlaylists";
+import { usePlaylists } from "@/hooks/usePlaylists";
 import { useFeelingLucky } from "@/hooks/useFeelingLucky";
 import { usePlayPreset } from "@/components/ProducerMode/usePlayPreset";
+import { usePresets } from "@/components/ProducerMode/usePresets";
 import { useCameraMode, type CameraMode } from "@/components/CameraSystem";
 import { usePresetSelector } from "./usePresetSelector";
-import type { ConvexPreset, Playlist, Preset } from "@/components/ProducerMode/types";
+import type { Playlist, Preset } from "@/components/ProducerMode/types";
 
 interface PresetSelectorProps {
   compact?: boolean;
 }
 
 interface GroupedPresets {
-  ungrouped: ConvexPreset[];
-  byPlaylist: Array<{ playlist: Playlist; presets: ConvexPreset[] }>;
-  publicUngrouped: ConvexPreset[];
-}
-
-function convexPresetToPreset(preset: ConvexPreset): Preset {
-  return {
-    id: preset._id,
-    name: preset.name,
-    colorPalette: preset.colorPalette,
-    parameters: preset.parameters,
-    cameraMode: preset.cameraMode,
-  };
+  ungrouped: Preset[];
+  byPlaylist: Array<{ playlist: Playlist; presets: Preset[] }>;
 }
 
 export function PresetSelector({ compact = false }: PresetSelectorProps) {
-  const { isAuthenticated } = useConvexAuth();
-  const { presets: myPresets, publicPresets, isLoading: presetsLoading } = useConvexPresets();
-  const { playlists, publicPlaylists, isLoading: playlistsLoading } = useConvexPlaylists();
+  const { presets, setActivePreset } = usePresets();
+  const { playlists } = usePlaylists();
   const cameraMode = useCameraMode();
 
   const {
@@ -54,8 +41,6 @@ export function PresetSelector({ compact = false }: PresetSelectorProps) {
     setMode,
     selectedPresetId,
     setSelectedPresetId,
-    activePresetId,
-    setActivePresetId,
     isLuckyPlaying,
     triggerStop,
     triggerPlay,
@@ -63,31 +48,25 @@ export function PresetSelector({ compact = false }: PresetSelectorProps) {
 
   const { playPreset, stopAll } = usePlayPreset();
 
-  const allPresets = useMemo(() => [...myPresets, ...publicPresets], [myPresets, publicPresets]);
-  const allPlaylists = useMemo(
-    () => [...playlists, ...publicPlaylists],
-    [playlists, publicPlaylists]
-  );
-
-  const feelingLucky = useFeelingLucky(allPresets);
+  const feelingLucky = useFeelingLucky(presets);
 
   const groupedPresets = useMemo((): GroupedPresets => {
     const presetIdsInPlaylists = new Set<string>();
-    for (const playlist of allPlaylists) {
+    for (const playlist of playlists) {
       for (const item of playlist.items) {
         presetIdsInPlaylists.add(item.presetId);
       }
     }
 
-    const ungrouped = myPresets.filter((p) => !presetIdsInPlaylists.has(p._id));
+    const ungrouped = presets.filter((preset) => !presetIdsInPlaylists.has(preset.id));
 
     const byPlaylist: GroupedPresets["byPlaylist"] = [];
-    for (const playlist of allPlaylists) {
+    for (const playlist of playlists) {
       const seenIds = new Set<string>();
-      const playlistPresets: ConvexPreset[] = [];
+      const playlistPresets: Preset[] = [];
       for (const item of playlist.items) {
         if (seenIds.has(item.presetId)) continue;
-        const preset = allPresets.find((p) => p._id === item.presetId);
+        const preset = presets.find((candidate) => candidate.id === item.presetId);
         if (preset) {
           seenIds.add(item.presetId);
           playlistPresets.push(preset);
@@ -98,23 +77,18 @@ export function PresetSelector({ compact = false }: PresetSelectorProps) {
       }
     }
 
-    const publicUngrouped = publicPresets.filter((p) => !presetIdsInPlaylists.has(p._id));
-
-    return { ungrouped, byPlaylist, publicUngrouped };
-  }, [myPresets, publicPresets, allPresets, allPlaylists]);
-
-  const isLoading = presetsLoading || playlistsLoading;
+    return { ungrouped, byPlaylist };
+  }, [presets, playlists]);
 
   useEffect(() => {
-    if (isLoading) return;
     if (mode === "preset" && selectedPresetId) {
-      const exists = allPresets.some((p) => p._id === selectedPresetId);
+      const exists = presets.some((preset) => preset.id === selectedPresetId);
       if (!exists) {
         setMode("feeling-lucky");
         setSelectedPresetId(null);
       }
     }
-  }, [isLoading, mode, selectedPresetId, allPresets, setMode, setSelectedPresetId]);
+  }, [mode, selectedPresetId, presets, setMode, setSelectedPresetId]);
 
   const handleValueChange = (value: string) => {
     const switchingToLucky = value === "feeling-lucky";
@@ -133,14 +107,14 @@ export function PresetSelector({ compact = false }: PresetSelectorProps) {
     } else if (value === "none") {
       setMode("none");
       setSelectedPresetId(null);
-      setActivePresetId(null);
+      setActivePreset(null);
     } else {
-      const preset = allPresets.find((p) => p._id === value);
+      const preset = presets.find((candidate) => candidate.id === value);
       setMode("preset");
       setSelectedPresetId(value);
-      setActivePresetId(value);
+      setActivePreset(value);
       if (preset) {
-        playPreset(convexPresetToPreset(preset));
+        playPreset(preset);
         if (preset.cameraMode) {
           cameraMode.setMode(preset.cameraMode as CameraMode);
         }
@@ -158,24 +132,23 @@ export function PresetSelector({ compact = false }: PresetSelectorProps) {
   const displayName = useMemo(() => {
     if (mode === "feeling-lucky") return "Feeling Lucky";
     if (mode === "preset" && selectedPresetId) {
-      const preset = allPresets.find((p) => p._id === selectedPresetId);
+      const preset = presets.find((candidate) => candidate.id === selectedPresetId);
       return preset?.name ?? "Preset";
     }
     return "None";
-  }, [mode, selectedPresetId, allPresets]);
+  }, [mode, selectedPresetId, presets]);
 
-  const hasPresets = allPresets.length > 0;
+  const hasPresets = presets.length > 0;
 
   return (
     <div className="flex items-center gap-1">
       <div className={cn(compact && "hidden sm:block")}>
-        <Select value={currentValue} onValueChange={handleValueChange} disabled={isLoading}>
+        <Select value={currentValue} onValueChange={handleValueChange}>
           <SelectTrigger
             className={cn(
               "h-10 w-40 gap-2 rounded-full border-0 bg-transparent px-3",
               "hover:bg-accent/50",
-              "focus:ring-0 focus-visible:ring-0",
-              isLoading && "opacity-50 cursor-wait"
+              "focus:ring-0 focus-visible:ring-0"
             )}
           >
             <Sparkles className="h-4 w-4" />
@@ -194,42 +167,27 @@ export function PresetSelector({ compact = false }: PresetSelectorProps) {
 
             {hasPresets && <SelectSeparator />}
 
-            {isAuthenticated && groupedPresets.ungrouped.length > 0 && (
+            {groupedPresets.ungrouped.length > 0 && (
               <>
                 {groupedPresets.ungrouped.map((preset) => (
-                  <SelectItem key={preset._id} value={preset._id}>
+                  <SelectItem key={preset.id} value={preset.id}>
                     {preset.name}
                   </SelectItem>
                 ))}
-                {(groupedPresets.byPlaylist.length > 0 ||
-                  groupedPresets.publicUngrouped.length > 0) && <SelectSeparator />}
+                {groupedPresets.byPlaylist.length > 0 && <SelectSeparator />}
               </>
             )}
 
             {groupedPresets.byPlaylist.map(({ playlist, presets }) => (
-              <SelectGroup key={playlist._id}>
+              <SelectGroup key={playlist.id}>
                 <SelectLabel>{playlist.name}</SelectLabel>
                 {presets.map((preset) => (
-                  <SelectItem key={`${playlist._id}-${preset._id}`} value={preset._id}>
+                  <SelectItem key={`${playlist.id}-${preset.id}`} value={preset.id}>
                     {preset.name}
                   </SelectItem>
                 ))}
               </SelectGroup>
             ))}
-
-            {groupedPresets.publicUngrouped.length > 0 && (
-              <>
-                {groupedPresets.byPlaylist.length > 0 && <SelectSeparator />}
-                <SelectGroup>
-                  <SelectLabel>Public Presets</SelectLabel>
-                  {groupedPresets.publicUngrouped.map((preset) => (
-                    <SelectItem key={preset._id} value={preset._id}>
-                      {preset.name}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </>
-            )}
           </SelectContent>
         </Select>
       </div>
@@ -291,6 +249,11 @@ export function PresetSelector({ compact = false }: PresetSelectorProps) {
               "h-10 w-10 rounded-full",
               feelingLucky.state.isPlaying && !feelingLucky.state.isPaused && "bg-white/10"
             )}
+            aria-label={
+              !feelingLucky.state.isPlaying || feelingLucky.state.isPaused
+                ? "Play random presets"
+                : "Pause random presets"
+            }
           >
             {!feelingLucky.state.isPlaying || feelingLucky.state.isPaused ? (
               <Play className="h-4 w-4" />
@@ -305,6 +268,7 @@ export function PresetSelector({ compact = false }: PresetSelectorProps) {
           onClick={() => feelingLucky.skip()}
           disabled={!feelingLucky.state.isPlaying}
           className="h-10 w-10 rounded-full"
+          aria-label="Skip random preset"
         >
           <SkipForward className="h-4 w-4" />
         </Button>

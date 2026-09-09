@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import { Save, Download, Upload, Copy, CloudUpload, Loader2 } from "lucide-react";
+import { Save, Download, Upload, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -171,82 +171,6 @@ export function PresetImportDialog({
           </Button>
           <Button onClick={onSubmit} disabled={!value.trim()}>
             Import
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-interface MigrateDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  localPresets: { id: string; name: string }[];
-  migrating: boolean;
-  progress: { current: number; total: number };
-  onMigrate: () => void;
-}
-
-export function PresetMigrateDialog({
-  open,
-  onOpenChange,
-  localPresets,
-  migrating,
-  progress,
-  onMigrate,
-}: MigrateDialogProps) {
-  return (
-    <Dialog open={open} onOpenChange={(o) => !migrating && onOpenChange(o)}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Migrate Local Presets to Cloud</DialogTitle>
-          <DialogDescription>
-            {localPresets.length} local preset{localPresets.length !== 1 ? "s" : ""} will be
-            uploaded to your cloud account. Local presets will be removed after migration.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="py-4">
-          <div className="max-h-48 overflow-y-auto space-y-1">
-            {localPresets.map((preset) => (
-              <div
-                key={preset.id}
-                className="text-sm text-muted-foreground px-2 py-1 bg-white/5 rounded"
-              >
-                {preset.name}
-              </div>
-            ))}
-          </div>
-          {migrating && (
-            <div className="mt-4 space-y-2">
-              <div className="flex items-center gap-2 text-sm">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Migrating {progress.current} of {progress.total}...
-              </div>
-              <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-primary transition-all"
-                  style={{ width: `${(progress.current / progress.total) * 100}%` }}
-                />
-              </div>
-            </div>
-          )}
-        </div>
-        <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={migrating}>
-            Cancel
-          </Button>
-          <Button onClick={onMigrate} disabled={migrating}>
-            {migrating ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Migrating...
-              </>
-            ) : (
-              <>
-                <CloudUpload className="h-4 w-4 mr-2" />
-                Migrate All
-              </>
-            )}
           </Button>
         </DialogFooter>
       </DialogContent>

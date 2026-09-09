@@ -1,5 +1,8 @@
 "use client";
 
+import { Gauge, ListMusic, Sparkles, Video, Zap } from "lucide-react";
+import type { CameraMode } from "@/components/CameraSystem";
+import type { Playlist, Preset } from "@/components/ProducerMode/types";
 import {
   DropdownMenuItem,
   DropdownMenuLabel,
@@ -9,9 +12,6 @@ import {
   DropdownMenuSubTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Switch } from "@/components/ui/switch";
-import { Gauge, Zap, Video, ListMusic, Film } from "lucide-react";
-import type { CameraMode } from "@/components/CameraSystem";
-import type { ConvexPreset } from "@/components/ProducerMode/types";
 
 interface CameraModeEntry {
   id: CameraMode;
@@ -30,17 +30,17 @@ export function CameraMenuSection({ currentMode, modes, onSelect }: CameraMenuSe
       <DropdownMenuSubTrigger className="cursor-pointer">
         <Video className="mr-2 h-4 w-4" />
         <span className="truncate">
-          {modes.find((m) => m.id === currentMode)?.label ?? "Camera"}
+          {modes.find((mode) => mode.id === currentMode)?.label ?? "Camera"}
         </span>
       </DropdownMenuSubTrigger>
       <DropdownMenuSubContent>
-        {modes.map((m) => (
+        {modes.map((mode) => (
           <DropdownMenuItem
-            key={m.id}
-            onClick={() => onSelect(m.id)}
-            className={`cursor-pointer ${currentMode === m.id ? "bg-primary/20" : ""}`}
+            key={mode.id}
+            onClick={() => onSelect(mode.id)}
+            className={`cursor-pointer ${currentMode === mode.id ? "bg-primary/20" : ""}`}
           >
-            {m.label}
+            {mode.label}
           </DropdownMenuItem>
         ))}
       </DropdownMenuSubContent>
@@ -49,17 +49,15 @@ export function CameraMenuSection({ currentMode, modes, onSelect }: CameraMenuSe
 }
 
 interface PlaylistGroup {
-  playlist: { _id: string; name: string };
-  presets: (ConvexPreset | undefined | null)[];
+  playlist: Playlist;
+  presets: Preset[];
 }
 
 interface PresetMenuSectionProps {
   displayName: string;
   presetMode: string;
   selectedPresetId: string | null;
-  isLoading: boolean;
-  ungroupedPresets: ConvexPreset[];
-  publicUngroupedPresets: ConvexPreset[];
+  ungroupedPresets: Preset[];
   playlistGroups: PlaylistGroup[];
   onSelect: (presetId: string | null, mode: "none" | "preset" | "feeling-lucky") => void;
 }
@@ -68,9 +66,7 @@ export function PresetMenuSection({
   displayName,
   presetMode,
   selectedPresetId,
-  isLoading,
   ungroupedPresets,
-  publicUngroupedPresets,
   playlistGroups,
   onSelect,
 }: PresetMenuSectionProps) {
@@ -85,7 +81,8 @@ export function PresetMenuSection({
           onClick={() => onSelect(null, "feeling-lucky")}
           className={`cursor-pointer ${presetMode === "feeling-lucky" ? "bg-primary/20" : ""}`}
         >
-          ✨ I&apos;m Feeling Lucky
+          <Sparkles className="mr-2 h-4 w-4" />
+          I&apos;m Feeling Lucky
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => onSelect(null, "none")}
@@ -93,135 +90,37 @@ export function PresetMenuSection({
         >
           None
         </DropdownMenuItem>
-        {!isLoading && (
+        {ungroupedPresets.length > 0 && (
           <>
-            {ungroupedPresets.length > 0 && (
-              <>
-                <DropdownMenuSeparator />
-                {ungroupedPresets.map((p) => (
-                  <DropdownMenuItem
-                    key={p._id}
-                    onClick={() => onSelect(p._id, "preset")}
-                    className={`cursor-pointer ${selectedPresetId === p._id ? "bg-primary/20" : ""}`}
-                  >
-                    {p.name}
-                  </DropdownMenuItem>
-                ))}
-              </>
-            )}
-            {playlistGroups.map(({ playlist, presets }) => (
-              <div key={playlist._id}>
-                <DropdownMenuSeparator />
-                <DropdownMenuLabel className="text-xs text-muted-foreground">
-                  {playlist.name}
-                </DropdownMenuLabel>
-                {presets.map((p) => (
-                  <DropdownMenuItem
-                    key={`${playlist._id}-${p!._id}`}
-                    onClick={() => onSelect(p!._id, "preset")}
-                    className={`cursor-pointer ${selectedPresetId === p!._id ? "bg-primary/20" : ""}`}
-                  >
-                    {p!.name}
-                  </DropdownMenuItem>
-                ))}
-              </div>
+            <DropdownMenuSeparator />
+            {ungroupedPresets.map((preset) => (
+              <DropdownMenuItem
+                key={preset.id}
+                onClick={() => onSelect(preset.id, "preset")}
+                className={`cursor-pointer ${selectedPresetId === preset.id ? "bg-primary/20" : ""}`}
+              >
+                {preset.name}
+              </DropdownMenuItem>
             ))}
-            {publicUngroupedPresets.length > 0 && (
-              <>
-                <DropdownMenuSeparator />
-                <DropdownMenuLabel className="text-xs text-muted-foreground">
-                  Public Presets
-                </DropdownMenuLabel>
-                {publicUngroupedPresets.map((p) => (
-                  <DropdownMenuItem
-                    key={p._id}
-                    onClick={() => onSelect(p._id, "preset")}
-                    className={`cursor-pointer ${selectedPresetId === p._id ? "bg-primary/20" : ""}`}
-                  >
-                    {p.name}
-                  </DropdownMenuItem>
-                ))}
-              </>
-            )}
           </>
         )}
-      </DropdownMenuSubContent>
-    </DropdownMenuSub>
-  );
-}
-
-interface Scene {
-  _id: string;
-  name: string;
-}
-
-interface SceneMenuSectionProps {
-  currentSceneId: string | null;
-  currentSceneName: string | undefined;
-  isAuthenticated: boolean;
-  isLoading: boolean;
-  myScenes: Scene[];
-  publicScenes: Scene[];
-  onSelect: (id: string) => void;
-}
-
-export function SceneMenuSection({
-  currentSceneId,
-  currentSceneName,
-  isAuthenticated,
-  isLoading,
-  myScenes,
-  publicScenes,
-  onSelect,
-}: SceneMenuSectionProps) {
-  const hasScenes = myScenes.length > 0 || publicScenes.length > 0;
-
-  return (
-    <DropdownMenuSub>
-      <DropdownMenuSubTrigger className="cursor-pointer">
-        <Film className="mr-2 h-4 w-4" />
-        <span className="truncate">{currentSceneName ?? "Select Scene"}</span>
-      </DropdownMenuSubTrigger>
-      <DropdownMenuSubContent>
-        {!isLoading && hasScenes ? (
-          <>
-            {isAuthenticated && myScenes.length > 0 && (
-              <>
-                <DropdownMenuLabel className="text-xs text-muted-foreground">
-                  My Scenes
-                </DropdownMenuLabel>
-                {myScenes.map((s) => (
-                  <DropdownMenuItem
-                    key={s._id}
-                    onClick={() => onSelect(s._id)}
-                    className={`cursor-pointer ${currentSceneId === s._id ? "bg-primary/20" : ""}`}
-                  >
-                    {s.name}
-                  </DropdownMenuItem>
-                ))}
-                {publicScenes.length > 0 && <DropdownMenuSeparator />}
-              </>
-            )}
-            {publicScenes.length > 0 && (
-              <>
-                <DropdownMenuLabel className="text-xs text-muted-foreground">
-                  Public Scenes
-                </DropdownMenuLabel>
-                {publicScenes.map((s) => (
-                  <DropdownMenuItem
-                    key={s._id}
-                    onClick={() => onSelect(s._id)}
-                    className={`cursor-pointer ${currentSceneId === s._id ? "bg-primary/20" : ""}`}
-                  >
-                    {s.name}
-                  </DropdownMenuItem>
-                ))}
-              </>
-            )}
-          </>
-        ) : (
-          <DropdownMenuItem disabled>No scenes available</DropdownMenuItem>
-        )}
+        {playlistGroups.map(({ playlist, presets }) => (
+          <div key={playlist.id}>
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel className="text-xs text-muted-foreground">
+              {playlist.name}
+            </DropdownMenuLabel>
+            {presets.map((preset) => (
+              <DropdownMenuItem
+                key={`${playlist.id}-${preset.id}`}
+                onClick={() => onSelect(preset.id, "preset")}
+                className={`cursor-pointer ${selectedPresetId === preset.id ? "bg-primary/20" : ""}`}
+              >
+                {preset.name}
+              </DropdownMenuItem>
+            ))}
+          </div>
+        ))}
       </DropdownMenuSubContent>
     </DropdownMenuSub>
   );

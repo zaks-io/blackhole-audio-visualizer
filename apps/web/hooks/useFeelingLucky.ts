@@ -1,12 +1,10 @@
 import { useRef, useCallback, useEffect, useMemo, useState } from "react";
 import gsap from "gsap";
-import { useQuery } from "convex/react";
-import { api } from "@blackhole/backend/convex/_generated/api";
-import type { Id } from "@blackhole/backend/convex/_generated/dataModel";
+import { shuffle, seededRandom } from "@/lib/shuffle";
 import { usePlayPreset } from "@/components/ProducerMode/usePlayPreset";
 import { useCameraMode } from "@/components/CameraSystem";
 import { usePresetSelector } from "@/components/playlist/usePresetSelector";
-import type { ConvexPreset, Preset } from "@/components/ProducerMode/types";
+import type { Preset } from "@/components/ProducerMode/types";
 import type { CameraMode } from "@/components/CameraSystem";
 
 const CAMERA_MODES: Exclude<CameraMode, "free" | "edge">[] = ["circle", "closeup", "orbit"];
@@ -18,41 +16,20 @@ export interface FeelingLuckyState {
   cycleKey: number;
 }
 
-function shuffleArray<T>(array: T[]): T[] {
-  const result = [...array];
-  for (let i = result.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [result[i], result[j]] = [result[j], result[i]];
-  }
-  return result;
-}
-
-function convexPresetToPreset(preset: ConvexPreset): Preset {
-  return {
-    id: preset._id,
-    name: preset.name,
-    colorPalette: preset.colorPalette,
-    parameters: preset.parameters,
-  };
-}
-
-export function useFeelingLucky(allPresets: ConvexPreset[]) {
+export function useFeelingLucky(allPresets: Preset[]) {
   const { playPreset, stopAll } = usePlayPreset();
   const { setMode: setCameraMode } = useCameraMode();
 
-  const presetIds = useMemo(() => allPresets.map((p) => p._id as Id<"presets">), [allPresets]);
+  const presetIds = useMemo(() => allPresets.map((p) => p.id), [allPresets]);
   const presetMap = useMemo(() => {
-    const map = new Map<string, ConvexPreset>();
-    for (const p of allPresets) map.set(p._id, p);
+    const map = new Map<string, Preset>();
+    for (const p of allPresets) map.set(p.id, p);
     return map;
   }, [allPresets]);
 
   const [seed, setSeed] = useState(() => Math.floor(Math.random() * 2147483647));
 
-  const shuffledIds = useQuery(
-    api.model.presetVotes.public.getShuffledPresetsForLucky,
-    presetIds.length > 0 ? { presetIds, seed } : "skip"
-  );
+  const shuffledIds = useMemo(() => shuffle(presetIds, seededRandom(seed)), [presetIds, seed]);
 
   const mode = usePresetSelector((s) => s.mode);
   const isLuckyPlaying = usePresetSelector((s) => s.isLuckyPlaying);
@@ -96,7 +73,7 @@ export function useFeelingLucky(allPresets: ConvexPreset[]) {
         cameraOrderRef.current.length === 0 ||
         cameraIndexRef.current >= cameraOrderRef.current.length
       ) {
-        cameraOrderRef.current = shuffleArray(CAMERA_MODES.map((_, i) => i));
+        cameraOrderRef.current = shuffle(CAMERA_MODES.map((_, i) => i));
         cameraIndexRef.current = 0;
       }
 
@@ -114,8 +91,7 @@ export function useFeelingLucky(allPresets: ConvexPreset[]) {
       cameraIndexRef.current++;
 
       setCameraMode(nextCamera);
-      playPreset(convexPresetToPreset(nextPreset));
-      usePresetSelector.getState().setActivePresetId(nextPreset._id);
+      playPreset(nextPreset);
 
       setState((s) => ({ ...s, cycleKey: s.cycleKey + 1 }));
 

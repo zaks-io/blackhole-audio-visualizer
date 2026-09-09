@@ -89,18 +89,6 @@ export interface Preset {
   cameraMode?: string;
 }
 
-// Convex types (using string for IDs to match Convex's Id type at runtime)
-export interface ConvexPreset {
-  _id: string;
-  userId: string;
-  name: string;
-  colorPalette: string;
-  parameters: PresetParameter[];
-  cameraMode?: string;
-  isPublic: boolean;
-  updatedAt: number;
-}
-
 export interface PlaylistItem {
   presetId: string;
   waitDuration?: number;
@@ -112,20 +100,17 @@ export interface CameraPresetItem {
 }
 
 export interface Playlist {
-  _id: string;
-  userId: string;
+  id: string;
   name: string;
   items: PlaylistItem[];
   cameraPresets?: CameraPresetItem[];
   defaultCameraDuration?: number;
   shuffle: boolean;
   defaultWaitDuration: number;
-  isPublic: boolean;
-  updatedAt: number;
 }
 
 export interface PlaylistWithPresets extends Playlist {
-  presets: (ConvexPreset | null)[];
+  presets: (Preset | null)[];
 }
 
 export type PlaybackStatus = "idle" | "tweening" | "waiting";

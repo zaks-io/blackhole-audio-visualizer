@@ -1,6 +1,7 @@
 "use client";
 
 import { Clock, Video, Plus, Trash2 } from "lucide-react";
+import type { CameraPresetItem } from "./types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -17,20 +18,8 @@ const CAMERA_MODES = [
   { id: "edge", label: "Edge" },
 ] as const;
 
-interface CameraPresetItem {
-  mode: string;
-  duration?: number;
-}
-
-function normalizeCameraPresets(
-  presets: (CameraPresetItem | string)[] | undefined
-): CameraPresetItem[] {
-  if (!presets) return [];
-  return presets.map((p) => (typeof p === "string" ? { mode: p } : p));
-}
-
 interface CameraPresetEditorProps {
-  cameraPresets: (CameraPresetItem | string)[] | undefined;
+  cameraPresets: CameraPresetItem[] | undefined;
   defaultCameraDuration: number | undefined;
   onAdd: (mode: string) => void;
   onUpdate: (index: number, duration: number | undefined) => void;
@@ -46,9 +35,7 @@ export function CameraPresetEditor({
   onRemove,
   onUpdateDefaultDuration,
 }: CameraPresetEditorProps) {
-  const normalized = normalizeCameraPresets(
-    cameraPresets as (CameraPresetItem | string)[] | undefined
-  );
+  const normalized = cameraPresets ?? [];
 
   return (
     <div className="px-3 py-2 border-t border-white/5">
@@ -59,7 +46,7 @@ export function CameraPresetEditor({
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-6 w-6">
+            <Button variant="ghost" size="icon" className="h-6 w-6" aria-label="Add camera mode">
               <Plus className="h-3 w-3" />
             </Button>
           </DropdownMenuTrigger>

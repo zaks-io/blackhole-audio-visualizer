@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { Analytics } from "@vercel/analytics/react";
 import { Toaster } from "sonner";
-import { ConvexClientProvider } from "@/components/providers/ConvexClientProvider";
 import "./globals.css";
 
 const geistSans = Geist({ subsets: ["latin"], variable: "--font-geist-sans" });
@@ -21,9 +19,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}>
-        <ConvexClientProvider>{children}</ConvexClientProvider>
+        {children}
         <Toaster theme="dark" position="bottom-right" />
-        <Analytics />
       </body>
     </html>
   );

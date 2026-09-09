@@ -50,6 +50,7 @@ export function AudioSourceButton({
   const buttonContent = (
     <Button
       variant="ghost"
+      aria-label={getTooltip()}
       size="icon"
       onClick={!canUseSystemAudio || isConnected ? handleClick : undefined}
       className={cn(

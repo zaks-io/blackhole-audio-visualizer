@@ -11,7 +11,7 @@ interface CameraModeState {
   setTransitioning: (isTransitioning: boolean) => void;
 }
 
-const useCameraModeStore = create<CameraModeState>((set, get) => ({
+export const useCameraModeStore = create<CameraModeState>((set, get) => ({
   mode: "circle",
   isTransitioning: false,
   setMode: (newMode) => {

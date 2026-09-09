@@ -6,7 +6,7 @@ import { setRuntimeValue } from "@/lib/runtimeStateRegistry";
 import { usePresets } from "./usePresets";
 import type { Preset } from "./types";
 import { PALETTE_OFFSETS, type ColorPaletteId } from "@/components/ColorModeSystem";
-import { PARAMS } from "@blackhole/backend/convex/lib/visualizationParameters";
+import { PARAMS } from "@/lib/visualizationParameters";
 
 interface TweenRef {
   path: string;
@@ -73,13 +73,10 @@ export function usePlayPreset() {
         const ref: TweenRef = { path: param.path, tween: null! as gsap.core.Tween, state };
         tweensRef.current.push(ref);
 
-        // Handle durations stored as milliseconds (legacy/AI-generated) vs seconds
-        // If duration > 100, assume it's milliseconds and convert to seconds
-        const durationInSeconds = param.duration > 100 ? param.duration / 1000 : param.duration;
         const tween = gsap.to(state, {
           value: param.value,
           progress: 1,
-          duration: durationInSeconds,
+          duration: param.duration,
           ease: param.ease,
           onUpdate: () => {
             // Direct GPU update - bypasses React state for performance

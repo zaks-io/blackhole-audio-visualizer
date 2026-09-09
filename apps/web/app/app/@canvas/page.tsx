@@ -17,14 +17,6 @@ const ProducerModePanel = dynamic(
   { ssr: false }
 );
 
-const SceneAgentPanel = dynamic(
-  () =>
-    import("@/components/scenes/SceneAgentPanel").then((m) => ({
-      default: m.SceneAgentPanel,
-    })),
-  { ssr: false }
-);
-
 const ControlSidebar = dynamic(
   () =>
     import("@/components/layout/ControlSidebar").then((m) => ({
@@ -40,16 +32,12 @@ const FPSMeter = dynamic(
     })),
   { ssr: false }
 );
-import { useCameraMode, type CameraMode } from "@/components/CameraSystem";
+import { useCameraMode } from "@/components/CameraSystem";
 import { useColorMode } from "@/components/ColorModeSystem";
 import { useUIState } from "@/hooks/useUIState";
-import { useViewerMode } from "@/hooks/useViewerMode";
-import { useUnifiedAudio } from "@/hooks/useUnifiedAudio";
-import { usePublicSceneWithDetails } from "@/hooks/useConvexScenes";
-import { useUnifiedPlayer } from "@/hooks/useUnifiedPlayer";
+import { useAudioSource } from "@/hooks/useAudioSource";
 import { isElectron } from "@/lib/platform";
 import type { Resolution } from "@/hooks/useUIState";
-import type { PlaylistWithPresets } from "@/components/ProducerMode/types";
 
 // HACK: +1 pixel on each dimension to ensure recorded video meets target resolution after encoding
 const RESOLUTIONS: Record<Exclude<Resolution, "auto">, { width: number; height: number }> = {
@@ -60,12 +48,6 @@ const RESOLUTIONS: Record<Exclude<Resolution, "auto">, { width: number; height: 
 };
 
 export default function CanvasSlot() {
-  const mode = useViewerMode((s) => s.mode);
-  const sceneId = useViewerMode((s) => s.sceneId);
-
-  // Scene data (only fetched when sceneId is present)
-  const { scene } = usePublicSceneWithDetails(sceneId ?? "");
-
   const cameraMode = useCameraMode();
   const colorMode = useColorMode();
   const canvasContainerRef = useRef<HTMLDivElement>(null);
@@ -97,34 +79,7 @@ export default function CanvasSlot() {
     };
   }, []);
 
-  // Build playlist for scene player
-  const scenePlaylist: PlaylistWithPresets | null = useMemo(() => {
-    if (!scene?.playlist) return null;
-    return {
-      _id: scene.playlist._id,
-      userId: scene.userId,
-      name: scene.playlist.name,
-      items: scene.playlist.items,
-      shuffle: false,
-      defaultWaitDuration: 10,
-      isPublic: false,
-      updatedAt: 0,
-      presets: scene.playlist.presets as PlaylistWithPresets["presets"],
-    };
-  }, [scene]);
-
-  // Scene player (only active when in scene mode)
-  const scenePlayer = useUnifiedPlayer({
-    playlist: mode === "scene" ? scenePlaylist : null,
-    audioUrl: mode === "scene" ? scene?.audioUrl : null,
-    loop: true,
-    onCameraModeChange: (m) => cameraMode.setMode(m as CameraMode),
-  });
-
-  // Unified audio hook
-  const audio = useUnifiedAudio({
-    sceneAudioElement: scenePlayer.audioElement,
-  });
+  const audio = useAudioSource();
 
   const isAudioActive = audio.isConnected;
 
@@ -229,9 +184,6 @@ export default function CanvasSlot() {
 
         {fpsVisible && <FPSMeter />}
       </div>
-
-      {/* Scene Agent Panel */}
-      <SceneAgentPanel sceneId={sceneId ?? undefined} />
 
       {/* Control Sidebar */}
       {devControlsVisible && <ControlSidebar analysisRef={audio.analysisRef} />}

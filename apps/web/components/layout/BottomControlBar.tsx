@@ -3,8 +3,6 @@
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { CameraControls } from "@/components/camera";
 import { PresetSelector } from "@/components/playlist";
-import { PresetVoteButtons } from "@/components/playlist/PresetVoteButtons";
-import { usePresetSelector } from "@/components/playlist/usePresetSelector";
 import { useUIState } from "@/hooks/useUIState";
 import { cn } from "@/lib/utils";
 import type { CameraMode } from "@/components/CameraSystem";
@@ -21,8 +19,6 @@ export function BottomControlBar({
   isCameraTransitioning,
 }: BottomControlBarProps) {
   const controlBarCollapsed = useUIState((s) => s.controlBarCollapsed);
-
-  const activePresetId = usePresetSelector((s) => s.activePresetId);
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -46,7 +42,6 @@ export function BottomControlBar({
           <PresetSelector />
         </div>
       </div>
-      <PresetVoteButtons presetId={activePresetId} />
     </TooltipProvider>
   );
 }

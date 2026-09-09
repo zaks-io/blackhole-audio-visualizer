@@ -10,7 +10,7 @@ import {
   useVisualizationControls,
   type VisualizationControlsState,
 } from "@/hooks/useVisualizationControls";
-import { PARAMS } from "@blackhole/backend/convex/lib/visualizationParameters";
+import { PARAMS } from "@/lib/visualizationParameters";
 import type { ParameterSliderProps } from "./types";
 
 function formatValue(value: number, step: number): string {

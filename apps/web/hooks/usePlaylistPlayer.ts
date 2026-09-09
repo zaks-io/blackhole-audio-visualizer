@@ -1,10 +1,12 @@
 import { useRef, useState, useCallback, useEffect } from "react";
 import gsap from "gsap";
+import { shuffle } from "@/lib/shuffle";
 import { usePlayPreset } from "@/components/ProducerMode/usePlayPreset";
+import { useCameraMode } from "@/components/CameraSystem";
+import { useCameraPlaylist } from "./useCameraPlaylist";
 import { usePresetSelector } from "@/components/playlist/usePresetSelector";
 import type {
   PlaylistWithPresets,
-  ConvexPreset,
   PlaylistPlayerState,
   Preset,
 } from "@/components/ProducerMode/types";
@@ -17,26 +19,20 @@ const initialState: PlaylistPlayerState = {
   waitProgress: 0,
 };
 
-function shuffleArray<T>(array: T[]): T[] {
-  const result = [...array];
-  for (let i = result.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [result[i], result[j]] = [result[j], result[i]];
-  }
-  return result;
-}
-
-function convexPresetToPreset(preset: ConvexPreset): Preset {
-  return {
-    id: preset._id,
-    name: preset.name,
-    colorPalette: preset.colorPalette,
-    parameters: preset.parameters,
-  };
-}
-
 export function usePlaylistPlayer(playlist: PlaylistWithPresets | null) {
   const { playPreset, stopAll } = usePlayPreset();
+  const camera = useCameraMode();
+  const {
+    start: startCameras,
+    stop: stopCameras,
+    pause: pauseCameras,
+    resume: resumeCameras,
+  } = useCameraPlaylist(
+    playlist?.cameraPresets,
+    playlist?.shuffle ?? false,
+    playlist?.defaultCameraDuration,
+    camera.setMode
+  );
 
   const [state, setState] = useState<PlaylistPlayerState>(initialState);
 
@@ -47,11 +43,11 @@ export function usePlaylistPlayer(playlist: PlaylistWithPresets | null) {
   const playNextRef = useRef<() => void>(() => {});
 
   const getPresetAtIndex = useCallback(
-    (itemIndex: number): ConvexPreset | null => {
+    (itemIndex: number): Preset | null => {
       if (!playlist) return null;
       const item = playlist.items[itemIndex];
       if (!item) return null;
-      return playlist.presets.find((p) => p?._id === item.presetId) ?? null;
+      return playlist.presets.find((p) => p?.id === item.presetId) ?? null;
     },
     [playlist]
   );
@@ -71,16 +67,22 @@ export function usePlaylistPlayer(playlist: PlaylistWithPresets | null) {
     waitTweenRef.current = null;
     stopAll();
     isActiveRef.current = false;
-  }, [stopAll]);
+    stopCameras();
+  }, [stopAll, stopCameras]);
 
   useEffect(() => {
     playNextRef.current = () => {
       if (!playlist || !isActiveRef.current) return;
+      if (playlist.items.length === 0 || playlist.presets.some((preset) => preset === null)) {
+        cleanup();
+        setState(initialState);
+        return;
+      }
 
       if (orderIndexRef.current >= playOrderRef.current.length) {
         // Loop back to the beginning, reshuffle if enabled
         const indices = playlist.items.map((_, i) => i);
-        playOrderRef.current = playlist.shuffle ? shuffleArray(indices) : indices;
+        playOrderRef.current = playlist.shuffle ? shuffle(indices) : indices;
         orderIndexRef.current = 0;
       }
 
@@ -100,7 +102,7 @@ export function usePlaylistPlayer(playlist: PlaylistWithPresets | null) {
         waitProgress: 0,
       }));
 
-      playPreset(convexPresetToPreset(preset), () => {
+      playPreset(preset, () => {
         if (!isActiveRef.current) return;
 
         const waitDuration = getWaitDuration(itemIndex);
@@ -134,11 +136,14 @@ export function usePlaylistPlayer(playlist: PlaylistWithPresets | null) {
 
   const play = useCallback(() => {
     if (!playlist || playlist.items.length === 0) return;
+    if (playlist.presets.some((preset) => preset === null)) {
+      throw new Error("Remove unavailable presets before playing this playlist");
+    }
 
     cleanup();
 
     const indices = playlist.items.map((_, i) => i);
-    playOrderRef.current = playlist.shuffle ? shuffleArray(indices) : indices;
+    playOrderRef.current = playlist.shuffle ? shuffle(indices) : indices;
     orderIndexRef.current = 0;
     isActiveRef.current = true;
 
@@ -150,20 +155,23 @@ export function usePlaylistPlayer(playlist: PlaylistWithPresets | null) {
       waitProgress: 0,
     });
 
+    startCameras();
     playNextRef.current();
-  }, [playlist, cleanup]);
+  }, [playlist, cleanup, startCameras]);
 
   const pause = useCallback(() => {
     if (!state.isPlaying || state.isPaused) return;
     waitTweenRef.current?.pause();
+    pauseCameras();
     setState((s) => ({ ...s, isPaused: true }));
-  }, [state.isPlaying, state.isPaused]);
+  }, [state.isPlaying, state.isPaused, pauseCameras]);
 
   const resume = useCallback(() => {
     if (!state.isPlaying || !state.isPaused) return;
     waitTweenRef.current?.resume();
+    resumeCameras();
     setState((s) => ({ ...s, isPaused: false }));
-  }, [state.isPlaying, state.isPaused]);
+  }, [state.isPlaying, state.isPaused, resumeCameras]);
 
   const stop = useCallback(() => {
     cleanup();

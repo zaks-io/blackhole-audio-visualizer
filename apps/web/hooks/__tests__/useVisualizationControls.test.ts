@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { useVisualizationControls, pathToKey } from "../useVisualizationControls";
-import { PARAM_DEFAULTS } from "@blackhole/backend/convex/lib/visualizationParameters";
+import { PARAM_DEFAULTS } from "@/lib/visualizationParameters";
 
 // Access the store directly without React
 const store = useVisualizationControls;

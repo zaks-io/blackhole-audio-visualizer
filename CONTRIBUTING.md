@@ -9,7 +9,6 @@ See the [Setup section in the README](./README.md#setup). Short version:
 
 ```bash
 bun install
-cp .env.example .env.local     # fill in values
 bun dev
 ```
 
@@ -35,10 +34,8 @@ gitignored; keep it that way.
 - **Naming** — hooks are `use[Feature].ts`; components are PascalCase directories
   with an `index.ts` barrel; shaders are `{purpose}Vertex.glsl` /
   `{purpose}Fragment.glsl`. See [CLAUDE.md](./CLAUDE.md) for the full conventions.
-- **Convex** — if you touch the schema or backend functions, commit the generated
-  `packages/backend/convex/_generated/` files alongside your changes. They're
-  required for Convex to work.
-- **Imports** — the frontend imports backend code via `@blackhole/backend/convex/...`.
+- **Configuration**: edit `apps/web/config/presets.json` for bundled presets and playlists.
+  The `exports/` archive records the original production data.
 
 ## Project structure
 

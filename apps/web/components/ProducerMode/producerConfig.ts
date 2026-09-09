@@ -1,5 +1,5 @@
 import type { ParameterGroup, EaseFunction } from "./types";
-import { getParameterGroups } from "@blackhole/backend/convex/lib/visualizationParameters";
+import { getParameterGroups } from "@/lib/visualizationParameters";
 
 // UI parameter groups derived from centralized visualization parameter definitions
 export const PRODUCER_PARAMETERS: ParameterGroup[] = getParameterGroups();

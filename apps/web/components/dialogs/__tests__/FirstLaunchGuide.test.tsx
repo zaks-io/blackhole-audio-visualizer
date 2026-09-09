@@ -3,7 +3,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { FirstLaunchGuide } from "../FirstLaunchGuide";
 
-const COOKIE_NAME = "blackhole_getting_started";
+const STORAGE_KEY = "blackhole_getting_started";
 
 (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT =
   true;
@@ -13,7 +13,7 @@ describe("FirstLaunchGuide", () => {
   let root: Root;
 
   beforeEach(() => {
-    document.cookie = `${COOKIE_NAME}=; Max-Age=0; Path=/`;
+    localStorage.removeItem(STORAGE_KEY);
     container = document.createElement("div");
     document.body.appendChild(container);
     root = createRoot(container);
@@ -31,7 +31,7 @@ describe("FirstLaunchGuide", () => {
   }
 
   function expectGuideStaysHiddenAfterRemount() {
-    expect(document.cookie).toContain(`${COOKIE_NAME}=1`);
+    expect(localStorage.getItem(STORAGE_KEY)).toBe("1");
 
     act(() => root.unmount());
     root = createRoot(container);

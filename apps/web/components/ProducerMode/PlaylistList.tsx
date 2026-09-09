@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, ListMusic, Globe, Trash2, MoreHorizontal } from "lucide-react";
+import { Plus, ListMusic, Trash2, MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -18,40 +18,30 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useConvexPlaylists } from "@/hooks/useConvexPlaylists";
+import { usePlaylists } from "@/hooks/usePlaylists";
 
 interface PlaylistListProps {
   onSelect: (playlistId: string) => void;
 }
 
 export function PlaylistList({ onSelect }: PlaylistListProps) {
-  const { playlists, createPlaylist, deletePlaylist } = useConvexPlaylists();
+  const { playlists, createPlaylist, deletePlaylist } = usePlaylists();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [playlistName, setPlaylistName] = useState("");
-  const [isCreating, setIsCreating] = useState(false);
 
-  const handleCreate = async () => {
+  const handleCreate = () => {
     if (!playlistName.trim()) return;
 
-    setIsCreating(true);
-    try {
-      const result = await createPlaylist(playlistName.trim(), false);
-      setPlaylistName("");
-      setCreateDialogOpen(false);
-      if (result?.playlistId) {
-        onSelect(result.playlistId);
-      }
-    } finally {
-      setIsCreating(false);
-    }
+    const result = createPlaylist(playlistName.trim());
+    setPlaylistName("");
+    setCreateDialogOpen(false);
+    onSelect(result.playlistId);
   };
 
-  const handleDelete = async (e: React.MouseEvent, playlistId: string) => {
+  const handleDelete = (e: React.MouseEvent, playlistId: string) => {
     e.stopPropagation();
-    await deletePlaylist(playlistId);
+    deletePlaylist(playlistId);
   };
-
-  const sortedPlaylists = [...playlists].sort((a, b) => b.updatedAt - a.updatedAt);
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
@@ -68,7 +58,7 @@ export function PlaylistList({ onSelect }: PlaylistListProps) {
       </div>
 
       <div className="flex-1 overflow-y-auto px-3 py-2 scrollbar-thin">
-        {sortedPlaylists.length === 0 ? (
+        {playlists.length === 0 ? (
           <div className="py-8 text-center text-sm text-muted-foreground">
             <ListMusic className="h-8 w-8 mx-auto mb-2 opacity-50" />
             <p>No playlists yet</p>
@@ -76,20 +66,15 @@ export function PlaylistList({ onSelect }: PlaylistListProps) {
           </div>
         ) : (
           <div className="space-y-1">
-            {sortedPlaylists.map((playlist) => (
+            {playlists.map((playlist) => (
               <div
-                key={playlist._id}
+                key={playlist.id}
                 className="flex items-center gap-2 px-2 py-2 rounded-md hover:bg-white/5 cursor-pointer group"
-                onClick={() => onSelect(playlist._id)}
+                onClick={() => onSelect(playlist.id)}
               >
                 <ListMusic className="h-4 w-4 text-muted-foreground shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-medium truncate">{playlist.name}</span>
-                    {playlist.isPublic && (
-                      <Globe className="h-3 w-3 text-muted-foreground shrink-0" />
-                    )}
-                  </div>
+                  <span className="text-xs font-medium truncate block">{playlist.name}</span>
                   <span className="text-[10px] text-muted-foreground">
                     {playlist.items.length} preset{playlist.items.length !== 1 ? "s" : ""}
                   </span>
@@ -101,13 +86,14 @@ export function PlaylistList({ onSelect }: PlaylistListProps) {
                       size="icon"
                       className="h-6 w-6 opacity-0 group-hover:opacity-100 shrink-0"
                       onClick={(e) => e.stopPropagation()}
+                      aria-label={`Actions for ${playlist.name}`}
                     >
                       <MoreHorizontal className="h-3 w-3" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-32">
                     <DropdownMenuItem
-                      onClick={(e) => handleDelete(e, playlist._id)}
+                      onClick={(e) => handleDelete(e, playlist.id)}
                       variant="destructive"
                     >
                       <Trash2 className="h-4 w-4 mr-2" />
@@ -140,8 +126,8 @@ export function PlaylistList({ onSelect }: PlaylistListProps) {
             <Button variant="ghost" onClick={() => setCreateDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleCreate} disabled={!playlistName.trim() || isCreating}>
-              {isCreating ? "Creating..." : "Create"}
+            <Button onClick={handleCreate} disabled={!playlistName.trim()}>
+              Create
             </Button>
           </DialogFooter>
         </DialogContent>

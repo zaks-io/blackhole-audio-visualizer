@@ -9,7 +9,6 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "."),
-      "@blackhole/backend": path.resolve(__dirname, "../../packages/backend"),
     },
   },
 });

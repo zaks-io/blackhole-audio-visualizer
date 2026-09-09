@@ -19,8 +19,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
-      - run: bun install
+      - run: bun install --frozen-lockfile
       - run: bun run electron:package:win
+      - run: bun run test:desktop
       - uses: actions/upload-artifact@v4
         with:
           name: windows-build
@@ -32,8 +33,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
-      - run: bun install
+      - run: bun install --frozen-lockfile
       - run: bun run electron:package:mac
+      - run: bun run test:desktop
       - uses: actions/upload-artifact@v4
         with:
           name: macos-build

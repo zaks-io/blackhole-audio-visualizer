@@ -20,9 +20,11 @@
     "electron:package:win": "cd apps/web && bun run build:electron && cd ../../apps/desktop && bun run package:win",
     "test": "turbo test",
     "test:coverage": "turbo test -- --coverage",
-    "prepare": "husky"
+    "prepare": "husky",
+    "test:desktop": "playwright test"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@vitest/coverage-v8": "^4.0.18",
     "husky": "^9.1.7",
     "next": "16.1.0",
