@@ -74,6 +74,16 @@ a manual check on the target machine.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) and [CLAUDE.md](CLAUDE.md) for conventions.
 
+## Image credits
+
+The Hazy Nebulae, Blue Nebulae, and Multi Nebulae sky textures are from
+[Space Spheremaps](https://www.spacespheremaps.com/) and are distributed under
+[their asset terms](https://www.spacespheremaps.com/about/).
+
+The Starmap texture is from [Deep Star Maps 2020](https://svs.gsfc.nasa.gov/4851/)
+by Ernie Wright, NASA/Goddard Space Flight Center Scientific Visualization Studio.
+It is public domain under [NASA SVS usage guidance](https://svs.gsfc.nasa.gov/help/).
+
 ## License
 
 [MIT](LICENSE) © Isaac Suttell
