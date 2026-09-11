@@ -58,7 +58,7 @@ offline.
 The manual `Build Electron App` GitHub Actions workflow builds and tests the selected
 platforms, then attaches their installers to a draft GitHub Release. The release tag
 uses the version in `apps/desktop/package.json`. Increment that version for each new
-release; an existing release is never overwritten. Publish the draft from GitHub
+release; an existing tag or release is never overwritten. Publish the draft from GitHub
 when it is ready. Signing and notarization are not configured in this workflow.
 
 ## Checks

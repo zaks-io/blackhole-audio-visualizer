@@ -99,6 +99,8 @@ jobs:
             echo "::error::No desktop installers were downloaded."
             exit 1
           fi
+          gh api --method POST "repos/${GH_REPO}/git/refs" \
+            -f "ref=refs/tags/${tag}" -f "sha=${GITHUB_SHA}" --silent
           gh release create "$tag" "${installers[@]}" \
-            --draft --target "$GITHUB_SHA" \
+            --draft --verify-tag \
             --title "Blackhole Audio Visualizer ${version}" --generate-notes
