@@ -1,3 +1,5 @@
+set -eu
+
 if ! command -v gitleaks >/dev/null 2>&1; then
   echo "gitleaks not installed. Install it: brew install gitleaks (or see https://github.com/gitleaks/gitleaks#installing)"
   exit 1

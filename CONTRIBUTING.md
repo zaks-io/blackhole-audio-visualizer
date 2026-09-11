@@ -24,8 +24,12 @@ bun run test
 ```
 
 A pre-commit hook (Husky) and CI also run [gitleaks](https://github.com/gitleaks/gitleaks)
-to catch committed secrets. Never commit real credentials — `.env.local` is
-gitignored; keep it that way.
+to catch committed secrets. The hook scans staged changes. CI scans the commits
+introduced by the PR or push, including secrets added and removed within that
+range. Neither runs a full-history scan. Missing or invalid commit boundaries
+fail the CI check instead of triggering a full scan.
+
+Never commit real credentials. `.env.local` is gitignored; keep it that way.
 
 ## Conventions
 

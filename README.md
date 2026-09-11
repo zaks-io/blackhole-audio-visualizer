@@ -55,8 +55,11 @@ bundled inside the Electron app. No hosted web deployment is involved. Dependenc
 installation and builds may download packages and fonts; the packaged app runs
 offline.
 
-The manual `Build Electron App` GitHub Actions workflow builds desktop artifacts.
-Signing, notarization, and publishing a release are separate from local packaging.
+The manual `Build Electron App` GitHub Actions workflow builds and tests the selected
+platforms, then attaches their installers to a draft GitHub Release. The release tag
+uses the version in `apps/desktop/package.json`. Increment that version for each new
+release; an existing tag or release is never overwritten. Publish the draft from GitHub
+when it is ready. Signing and notarization are not configured in this workflow.
 
 ## Checks
 
@@ -73,6 +76,16 @@ using synthetic audio. Physical microphone and system-audio permissions still ne
 a manual check on the target machine.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) and [CLAUDE.md](CLAUDE.md) for conventions.
+
+## Image credits
+
+The Hazy Nebulae, Blue Nebulae, and Multi Nebulae sky textures are from
+[Space Spheremaps](https://www.spacespheremaps.com/) and are distributed under
+[their asset terms](https://www.spacespheremaps.com/about/).
+
+The Starmap texture is from [Deep Star Maps 2020](https://svs.gsfc.nasa.gov/4851/)
+by Ernie Wright, NASA/Goddard Space Flight Center Scientific Visualization Studio.
+It is public domain under [NASA SVS usage guidance](https://svs.gsfc.nasa.gov/help/).
 
 ## License
 
