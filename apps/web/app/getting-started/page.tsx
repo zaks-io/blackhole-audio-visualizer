@@ -113,6 +113,8 @@ export default function GettingStartedPage() {
             Follow the{" "}
             <a
               href="https://github.com/ExistentialAudio/BlackHole#record-system-audio"
+              target="_blank"
+              rel="noopener noreferrer"
               className="text-cyan hover:underline"
             >
               BlackHole installation and routing guide
