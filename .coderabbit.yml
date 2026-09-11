@@ -1,0 +1,39 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# CLAUDE.md is picked up automatically as review guidelines, so project
+# conventions live there rather than being repeated in this file.
+reviews:
+  # Reviews are triggered manually with `@coderabbitai review` so the hourly
+  # review budget is spent on a settled head rather than every push.
+  auto_review:
+    enabled: false
+
+  path_filters:
+    # GLSL is ignored by CodeRabbit's defaults, but the shaders are the GPU
+    # simulation itself and nothing else lints them.
+    - "apps/web/shaders/**/*.glsl"
+    # Frozen record of the Convex-to-local migration. Never edited.
+    - "!exports/**"
+    # HDR environment maps and packaged app icons.
+    - "!**/*.exr"
+    - "!**/*.icns"
+
+  path_instructions:
+    - path: "apps/web/shaders/**/*.glsl"
+      instructions: |
+        Shaders compile through three.js ShaderMaterial and GPUComputationRenderer, which prepend the version and precision prelude. Do not flag their absence.
+        Check that every uniform, attribute, and varying is declared with a matching name and type in the TypeScript that binds it.
+        Flag divisions, sqrt, normalize, and pow calls that can receive zero or a negative operand and produce NaN or Inf in the simulation.
+    - path: "apps/desktop/src/**"
+      instructions: |
+        Electron main and preload. Keep contextIsolation on and nodeIntegration off, and flag any change that disables the renderer sandbox or webSecurity.
+        The preload bridge must expose only named functions, never raw ipcRenderer or Node modules.
+        Validate every IPC payload in the main process before use.
+        The app:// protocol handler must keep resolving paths inside the static export directory and rejecting traversal.
+    - path: "apps/web/config/presets.json"
+      instructions: |
+        Bundled preset library validated by apps/web/lib/presetLibrarySchema.ts at load time.
+        The schema does not check value ranges. Flag parameter values outside the min and max declared for that path in apps/web/lib/visualizationParameters.ts.
+        Playlist items may reference preset ids that no longer exist. That is intentional and the editor surfaces them, so do not flag it.
+
+chat:
+  art: false
