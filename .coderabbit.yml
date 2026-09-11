@@ -7,10 +7,9 @@ reviews:
   auto_review:
     enabled: false
 
+  # Only exclusions. Any non-negated pattern turns this list into an allowlist
+  # and everything else in the PR is skipped.
   path_filters:
-    # GLSL is ignored by CodeRabbit's defaults, but the shaders are the GPU
-    # simulation itself and nothing else lints them.
-    - "apps/web/shaders/**/*.glsl"
     # Frozen record of the Convex-to-local migration. Never edited.
     - "!exports/**"
     # HDR environment maps and packaged app icons.
@@ -18,11 +17,6 @@ reviews:
     - "!**/*.icns"
 
   path_instructions:
-    - path: "apps/web/shaders/**/*.glsl"
-      instructions: |
-        Shaders compile through three.js ShaderMaterial and GPUComputationRenderer, which prepend the version and precision prelude. Do not flag their absence.
-        Check that every uniform, attribute, and varying is declared with a matching name and type in the TypeScript that binds it.
-        Flag divisions, sqrt, normalize, and pow calls that can receive zero or a negative operand and produce NaN or Inf in the simulation.
     - path: "apps/desktop/src/**"
       instructions: |
         Electron main and preload. Keep contextIsolation on and nodeIntegration off, and flag any change that disables the renderer sandbox or webSecurity.
