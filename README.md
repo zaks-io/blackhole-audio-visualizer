@@ -55,8 +55,11 @@ bundled inside the Electron app. No hosted web deployment is involved. Dependenc
 installation and builds may download packages and fonts; the packaged app runs
 offline.
 
-The manual `Build Electron App` GitHub Actions workflow builds desktop artifacts.
-Signing, notarization, and publishing a release are separate from local packaging.
+The manual `Build Electron App` GitHub Actions workflow builds and tests the selected
+platforms, then attaches their installers to a draft GitHub Release. The release tag
+uses the version in `apps/desktop/package.json`. Increment that version for each new
+release; an existing release is never overwritten. Publish the draft from GitHub
+when it is ready. Signing and notarization are not configured in this workflow.
 
 ## Checks
 
