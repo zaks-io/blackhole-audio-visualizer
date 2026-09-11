@@ -14,8 +14,27 @@ bun run electron:dev
 ```
 
 For renderer development in a browser, use `bun run dev:web` and open
-http://localhost:3000/app. System audio capture is available in Electron;
-the browser supports microphone input.
+http://localhost:3000/app.
+
+## Connect audio
+
+- **Browser:** On a computer or phone, allow microphone access and press Start to
+  visualize music or other sounds around you. The web app uses the microphone or
+  audio inputs your browser provides. It cannot capture system audio directly.
+  Choose the input in your browser or device settings.
+- **Desktop:** [Download the desktop app from GitHub](https://github.com/zaks-io/blackhole-audio-visualizer/releases/latest),
+  open it, then choose Settings → Audio
+  source → System Audio to visualize audio playing on your computer from your
+  preferred music service or another app. Microphone input is also available.
+- **Optional macOS browser setup:** [BlackHole by Existential Audio](https://github.com/ExistentialAudio/BlackHole#record-system-audio)
+  is a separate audio driver unrelated to this visualizer. Install it and follow
+  its Multi-Output Device setup to send audio to both BlackHole and your speakers
+  or headphones. Select BlackHole as the browser's microphone input through your
+  browser or device settings, allow microphone access, and press Start. This
+  takes extra setup; the desktop app captures system audio without that driver.
+
+Start connects audio and runs random presets. Pause stops audio and pauses preset
+changes. See the web app's Getting Started page or Help for the full setup guide.
 
 ## Presets and playlists
 

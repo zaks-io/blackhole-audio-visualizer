@@ -13,7 +13,7 @@ const features = [
     label: "Live audio",
     color: "bg-cyan/15 text-cyan",
     description:
-      "Connect system audio or a microphone and the particle simulation responds as the music plays.",
+      "Use a microphone in your browser on a computer or phone, or download the desktop app to capture system audio from your preferred music service.",
   },
   {
     icon: SlidersHorizontal,
@@ -112,6 +112,14 @@ export default function AboutPage() {
           >
             Launch Visualizer
           </Link>
+          <a
+            href="https://github.com/zaks-io/blackhole-audio-visualizer/releases/latest"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-4 text-sm text-cyan hover:underline"
+          >
+            Download desktop app from GitHub
+          </a>
         </footer>
       </div>
     </main>

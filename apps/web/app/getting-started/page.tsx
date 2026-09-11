@@ -46,8 +46,9 @@ export default function GettingStartedPage() {
 
         <section className="mt-14 sm:mt-20">
           <p className="text-base text-muted-foreground leading-relaxed">
-            Blackhole analyzes live audio on your device. Pick an input from the audio button in the
-            top control bar.
+            Use a microphone in your browser, including on your phone, or download the desktop app
+            to visualize system audio from your preferred music service. Press Start to connect
+            audio and run random presets. Pause stops audio and pauses preset changes.
           </p>
         </section>
 
@@ -60,11 +61,21 @@ export default function GettingStartedPage() {
                 <Monitor className="h-[18px] w-[18px]" />
               </div>
               <div className="min-w-0">
-                <h2 className="text-lg font-semibold text-foreground">System Audio</h2>
+                <h2 className="text-lg font-semibold text-foreground">Desktop: system audio</h2>
                 <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-                  Use this in the desktop app to react to music playing on your computer. On macOS,
-                  grant Screen Recording permission when prompted, then restart Blackhole.
+                  Download and open the desktop app, then choose Settings → Audio source → System
+                  Audio. Play music from your preferred service or any other app on your computer.
+                  On macOS, grant Screen Recording permission when prompted, then restart the
+                  visualizer.
                 </p>
+                <a
+                  href="https://github.com/zaks-io/blackhole-audio-visualizer/releases/latest"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-3 inline-flex text-sm text-cyan hover:underline"
+                >
+                  Download desktop app from GitHub
+                </a>
               </div>
             </div>
           </div>
@@ -75,14 +86,42 @@ export default function GettingStartedPage() {
                 <Mic className="h-[18px] w-[18px]" />
               </div>
               <div className="min-w-0">
-                <h2 className="text-lg font-semibold text-foreground">Microphone</h2>
+                <h2 className="text-lg font-semibold text-foreground">Browser: microphone</h2>
                 <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-                  Use any microphone or audio input recognized by your computer. Grant microphone
-                  access when your system asks.
+                  Open the web app on your computer or phone, allow microphone access, and press
+                  Start. Your microphone picks up music and other sounds around you. The web app can
+                  use the microphone or audio inputs exposed by your browser, but cannot capture
+                  system audio directly. Choose your input in your browser or device settings.
+                  Microphone input is also available in the desktop app.
                 </p>
               </div>
             </div>
           </div>
+        </section>
+
+        <hr className="my-14 sm:my-20 border-white/5" />
+
+        <section>
+          <h2 className="text-2xl font-semibold tracking-tight">Optional browser setup on macOS</h2>
+          <p className="mt-4 text-sm text-muted-foreground leading-relaxed">
+            If you prefer to stay in the browser, you can install BlackHole by Existential Audio, a
+            separate audio driver unrelated to this visualizer. It routes system audio into an input
+            your browser can use. The desktop app is the simpler option for system audio and does
+            not need this driver.
+          </p>
+          <p className="mt-4 text-sm text-muted-foreground leading-relaxed">
+            Follow the{" "}
+            <a
+              href="https://github.com/ExistentialAudio/BlackHole#record-system-audio"
+              className="text-cyan hover:underline"
+            >
+              BlackHole installation and routing guide
+            </a>
+            . Set up a Multi-Output Device with BlackHole and your speakers or headphones so you can
+            still hear your music. Route your computer&apos;s output through that device, then
+            choose BlackHole as the microphone input in your browser or device settings. Allow
+            microphone access in the web app and press Start.
+          </p>
         </section>
 
         <hr className="my-14 sm:my-20 border-white/5" />

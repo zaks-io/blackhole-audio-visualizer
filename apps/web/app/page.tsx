@@ -36,6 +36,15 @@ export default function LandingPage() {
           Launch Visualizer
         </Link>
 
+        <a
+          href="https://github.com/zaks-io/blackhole-audio-visualizer/releases/latest"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-4 text-sm text-cyan hover:underline"
+        >
+          Download desktop app from GitHub
+        </a>
+
         <div className="mt-8 flex items-center gap-3 text-sm text-muted-foreground/50">
           <Link href="/getting-started" className="hover:text-muted-foreground transition-colors">
             Getting Started
