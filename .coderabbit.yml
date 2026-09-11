@@ -1,0 +1,33 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# CLAUDE.md is picked up automatically as review guidelines, so project
+# conventions live there rather than being repeated in this file.
+reviews:
+  # Reviews are triggered manually with `@coderabbitai review` so the hourly
+  # review budget is spent on a settled head rather than every push.
+  auto_review:
+    enabled: false
+
+  # Only exclusions. Any non-negated pattern turns this list into an allowlist
+  # and everything else in the PR is skipped.
+  path_filters:
+    # Frozen record of the Convex-to-local migration. Never edited.
+    - "!exports/**"
+    # HDR environment maps and packaged app icons.
+    - "!**/*.exr"
+    - "!**/*.icns"
+
+  path_instructions:
+    - path: "apps/desktop/src/**"
+      instructions: |
+        Electron main and preload. Keep contextIsolation on and nodeIntegration off, and flag any change that disables the renderer sandbox or webSecurity.
+        The preload bridge must expose only named functions, never raw ipcRenderer or Node modules.
+        Validate every IPC payload in the main process before use.
+        The app:// protocol handler must keep resolving paths inside the static export directory and rejecting traversal.
+    - path: "apps/web/config/presets.json"
+      instructions: |
+        Bundled preset library validated by apps/web/lib/presetLibrarySchema.ts at load time.
+        The schema does not check value ranges. Flag parameter values outside the min and max declared for that path in apps/web/lib/visualizationParameters.ts.
+        Playlist items may reference preset ids that no longer exist. That is intentional and the editor surfaces them, so do not flag it.
+
+chat:
+  art: false
