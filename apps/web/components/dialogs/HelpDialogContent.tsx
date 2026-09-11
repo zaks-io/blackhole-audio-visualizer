@@ -12,11 +12,20 @@ export function HelpDialogContent({ onFullSetupGuideClick }: HelpDialogContentPr
           <Monitor className="h-4 w-4 text-cyan-400" />
         </div>
         <div>
-          <h4 className="text-sm font-medium mb-1">System Audio</h4>
+          <h4 className="text-sm font-medium mb-1">Desktop: system audio</h4>
           <p className="text-sm text-muted-foreground">
-            Captures audio playing on your computer. macOS asks for Screen Recording permission the
-            first time you connect.
+            Download the desktop app to visualize music from your preferred music service or any
+            other audio playing on your computer. Choose System Audio in Settings. On macOS, allow
+            Screen Recording when prompted.
           </p>
+          <a
+            href="https://github.com/zaks-io/blackhole-audio-visualizer/releases/latest"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-2 inline-flex text-sm text-cyan-400 hover:text-cyan-300 transition-colors"
+          >
+            Download desktop app from GitHub
+          </a>
         </div>
       </div>
 
@@ -25,10 +34,11 @@ export function HelpDialogContent({ onFullSetupGuideClick }: HelpDialogContentPr
           <Mic className="h-4 w-4 text-purple-400" />
         </div>
         <div>
-          <h4 className="text-sm font-medium mb-1">Microphone</h4>
+          <h4 className="text-sm font-medium mb-1">Browser: microphone</h4>
           <p className="text-sm text-muted-foreground">
-            Uses a microphone or another audio input recognized by your computer. Start connects
-            audio and runs random presets. Pause stops audio and pauses preset changes.
+            On a computer or phone, allow microphone access and press Start to visualize sound
+            around you. The web app uses the microphone or audio input your browser provides; it
+            cannot capture system audio directly.
           </p>
         </div>
       </div>
@@ -44,6 +54,12 @@ export function HelpDialogContent({ onFullSetupGuideClick }: HelpDialogContentPr
           </p>
         </div>
       </div>
+
+      <p className="text-sm text-muted-foreground">
+        Prefer the browser on macOS? The separate BlackHole audio driver can route system audio into
+        a browser input. It takes extra setup; the desktop app captures system audio without that
+        driver. See the full setup guide below.
+      </p>
 
       <div className="pt-4 border-t border-white/5">
         <a
