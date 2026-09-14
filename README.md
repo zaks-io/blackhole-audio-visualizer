@@ -78,7 +78,13 @@ The manual `Build Electron App` GitHub Actions workflow builds and tests the sel
 platforms, then attaches their installers to a draft GitHub Release. The release tag
 uses the version in `apps/desktop/package.json`. Increment that version for each new
 release; an existing tag or release is never overwritten. Publish the draft from GitHub
-when it is ready. Signing and notarization are not configured in this workflow.
+when it is ready. The macOS job uses the `Production` GitHub environment for signing and notarization.
+Configure `CSC_LINK` with the base64-encoded Developer ID Application `.p12`,
+`CSC_KEY_PASSWORD` with its export password, and `APPLE_ID`,
+`APPLE_APP_SPECIFIC_PASSWORD`, and `APPLE_TEAM_ID` for Apple notarization.
+Repository secrets are also available to the job. Missing credentials or failed
+signature, notarization-ticket, or Gatekeeper checks stop the build before upload.
+See [electron-builder's notarization guide](https://www.electron.build/v26/docs/notarization/).
 
 ## Checks
 
