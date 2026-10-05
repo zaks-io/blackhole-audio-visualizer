@@ -7,3 +7,7 @@ node_modules
 .turbo
 *.glsl
 packages/backend/convex/_generated/
+
+# Generated workflow skills must match their upstream source.
+.agents/skills/ziw-*/
+.claude/skills/ziw-*/
